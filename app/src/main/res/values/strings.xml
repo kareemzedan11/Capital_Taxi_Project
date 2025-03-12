@@ -1,0 +1,527 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- App Name -->
+    <string name="app_name">Capital Taxi</string>
+
+    <!-- Start Screen Texts -->
+    <string name="get_started">Let\'s Get Started</string>
+    <string name="get_started_button">Get Started</string>
+    <string name="introduction_image_description">Introduction image</string>
+
+    <!-- Select The Mode Screen -->
+    <string name="select_the_mode_title">Please Select: </string>
+    <string name="mode_instruction">You can switch to another mode later if you wish.</string>
+    <string name="captain_button">Captain</string>
+    <string name="passenger_button">Passenger</string>
+
+    <!-- Search for Location Screen -->
+    <string name="location_permission_message">We need to know your location, \nPlease allow us to access it</string>
+    <string name="access_location_button">Access My Location</string>
+
+    <!-- Language Selection Screen -->
+    <string name="select_language_title">Select Language</string>
+    <string name="english_language">English</string>
+    <string name="arabic_language">Arabic</string>
+
+    <!-- OTP Screen -->
+    <string name="otp_verification_title">OTP Verification</string>
+    <string name="otp_enter_message">Enter OTP sent to +0123456789</string>
+    <string name="resend_code_message">Resend code in %1$s seconds</string>
+    <string name="resend_code_now_message">Resend code now</string>
+    <string name="verify_now_button">Verify Now</string>
+
+    <!-- Phone Verification Screen -->
+    <string name="phone_verification_title">Join us via Phone</string>
+    <string name="phone_verification_message">We\'ll text a code to verify your phone</string>
+    <string name="phone_number_placeholder">Enter your phone number</string>
+    <string name="send_code_button">Send code</string>
+    <string name="otp_placeholder">Enter OTP sent to your phone</string>
+    <string name="verify_otp_button">Verify OTP</string>
+
+    <!-- Onboarding Page -->
+    <string name="onboarding_message1">on time,</string>
+    <string name="onboarding_message2">every time!</string>
+    <string name="continue_with_google">Continue With Google</string>
+    <string name="continue_with_phone">Continue With Phone</string>
+    <string name="log_in">Log in</string>
+
+    <!-- New Password Screen -->
+    <string name="new_password_title">Create New \n \nPassword</string>
+    <string name="new_password_message">This password should be different from previous password</string>
+    <string name="new_password_placeholder">Enter your new password</string>
+    <string name="save_button">Save</string>
+
+
+    <!-- Confirm Information Screen -->
+    <string name="confirm_information_title">Confirm your information</string>
+    <string name="name_label">Name</string>
+    <string name="email_label">Email</string>
+    <string name="phone_number_label">Phone Number</string>
+    <string name="enter_phone_number">Enter your phone number</string>
+    <string name="next_button">Next</string>
+
+
+    <!-- Voucher Screen -->
+    <string name="voucher_screen_title">Voucher</string>
+    <string name="voucher_promo_code_placeholder">Have a promo code? Enter it here</string>
+    <string name="no_vouchers_available">No Vouchers Available</string>
+
+    <!-- Trips History Screen -->
+    <string name="trips_history_screen_title">Trip History</string>
+    <string name="no_trip_history_available">No Trip History Available Now</string>
+
+
+    <!-- Settings Screen -->
+    <string name="settings_title">Settings</string>
+    <string name="home_title">Home</string>
+    <string name="add_work_title">Add Work</string>
+    <string name="communication_title">Communication</string>
+    <string name="saved_places_title">Saved Places</string>
+
+    <!-- Appearance -->
+    <string name="appearance_title">Appearance</string>
+    <string name="light_mode">Light Mode</string>
+    <string name="dark_mode">Dark Mode</string>
+
+    <string name="cancel_button">Cancel</string>
+
+
+    <!-- user register -->
+
+    <string name="sign_up">Sign Up</string>
+    <string name="create_user">Create a new User</string>
+    <string name="user_name">User Name</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="confirm_password">Confirm Password</string>
+    <string name="phone">Phone</string>
+    <string name="terms_conditions">I agree to </string>
+    <string name="terms_conditions_accept"> terms&amp;conditions</string>
+
+    <string name="sign_up_with">Or sign up With</string>
+    <string name="google_logo_desc">Google Logo</string>
+    <string name="x_logo_desc">X Logo</string>
+    <string name="facebook_logo_desc">Facebook Logo</string>
+    <string name="already_have_account">Already have an account?</string>
+    <string name="signin">Sign In</string>
+    <string name="back">Back</string>
+    <string name="password_icon_desc">Password icon</string>
+    <string name="phone_icon_desc">Phone icon</string>
+    <string name="email_icon_desc">Email icon</string>
+    <string name="person_icon_desc">Person icon</string>
+    <string name="hide_password">Hide password</string>
+    <string name="show_password">Show password</string>
+    <string name="passenger_Mode">passenger Mode</string>
+
+
+    <!-- Profile Screen -->
+    <string name="profile_settings_title">Profile Settings</string>
+    <string name="first_name_label">First Name</string>
+    <string name="last_name_label">Last Name</string>
+
+    <string name="phone_label">Phone</string>
+
+
+    <!-- Payment Screen -->
+    <string name="payment_method_title">Payment Method</string>
+    <string name="choose_payment_method">Choose Payment Method</string>
+    <string name="add_new_method_button">+ Add New Method</string>
+    <string name="payment_method_click">Click</string>
+    <string name="payment_method_balance">Balance: 250,000 UZS</string>
+    <string name="payment_method_discount">Get 5% discount</string>
+    <string name="payment_method_cash">Cash</string>
+    <string name="payment_method_prepare_cash">Prepare your cash</string>
+    <string name="payment_method_credit_card">Credit Card</string>
+    <string name="payment_method_visa_mastercard">Visa or MasterCard</string>
+    <string name="payment_method_payme">Payme</string>
+    <string name="payment_method_paypal">Pay with your PayPal balance</string>
+    <string name="Balance_250000_UZS">Balance: 250,000 UZS</string>
+    <string name="Get_5_percent_discount">Get 5% discount</string>
+    <string name="Prepare_your_cash">Prepare your cash</string>
+    <string name="Get_7_percent_discount">Get 7% discount</string>
+    <string name="Visa_or_MasterCard">Visa or MasterCard</string>
+    <string name="Pay_with_your_PayPal_balance">Pay with your PayPal balance</string>
+    <string name="Get_3_percent_discount">Get 3% discount</string>
+
+    <!-- Notification Screen -->
+    <string name="notification_title">Notification</string>
+    <string name="no_notification_message">No Notification Available Now</string>
+
+
+    <!-- user Login -->
+    <string name="Email_label">Email</string>
+    <string name="Password_label">Password</string>
+    <string name="ForgetPassword">Forget Password</string>
+    <string name="SignIn">Sign In</string>
+    <string name="OrSignInWith">Or sign in With</string>
+    <string name="OrSignUpWith">Or sign in With</string>
+
+    <string name="Dont_have_an_account">Don\'t have an account?</string>
+    <string name="SignUp">Sign Up</string>
+    <string name="sign_in_with">Or sign in With</string>
+    <string name="Continue">Continue</string>
+
+
+    <!-- user HomeScreen -->
+    <string name="Find_a_driver">Find a driver</string>
+    <string name="Payment_method">Payment method</string>
+    <string name="Cash">Cash</string>
+    <string name="Click">Click</string>
+
+    <string name="Credit_card">Credit card</string>
+    <string name="Payme">Payme</string>
+    <string name="Paypal">Paypal</string>
+    <string name="Trip_History">Trip History</string>
+    <string name="Payment">Payment</string>
+    <string name="Coupons">Coupons</string>
+    <string name="Notifications">Notifications</string>
+    <string name="Safety">Safety</string>
+    <string name="Settings">Settings</string>
+    <string name="Help">Help</string>
+    <string name="Support">Support</string>
+    <string name="Invite_Friends">Invite Friends</string>
+
+    <string name="No_Trip_Message">No Trip History Available Now</string>
+    <string name="No_Notification_Message">No Notification Available Now</string>
+    <string name="No_Vouchers_Message">No Vouchers Available</string>
+
+    <string name="promo_code_placeholder">Have a promo code? Enter it here</string>
+
+
+    <string name="Account_Settings">Account Settings</string>
+    <string name="Home">Home</string>
+    <string name="Add_Work">Add Work</string>
+    <string name="Communication">Communication</string>
+
+    <string name="Saved_Places">Saved Places</string>
+    <string name="Appearance">Appearance</string>
+    <string name="Language">Language</string>
+
+    <string name="Preferences">Preferences</string>
+    <string name="Two_Factor_Authentication">Two Factor Authentication</string>
+    <string name="Privacy">Privacy Settings</string>
+    <string name="Security_Notifications">Security Notifications</string>
+    <string name="Emergency">Emergency Contact</string>
+
+    <string name="Logout">Log Out</string>
+    <string name="Delete_Account">Delete Account</string>
+
+    <string name="Become_driver">Become a driver</string>
+
+
+    <!-- General UI Texts -->
+    <string name="Trips">Trips</string>
+    <string name="Payment_and_Billing">Payment and Billing</string>
+    <string name="Ride_Safety">Ride Safety</string>
+    <string name="Account">Account</string>
+    <string name="Rate_and_Feedback">Rate and Feedback</string>
+    <string name="Was_this_helpful">Was this helpful?</string>
+    <string name="Yes">Yes</string>
+    <string name="No">No</string>
+
+    <!-- Help Section Titles for Trips -->
+    <string name="Trip_Routes_and_Navigation">Trip Routes and Navigation</string>
+    <string name="Trip_Scheduling_and_Cancellations">Trip Scheduling and Cancellations</string>
+    <string name="Trip_Fare_Estimation">Trip Fare Estimation</string>
+    <string name="Trip_Issues_and_Disputes">Trip Issues and Disputes</string>
+    <string name="Tracking_Your_Trip">Tracking Your Trip</string>
+    <string name="Ride_Comfort_and_Preferences">Ride Comfort and Preferences</string>
+    <string name="Safety_During_Trips">Safety During Trips</string>
+    <string name="What_to_Do_if_Your_Driver_is_Lost">What to Do if Your Driver is Lost</string>
+
+    <!-- Help Section Titles for Payment -->
+    <string name="How_to_Add_a_Payment_Method">How to Add a Payment Method</string>
+    <string name="How_to_Remove_a_Payment_Method">How to Remove a Payment Method</string>
+    <string name="How_to_Update_Your_Payment_Details">How to Update Your Payment Details</string>
+    <string name="Checking_Your_Payment_History">Checking Your Payment History</string>
+    <string name="Understanding_Payment_Receipts">Understanding Payment Receipts</string>
+    <string name="What_to_Do_If_Your_Payment_Fails">What to Do If Your Payment Fails</string>
+    <string name="Payment_Refunds_and_Disputes">Payment Refunds and Disputes</string>
+
+    <!-- Help Section Titles for Ride Safety -->
+    <string name="In_Ride_Safety">In-Ride Safety</string>
+    <string name="Accident_Reporting">Accident Reporting</string>
+    <string name="Lost_Items">Lost Items</string>
+    <string name="Safety_Measures_and_Policies">Safety Measures and Policies</string>
+    <string name="Data_Privacy_and_Security">Data Privacy and Security</string>
+
+    <!-- Help Section Titles for Account -->
+    <string name="Updating_Personal_Information">Updating Personal Information</string>
+    <string name="Password_Management">Password Management</string>
+    <string name="Notification_Preferences">Notification Preferences</string>
+    <string name="Linked_Accounts">Linked Accounts</string>
+    <string name="Language_and_Region_Settings">Language and Region Settings</string>
+    <string name="Account_Deactivation_or_Deletion">Account Deactivation or Deletion</string>
+
+    <!-- Help Section Titles for Rate and Feedback -->
+    <string name="How_to_Rate_Your_Ride">How to Rate Your Ride</string>
+    <string name="Leaving_Comments">Leaving Comments</string>
+    <string name="Driver_Compliments">Driver Compliments</string>
+    <string name="Reporting_Issues">Reporting Issues</string>
+    <string name="Anonymous_Feedback">Anonymous Feedback</string>
+    <string name="Customer_Support_Follow_Up">Customer Support Follow-Up</string>
+
+    <string name="Content_coming_soon">Content coming soon</string>
+
+    <string name="Details_about">Details about</string>
+
+    <string name="How_can_we_help_you">How can we help you?</string>
+    <string name="Select_Topic">Select a topic to learn more : </string>
+
+    <string name="search_for_Topics">Search for topics</string>">
+
+    <string name="Welcome_to_chatbot">Welcome to our chatbot! Feel free to ask anything.</string>
+    <string name="Lets_Chat">Let\'s Chat</string>
+
+
+    <string name="Where_are_you_going_today">Where are you going today?</string>">
+    <string name="Select_Drop_Off_Location">Select Drop Off Location</string>
+    <string name="Select_Pickup_Location">Select Pickup Location</string>
+
+
+    <string name="Pickup_Now">Now</string>">
+    <string name="Pickup_later">Later</string>">
+
+    <string name="PickOff_Point">PickOff Point</string>">
+    <string name="Pickup_Point">Pickup Point</string>
+
+    <string name="For_Me">For Me</string>
+    <string name="For_a_group">For a Group</string>
+
+    <string name="When_do_you_need_a_ride">When do you need a ride?</string>
+    <string name="Now">Now</string>
+    <string name="Later">Later</string>
+
+    <string name="Done_Button">Done</string>
+
+    <string name="Who_is_the_ride_for">Who is the ride for?</string>
+
+    <string name="Work">Work</string>
+    <string name="Favorite">Favorite</string>
+    <string name="Confirm_Pickup">Confirm Pickup</string>
+    <string name="drivers_are_view_request">drivers are viewing your request</string>
+    <string name="Ride_requested">Ride requested, Please wait for the driver.</string>
+    <string name="Drop_off_time">Drop off time:</string>
+
+    <!-- Invite Friends -->
+
+    <string name="Invitations">Invitations</string>
+    <string name="offers">Offers</string>
+    <string name="Invite">Invite</string>
+    <string name="You_not_have_any_offers">You haven\'t any offers</string>
+    <string name="You_not_have_any_invitations">You haven\'t any invitations</string>
+
+
+    <string name="Arrange_your_trip">Arrange your trip</string>
+
+
+    <string name="create_new_password">Create New\nPassword</string>
+    <string name="password_hint">This password should be different from the previous password</string>
+    <string name="new_password_label">New Password</string>
+
+    <string name="back_button_description">Back</string>
+
+
+    <string name="dialog_title">Notice</string>
+    <string name="ok_button">OK</string>
+    <string name="password_changed_successfully">Password changed successfully</string>
+    <string name="please_enter_valid_password">please_enter_valid_password</string>
+
+    <string name="select_language">Select language</string>
+    <string name="Arabic">العربيه</string>
+    <string name="English">English</string>
+    <string name="Driver_Mode"> Driver Mode</string>
+
+
+    <string name="face_validation_title">Face Validation</string>
+    <string name="photo">Photo</string>
+    <string name="add_a_photo">Add a photo</string>
+    <string name="photo_is_uploaded">Photo is uploaded</string>
+    <string name="clear_face">- Clearly visible face</string>
+    <string name="no_sunglasses">- Without sunglasses</string>
+    <string name="good_lighting">- Good lighting and without filters</string>
+
+
+    <string name="certificate_of_vehicle_registration">Certificate Of Vehicle Registration</string>
+    <string name="upload_vehicle_registration">Upload Vehicle Registration</string>
+    <string name="front_of_vehicle_registration">Front of Vehicle Registration</string>
+    <string name="back_of_vehicle_registration">Back of Vehicle Registration</string>
+
+
+    <string name="driver_licence">Driver License</string>
+    <string name="front_of_license">Front of License</string>
+    <string name="back_of_license">Back of License</string>
+
+    <string name="selfie_with_license">Selfie with License</string>
+    <string name="add_selfie">Add Selfie</string>
+
+
+    <string name="national_id_card">National ID Card</string>
+    <string name="front_of_national_id">Front of National ID Card</string>
+    <string name="back_of_national_id">Back of National ID Card</string>
+    <string name="add_front_photo">Add Front Photo</string>
+    <string name="add_back_photo">Add Back Photo</string>
+
+    <string name="driver_license_number">Driver License Number</string>
+    <string name="expiration_date">Expiration Date</string>
+    <string name="Additional_comments"> Additional comments…</string>
+    <string name="Confirm">Confirm</string>
+    <string name="How_is_your_trip"> How is your trip?</string>
+    <string name="rate_driver">Please rate your driver</string>
+
+    <!-- Manage Account -->
+    <string name="Updating_Profile_and_Information">Updating Profile and Information</string>
+    <string name="Bank_Account_Management">Bank Account Management</string>
+    <string name="Notification_Settings">Notification Settings</string>
+    <string name="Document_Upload_and_Verification">Document Upload and Verification</string>
+    <string name="Deactivating_or_Deleting_Account">Deactivating or Deleting Account</string>
+
+    <!-- Payment Help -->
+    <string name="How_to_Set_Up_Payment_Methods">How to Set Up Payment Methods</string>
+    <string name="Updating_Bank_Details">Updating Bank Details</string>
+    <string name="Payment_Cycle_and_Timelines">Payment Cycle and Timelines</string>
+    <string name="Viewing_Earnings_and_Payments">Viewing Earnings and Payments</string>
+    <string name="Handling_Payment_Disputes">Handling Payment Disputes</string>
+    <string name="What_to_Do_if_a_Payment_is_Missing">What to Do if a Payment is Missing</string>
+
+    <!-- Rate Feedback -->
+    <string name="Understanding_Ratings">Understanding Ratings</string>
+    <string name="Improving_Your_Rating">Improving Your Rating</string>
+    <string name="Handling_Customer_Feedback">Handling Customer Feedback</string>
+    <string name="Reporting_Unfair_Ratings">Reporting Unfair Ratings</string>
+    <string name="Providing_Feedback_to_Passengers">Providing Feedback to Passengers</string>
+
+    <!-- Ride Safety -->
+    <string name="Safety_Tips_for_Drivers">Safety Tips for Drivers</string>
+    <string name="Reporting_Incidents">Reporting Incidents</string>
+    <string name="Lost_and_Found_Procedures">Lost and Found Procedures</string>
+    <string name="Vehicle_Safety_Requirements">Vehicle Safety Requirements</string>
+
+    <!-- Trip Help -->
+    <string name="Accepting_and_Declining_Trips">Accepting and Declining Trips</string>
+    <string name="How_to_Navigate_to_a_Passenger">How to Navigate to a Passenger</string>
+    <string name="Managing_Scheduled_Trips">Managing Scheduled Trips</string>
+    <string name="Dealing_with_Fare_Disputes">Dealing with Fare Disputes</string>
+    <string name="Handling_Cancellations">Handling Cancellations</string>
+    <string name="Tips_for_Ensuring_Trip_Quality">Tips for Ensuring Trip Quality</string>
+    <string name="Safety_Tips_During_Trips">Safety Tips During Trips</string>
+
+    <string name="Pm">Pm</string>
+    <string name="Am">Am</string>
+
+    <string name="To">To</string>
+    <string name="From">From</string>
+    <string name="Stop">Stop</string>
+
+    <string name="Price">Price</string>
+
+    <string name="share_with_friends">Share with your friends and enjoy rewards!</string>
+    <string name="rewards">Rewards</string>
+    <string name="share_your_referral_code">Share Your Referral Code</string>
+    <string name="copy_code">Copy Code</string>
+    <string name="facebook">Facebook</string>
+    <string name="whatsapp">WhatsApp</string>
+    <string name="more">More</string>
+    <string name="referral_code">Referral Code:</string>
+
+    <string name="your_discount">Your Discount</string>
+    <string name="get_20_percent_off">Get 20% off for every friend you invite!</string>
+    <string name="win_a_prize">Win a Prize</string>
+    <string name="get_50_gift_card">Get a $50 gift card when 5 friends join!</string>
+    <string name="your_code">Your Code</string>
+    <string name="use_code_to_share">Use code: ABC123 to share!</string>
+
+
+    <string name="Duration">Duration</string>
+    <string name="Distance">Distance</string>
+
+    <string name="the_arrive_after">The Arrive After</string>
+    <string name="your_trip">Your Trip</string>
+
+    <string name="trip_details">Trip Details</string>
+    <string name="share_trip_status">Share your trip status</string>
+    <string name="share">Share</string>
+    <string name="cancel_trip">Cancel Trip</string>
+
+    <string name="service_not_available">Service not available</string>
+    <string name="service_not_available_message">Our service is not available in your area</string>
+    <string name="enter_address">Enter Address</string>
+
+    <string name="meeting_location">We will meet after</string>
+    <string name="change">Change</string>
+
+
+    <string name="Income">Income</string>
+    <string name="Inbox">Inbox</string>
+    <string name="Wallet">Wallet</string>
+    <string name="meet_passenger">Meet Passenger</string>
+    <string name="meet_before_time">Meet before</string>
+    <string name="waiting_for_passenger_acceptance">Waiting for passenger acceptance</string>
+    <string name="new_price_sent_to_passenger">The new price has been sent to the passenger</string>
+    <string name="arrived_at_passenger_location"  >You\'ve arrived at the passenger\'s location</string>
+    <string name="start_trip">Start Trip</string>
+    <string name="you_arrived">YOU ARRIVED</string>
+    <string name="trip_duration">20 min</string>
+
+    <string name="see_trip_review">See Trip Review</string>
+    <string name="end_trip">End Trip</string>
+
+
+    <string name="trip_arrived">Trip Arrived</string>
+    <string name="destination">Destination:</string>
+    <string name="location">Abbas El-Akkad Strt</string>
+    <string name="arrived">Arrived</string>
+    <string name="distance">Distance:</string>
+    <string name="distance_value">5.2 km</string>
+    <string name="fare">Fare:</string>
+    <string name="fare_value">30.00 EGP</string>
+    <string name="rate_user">Rate the User:</string>
+    <string name="leave_comment">Leave a comment (optional):</string>
+    <string name="comment_placeholder">Your comment...</string>
+    <string name="submit_rating">Submit Rating</string>
+    <string name="go_to_home">Go to Home</string>
+    <string name="rating_submitted">Rating Submitted</string>
+    <string name="rating_submitted_message">Your rating and comment have been submitted.</string>
+    <string name="stop_accept_trips">Stop Accept Trips</string>
+     <string name="cancellation_reasons">Reasons for cancellation:</string>
+    <string name="cancel_trip_dialog_title">Confirm Cancellation</string>
+    <string name="cancel_trip_dialog_message">Are you sure you want to cancel the trip? This action may lower your rating.</string>
+    <string name="cancel_trip_button_confirm">Yes, Cancel</string>
+    <string name="cancel_trip_button_dismiss">No, Keep Trip</string>
+    <string-array name="reasons">
+        <item>Passenger was not at the pickup location</item>
+        <item>Passenger had too many passengers</item>
+        <item>Passenger brought prohibited items</item>
+        <item>Passenger\'s behavior was inappropriate</item>
+        <item>Safety concerns at the pickup location</item>
+        <item>Trip distance is too short</item>
+        <item>Destination is in a restricted area</item>
+        <item>Technical issues with the app</item>
+        <item>Vehicle condition does not support the trip</item>
+        <item>Personal emergency for the driver</item>
+        <item>Passenger refused to follow safety protocols</item>
+        <item>Passenger requested illegal or unsafe activities</item>
+        <item>Weather conditions are unfavorable</item>
+        <item>Heavy traffic in the area</item>
+        <item>Destination is too far or out of coverage</item>
+        <item>Passenger\'s payment method is invalid or suspicious</item>
+    </string-array>
+
+    <string name="trip_in_progress">Trip In Progress</string>
+    <string name="destination_address">Abbas El-Akkad Strt</string>
+    <string name="time_left">15 mins left</string>
+    <string name="estimated_fare">Estimated Fare:</string>
+
+    <string name="documents">Documents</string>
+    <string name="terms_and_conditions">Terms and Conditions</string>
+    <string name="about_the_app">About the App</string>
+
+
+    <string name="warning">Warning</string>
+    <string name="photo_warning_message">The photo, once uploaded, cannot be deleted or edited for 2 years.</string>
+    <string name="understand">I Understand</string>
+    <string name="payment_message">Sorry, We would like to inform you that our payment services currently support cash payments only. Other payment methods are not available at this time.</string>
+    <string name="Send">Send</string>
+
+
+
+</resources>

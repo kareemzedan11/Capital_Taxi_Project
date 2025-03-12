@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "512973562686",
+    "project_id": "capital-taxi-ed8f0",
+    "storage_bucket": "capital-taxi-ed8f0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:512973562686:android:a0c7678ebe69e9618c426f",
+        "android_client_info": {
+          "package_name": "com.example.capital_taxi"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "512973562686-svb9r20l8hn66s3mqkojmcobovn6dq2m.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDk56vt5FPOa-Pas3Ylwjcfka0G5CG8u1s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "512973562686-svb9r20l8hn66s3mqkojmcobovn6dq2m.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

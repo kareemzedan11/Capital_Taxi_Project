@@ -1,0 +1,463 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">تاكسي العاصمة</string>
+    <string name="get_started">ابدأ العمل مع تاكسي العاصمه</string>
+    <string name="get_started_button">ابدأ الآن</string>
+    <string name="introduction_image_description">صورة تقديمية</string>
+    <string name="select_the_mode_title">الرجاء الاختيار:</string>
+    <string name="mode_instruction">يمكنك التبديل إلى وضع آخر لاحقاً إذا أردت.</string>
+    <string name="captain_button">كابتن</string>
+    <string name="passenger_button">راكب</string>
+    <string name="location_permission_message">نحتاج إلى معرفة موقعك، \nيرجى السماح لنا بالوصول إليه</string>
+    <string name="access_location_button">الوصول إلى موقعي</string>
+    <string name="select_language_title">اختر اللغة</string>
+    <string name="english_language">الإنجليزية</string>
+    <string name="arabic_language">العربية</string>
+    <string name="otp_verification_title">التحقق من OTP</string>
+    <string name="otp_enter_message">أدخل OTP المرسل إلى +0123456789</string>
+    <string name="resend_code_message">إعادة إرسال الرمز خلال %1$s ثانية</string>
+    <string name="resend_code_now_message">إعادة إرسال الرمز الآن</string>
+    <string name="verify_now_button">تحقق الآن</string>
+    <string name="phone_verification_title">انضم إلينا عبر الهاتف</string>
+    <string name="phone_verification_message">سنرسل لك رمزاً للتحقق من رقم هاتفك</string>
+    <string name="phone_number_placeholder">أدخل رقم هاتفك</string>
+    <string name="send_code_button">إرسال الرمز</string>
+    <string name="otp_placeholder">أدخل OTP المرسل إلى هاتفك</string>
+    <string name="verify_otp_button">التحقق من OTP</string>
+    <string name="onboarding_message1">في الوقت المحدد،</string>
+    <string name="onboarding_message2">كل مرة!</string>
+    <string name="continue_with_google">التسجيل باستخدام جوجل</string>
+    <string name="continue_with_phone">التسجيل باستخدام الهاتف</string>
+    <string name="log_in">تسجيل الدخول</string>
+    <string name="new_password_title">إنشاء كلمة مرور جديدة</string>
+    <string name="new_password_message">يجب أن تكون هذه الكلمة مختلفة عن كلمة المرور السابقة</string>
+    <string name="new_password_placeholder">أدخل كلمة المرور الجديدة</string>
+    <string name="save_button">حفظ</string>
+    <string name="confirm_information_title">تأكيد معلوماتك</string>
+    <string name="name_label">الاسم</string>
+    <string name="email_label">البريد الإلكتروني</string>
+    <string name="phone_number_label">رقم الهاتف</string>
+    <string name="enter_phone_number">أدخل رقم هاتفك</string>
+    <string name="next_button">التالي</string>
+    <string name="voucher_screen_title">القسيمة</string>
+    <string name="voucher_promo_code_placeholder">هل لديك رمز ترويجي؟ أدخله هنا</string>
+    <string name="no_vouchers_available">لا توجد قسائم حالياً</string>
+    <string name="trips_history_screen_title">تاريخ الرحلات</string>
+    <string name="no_trip_history_available">لا توجد رحلات سابقة حالياً</string>
+    <string name="settings_title">الإعدادات</string>
+    <string name="home_title">الصفحة الرئيسية</string>
+    <string name="add_work_title">إضافة عمل</string>
+    <string name="communication_title">التواصل</string>
+    <string name="saved_places_title">الأماكن المحفوظة</string>
+    <string name="appearance_title">المظهر</string>
+    <string name="light_mode">الوضع الفاتح</string>
+    <string name="dark_mode">الوضع الداكن</string>
+    <string name="cancel_button">إلغاء</string>
+    <string name="sign_up">التسجيل</string>
+    <string name="create_user">إنشاء مستخدم جديد</string>
+    <string name="user_name">اسم المستخدم</string>
+    <string name="email">البريد الإلكتروني</string>
+    <string name="password">كلمة المرور</string>
+    <string name="confirm_password">تأكيد كلمة المرور</string>
+    <string name="phone">الهاتف</string>
+    <string name="terms_conditions">أوافق على</string>
+    <string name="terms_conditions_accept">الشروط والأحكام</string>
+    <string name="sign_up_with">أو سجل باستخدام</string>
+    <string name="google_logo_desc">شعار جوجل</string>
+    <string name="x_logo_desc">شعار X</string>
+    <string name="facebook_logo_desc">شعار فيسبوك</string>
+    <string name="already_have_account">هل لديك حساب؟</string>
+    <string name="signin">تسجيل الدخول</string>
+    <string name="back">رجوع</string>
+    <string name="password_icon_desc">رمز كلمة المرور</string>
+    <string name="phone_icon_desc">رمز الهاتف</string>
+    <string name="email_icon_desc">رمز البريد الإلكتروني</string>
+    <string name="person_icon_desc">رمز الشخص</string>
+    <string name="hide_password">إخفاء كلمة المرور</string>
+    <string name="show_password">إظهار كلمة المرور</string>
+    <string name="profile_settings_title">إعدادات الملف الشخصي</string>
+    <string name="first_name_label">الاسم الأول</string>
+    <string name="last_name_label">الاسم الأخير</string>
+    <string name="phone_label">الهاتف</string>
+    <string name="payment_method_title">طريقة الدفع</string>
+    <string name="choose_payment_method">اختر طريقة الدفع</string>
+    <string name="add_new_method_button">+ إضافة طريقة جديدة</string>
+    <string name="payment_method_click">انقر</string>
+    <string name="payment_method_balance">الرصيد: 250,000 UZS</string>
+    <string name="payment_method_discount">احصل على خصم 5%</string>
+    <string name="payment_method_cash">نقداً</string>
+    <string name="payment_method_prepare_cash">جهز نقودك</string>
+    <string name="payment_method_credit_card">بطاقة ائتمان</string>
+    <string name="payment_method_visa_mastercard">فيزا أو ماستركارد</string>
+    <string name="payment_method_payme">Payme</string>
+    <string name="payment_method_paypal">الدفع عبر PayPal</string>
+    <string name="notification_title">الإشعارات</string>
+    <string name="no_notification_message">لا توجد إشعارات حالياً</string>
+    <string name="Email_label">البريد الإلكتروني</string>
+    <string name="Password_label">كلمة المرور</string>
+    <string name="ForgetPassword">نسيت كلمة المرور</string>
+    <string name="SignIn">تسجيل الدخول</string>
+    <string name="OrSignInWith">أو سجل باستخدام</string>
+    <string name="OrSignUpWith">أو اشترك باستخدام</string>
+
+    <string name="Continue">استمرار</string>
+
+    <string name="Dont_have_an_account">لا تملك حساباً؟</string>
+    <string name="SignUp">سجل</string>
+    <string name="passenger_Mode">وضع الراكب</string>
+
+    <string name="sign_in_with">أو تسجيل الدخول باستخدام</string>
+    <!-- user HomeScreen -->
+    <string name="Find_a_driver">ابحث عن سائق</string>
+    <string name="Payment_method">طريقة الدفع</string>
+    <string name="Cash">نقداً</string>
+    <string name="Payme">باي مي</string>
+    <string name="Paypal">باي بال</string>
+    <string name="Trip_History">سجل الرحلات</string>
+    <string name="Payment">الدفع</string>
+    <string name="Coupons">القسائم</string>
+    <string name="Notifications">الإشعارات</string>
+    <string name="Safety">الأمان</string>
+    <string name="Settings">الإعدادات</string>
+    <string name="Help">المساعدة</string>
+    <string name="Support">الدعم</string>
+    <string name="Invite_Friends">دعوة الأصدقاء</string>
+
+    <string name="No_Trip_Message">لا يوجد سجل رحلات حالياً</string>
+    <string name="No_Notification_Message">لا توجد إشعارات حالياً</string>
+    <string name="No_Vouchers_Message">لا توجد قسائم</string>
+
+    <string name="promo_code_placeholder">لديك رمز ترويجي؟ أدخله هنا</string>
+
+    <string name="Account_Settings">إعدادات الحساب</string>
+    <string name="Home">الرئيسية</string>
+    <string name="Add_Work">إضافة العمل</string>
+    <string name="Communication">التواصل</string>
+
+    <string name="Saved_Places">الأماكن المحفوظة</string>
+    <string name="Appearance">المظهر</string>
+    <string name="Language">اللغة</string>
+
+    <string name="Preferences">التفضيلات</string>
+    <string name="Two_Factor_Authentication">المصادقة الثنائية</string>
+    <string name="Privacy">إعدادات الخصوصية</string>
+    <string name="Security_Notifications">إشعارات الأمان</string>
+    <string name="Emergency">جهة اتصال للطوارئ</string>
+
+    <string name="Logout">تسجيل الخروج</string>
+    <string name="Delete_Account">حذف الحساب</string>
+    <string name="Become_driver">كن سائقًا</string>
+    <string name="Click">اضغط</string>
+    <string name="Balance_250000_UZS">الرصيد: 250,000 سوم</string>
+    <string name="Get_5_percent_discount">احصل على خصم 5%</string>
+    <string name="Prepare_your_cash">جهز النقود</string>
+    <string name="Get_7_percent_discount">احصل على خصم 7%</string>
+    <string name="Credit_card">بطاقة ائتمان</string>
+    <string name="Visa_or_MasterCard">فيزا أو ماستركارد</string>
+    <string name="Pay_with_your_PayPal_balance">ادفع برصيد باي بال</string>
+    <string name="Get_3_percent_discount">احصل على خصم 3%</string>
+
+
+    <!-- General UI Texts -->
+    <string name="Trips">الرحلات</string>
+    <string name="Payment_and_Billing">الدفع والفواتير</string>
+    <string name="Ride_Safety">سلامة الرحلة</string>
+    <string name="Account">الحساب</string>
+    <string name="Rate_and_Feedback">التقييم والملاحظات</string>
+    <string name="Was_this_helpful">هل كانت هذه المعلومات مفيدة؟</string>
+    <string name="Yes">نعم</string>
+    <string name="No">لا</string>
+
+    <!-- Help Section Titles for Trips -->
+    <string name="Trip_Routes_and_Navigation">طرق الرحلات والملاحة</string>
+    <string name="Trip_Scheduling_and_Cancellations">جدولة الرحلات والإلغاء</string>
+    <string name="Trip_Fare_Estimation">تقدير تكلفة الرحلة</string>
+    <string name="Trip_Issues_and_Disputes">مشاكل الرحلة والنزاعات</string>
+    <string name="Tracking_Your_Trip">تتبع رحلتك</string>
+    <string name="Ride_Comfort_and_Preferences">راحة الرحلة والتفضيلات</string>
+    <string name="Safety_During_Trips">السلامة أثناء الرحلات</string>
+    <string name="What_to_Do_if_Your_Driver_is_Lost">ماذا تفعل إذا ضاع سائقك؟</string>
+
+    <!-- Help Section Titles for Payment -->
+    <string name="How_to_Add_a_Payment_Method">كيفية إضافة وسيلة دفع</string>
+    <string name="How_to_Remove_a_Payment_Method">كيفية إزالة وسيلة دفع</string>
+    <string name="How_to_Update_Your_Payment_Details">كيفية تحديث تفاصيل الدفع الخاصة بك</string>
+    <string name="Checking_Your_Payment_History">التحقق من تاريخ الدفع</string>
+    <string name="Understanding_Payment_Receipts">فهم إيصالات الدفع</string>
+    <string name="What_to_Do_If_Your_Payment_Fails">ماذا تفعل إذا فشل الدفع</string>
+    <string name="Payment_Refunds_and_Disputes">استرداد المدفوعات والنزاعات</string>
+
+    <!-- Help Section Titles for Ride Safety -->
+    <string name="In_Ride_Safety">سلامة أثناء الرحلة</string>
+    <string name="Accident_Reporting">إبلاغ الحوادث</string>
+    <string name="Lost_Items">الأشياء المفقودة</string>
+    <string name="Safety_Measures_and_Policies">إجراءات وسياسات السلامة</string>
+    <string name="Data_Privacy_and_Security">خصوصية البيانات والأمان</string>
+
+    <!-- Help Section Titles for Account -->
+    <string name="Updating_Personal_Information">تحديث المعلومات الشخصية</string>
+    <string name="Password_Management">إدارة كلمة المرور</string>
+    <string name="Notification_Preferences">تفضيلات الإشعارات</string>
+    <string name="Linked_Accounts">الحسابات المرتبطة</string>
+    <string name="Language_and_Region_Settings">إعدادات اللغة والمنطقة</string>
+    <string name="Account_Deactivation_or_Deletion">إلغاء الحساب أو حذفه</string>
+
+    <!-- Help Section Titles for Rate and Feedback -->
+    <string name="How_to_Rate_Your_Ride">كيفية تقييم رحلتك</string>
+    <string name="Leaving_Comments">ترك التعليقات</string>
+    <string name="Driver_Compliments">إطراء السائق</string>
+    <string name="Reporting_Issues">الإبلاغ عن المشاكل</string>
+    <string name="Anonymous_Feedback">التعليقات المجهولة</string>
+    <string name="Customer_Support_Follow_Up">متابعة دعم العملاء</string>
+
+    <string name="Content_coming_soon">المحتوى قادم قريباً</string>
+    <string name="Details_about">تفاصيل عن</string>
+
+    <string name="How_can_we_help_you">كيف يمكننا مساعدتك؟</string>
+    <string name="Select_Topic">اختر موضوعاً للتعرف عليه أكثر:</string>
+    <string name="search_for_Topics">ابحث عن المواضيع</string>
+
+    <string name="Welcome_to_chatbot">مرحباً بك في روبوت الدردشة لدينا! لا تتردد في طرح أي سؤال.</string>
+    <string name="Lets_Chat">لنبدأ الدردشة</string>
+
+    <string name="Where_are_you_going_today">إلى أين تذهب اليوم؟</string>
+    <string name="Select_Drop_Off_Location">اختر موقع الوصول</string>
+    <string name="Select_Pickup_Location">اختر موقع الالتقاء</string>
+    <string name="Pickup_Now">استلام الآن</string>
+    <string name="For_Me">لي</string>
+    <string name="For_a_group">لمجموعة</string>
+
+    <string name="When_do_you_need_a_ride">متى تحتاج إلى رحلة؟</string>
+    <string name="Pickup_later">لاحقا</string>">
+
+    <string name="Now">الآن</string>
+    <string name="Later">لاحقًا</string>
+
+    <string name="Done_Button">تم</string>
+
+    <string name="Who_is_the_ride_for">لمن الرحلة؟</string>
+
+    <string name="Work">العمل</string>
+    <string name="Favorite">المفضلة</string>
+    <string name="Confirm_Pickup">تأكيد الاستلام</string>
+    <string name="drivers_are_view_request">من السائقون يشاهدون طلبك</string>
+    <string name="Ride_requested">تم طلب الرحلة، يرجى انتظار السائق.</string>
+    <string name="Drop_off_time">وقت النزول</string>
+
+    <!-- دعوة الأصدقاء -->
+
+    <string name="Invitations">الدعوات</string>
+    <string name="offers">العروض</string>
+    <string name="Invite">دعوة</string>
+    <string name="You_not_have_any_offers">ليس لديك أي عروض</string>
+    <string name="You_not_have_any_invitations">ليس لديك أي دعوات</string>
+
+
+    <string name="Pickup_Point">نقطة الاستلام</string>
+    <string name="Arrange_your_trip">رتب رحلتك</string>
+
+    <string name="PickOff_Point">نقطة النزول</string>
+    <string name="select_language">اختر اللغة</string>
+    <string name="Arabic">العربية</string>
+    <string name="English">English</string>
+
+    <string name="create_new_password">إنشاء كلمة مرور جديدة</string>
+    <string name="password_hint">يجب أن تكون هذه الكلمة مختلفة عن كلمة المرور السابقة</string>
+    <string name="new_password_label">كلمة المرور الجديدة</string>
+    <string name="dialog_title">تنبيه</string>
+    <string name="ok_button">موافق</string>
+    <string name="password_changed_successfully">تم تغيير كلمة المرور بنجاح</string>
+    <string name="please_enter_valid_password">يرجى إدخال كلمة مرور صالحة</string>
+
+    <string name="back_button_description">عودة</string>
+    <string name="Driver_Mode">وضع السائق</string>
+
+
+    <string name="face_validation_title">التحقق من الوجه</string>
+    <string name="photo">صورة</string>
+    <string name="add_a_photo">أضف صورة</string>
+    <string name="photo_is_uploaded">تم رفع الصورة</string>
+    <string name="clear_face">- وجه واضح</string>
+    <string name="no_sunglasses">- بدون نظارات شمسية</string>
+    <string name="good_lighting">- إضاءة جيدة وبدون فلاتر</string>
+
+
+    <string name="certificate_of_vehicle_registration">شهادة تسجيل المركبة</string>
+    <string name="upload_vehicle_registration">رفع تسجيل المركبة</string>
+    <string name="front_of_vehicle_registration">واجهة تسجيل المركبة</string>
+    <string name="back_of_vehicle_registration">خلفية تسجيل المركبة</string>
+    <string name="add_front_photo">أضف صورة أمامية</string>
+    <string name="add_back_photo">أضف صورة خلفية</string>
+
+
+    <string name="national_id_card">بطاقة الهوية الوطنية</string>
+    <string name="front_of_national_id">واجهة بطاقة الهوية الوطنية</string>
+    <string name="back_of_national_id">خلفية بطاقة الهوية الوطنية</string>
+
+    <string name="driver_licence">رخصة القيادة</string>
+    <string name="front_of_license">واجهة الرخصة</string>
+    <string name="back_of_license">خلفية الرخصة</string>
+
+    <string name="selfie_with_license">سيلفي مع الرخصة</string>
+    <string name="add_selfie">أضف سيلفي</string>
+
+    <string name="Additional_comments">تعليقات إضافية...</string>
+    <string name="Confirm">تأكيد</string>
+    <string name="How_is_your_trip">كيف كانت رحلتك؟</string>
+    <string name="rate_driver">يرجى تقييم السائق</string>
+
+    <string name="driver_license_number">رقم رخصة القيادة</string>
+    <string name="expiration_date">تاريخ الانتهاء</string>
+    <string name="Pm">م</string>
+    <string name="Am">ص</string>
+
+    <!-- Manage Account -->
+    <string name="Updating_Profile_and_Information">تحديث الملف الشخصي والمعلومات</string>
+    <string name="Bank_Account_Management">إدارة الحساب البنكي</string>
+    <string name="Notification_Settings">إعدادات الإشعارات</string>
+    <string name="Document_Upload_and_Verification">رفع المستندات والتحقق منها</string>
+    <string name="Deactivating_or_Deleting_Account">تعطيل أو حذف الحساب</string>
+
+    <!-- Payment Help -->
+    <string name="How_to_Set_Up_Payment_Methods">كيفية إعداد طرق الدفع</string>
+    <string name="Updating_Bank_Details">تحديث بيانات الحساب البنكي</string>
+    <string name="Payment_Cycle_and_Timelines">دورة الدفع والجداول الزمنية</string>
+    <string name="Viewing_Earnings_and_Payments">عرض الأرباح والمدفوعات</string>
+    <string name="Handling_Payment_Disputes">معالجة نزاعات المدفوعات</string>
+    <string name="What_to_Do_if_a_Payment_is_Missing">ماذا تفعل إذا كانت هناك دفعة مفقودة</string>
+
+    <!-- Rate Feedback -->
+    <string name="Understanding_Ratings">فهم التقييمات</string>
+    <string name="Improving_Your_Rating">تحسين تقييمك</string>
+    <string name="Handling_Customer_Feedback">التعامل مع تعليقات العملاء</string>
+    <string name="Reporting_Unfair_Ratings">الإبلاغ عن التقييمات غير العادلة</string>
+    <string name="Providing_Feedback_to_Passengers">تقديم التعليقات للركاب</string>
+
+    <!-- Ride Safety -->
+    <string name="Safety_Tips_for_Drivers">نصائح السلامة للسائقين</string>
+    <string name="Reporting_Incidents">الإبلاغ عن الحوادث</string>
+    <string name="Lost_and_Found_Procedures">إجراءات المفقودات</string>
+    <string name="Vehicle_Safety_Requirements">متطلبات سلامة المركبات</string>
+
+    <!-- Trip Help -->
+    <string name="Accepting_and_Declining_Trips">قبول أو رفض الرحلات</string>
+    <string name="How_to_Navigate_to_a_Passenger">كيفية التنقل إلى الراكب</string>
+    <string name="Managing_Scheduled_Trips">إدارة الرحلات المجدولة</string>
+    <string name="Dealing_with_Fare_Disputes">التعامل مع نزاعات الأجرة</string>
+    <string name="Handling_Cancellations">التعامل مع الإلغاءات</string>
+    <string name="Tips_for_Ensuring_Trip_Quality">نصائح لضمان جودة الرحلة</string>
+    <string name="Safety_Tips_During_Trips">نصائح السلامة أثناء الرحلات</string>
+
+
+    <string name="To">الي</string>
+    <string name="From">من</string>
+    <string name="Stop">التوقف</string>
+
+    <string name="Price">السعر</string>
+    <string name="share_with_friends">شارك مع أصدقائك واستمتع بالمكافآت!</string>
+    <string name="rewards">المكافآت</string>
+    <string name="share_your_referral_code">شارك رمز الإحالة الخاص بك</string>
+    <string name="copy_code">نسخ الرمز</string>
+    <string name="facebook">فيسبوك</string>
+    <string name="whatsapp">واتساب</string>
+    <string name="more">المزيد</string>
+    <string name="referral_code">رمز الإحالة:</string>
+
+
+    <string name="your_discount">خصمك</string>
+    <string name="get_20_percent_off">احصل على خصم 20% لكل صديق تدعوه!</string>
+    <string name="win_a_prize">فز بجائزة</string>
+    <string name="get_50_gift_card">احصل على بطاقة هدايا بقيمة 50 دولار عندما ينضم 5 أصدقاء!</string>
+    <string name="your_code">رمزك</string>
+    <string name="use_code_to_share">استخدم الرمز: ABC123 للمشاركة!</string>
+
+
+    <string name="the_arrive_after">الوصول بعد</string>
+    <string name="your_trip">رحلتك</string>
+    <string name="Duration">المده</string>
+    <string name="Distance">المسافه</string>
+    <string name="trip_details">تفاصيل الرحلة</string>
+    <string name="share_trip_status">شارك حالة رحلتك</string>
+    <string name="share">مشاركة</string>
+    <string name="cancel_trip">إلغاء الرحلة</string>
+
+    <string name="you_arrived">لقد وصلت</string>
+    <string name="trip_duration">20 دقيقة</string>
+
+    <string name="see_trip_review">عرض تقييم الرحلة</string>
+    <string name="end_trip">إنهاء الرحلة</string>
+
+    <string name="service_not_available">الخدمة غير متوفرة</string>
+    <string name="service_not_available_message">خدمتنا غير متوفرة في منطقتك</string>
+    <string name="enter_address">أدخل العنوان</string>
+    <string name="change">تغيير</string>
+    <string name="meeting_location">سيكون الالتقاء بعد </string>
+
+
+    <string name="Income">الدخل</string>
+    <string name="Inbox">البريد الوارد</string>
+    <string name="Wallet">المحفظة</string>
+    <string name="meet_passenger">قابل الراكب</string>
+    <string name="meet_before_time">قابل قبل </string>
+    <string name="waiting_for_passenger_acceptance">في انتظار قبول الراكب</string>
+    <string name="new_price_sent_to_passenger">تم إرسال السعر الجديد إلى الراكب</string>
+    <string name="arrived_at_passenger_location">لقد وصلت إلى موقع الراكب</string>
+    <string name="start_trip">ابدأ الرحلة</string>
+
+
+
+    <string name="trip_arrived">تم الوصول إلى الرحلة</string>
+    <string name="destination">الوجهة:</string>
+    <string name="location">شارع عباس العقاد</string>
+    <string name="arrived">تم الوصول</string>
+    <string name="distance">المسافة:</string>
+    <string name="distance_value">٥.٢ كم</string>
+    <string name="fare">الأجرة:</string>
+    <string name="fare_value">٣٠.٠٠ جنيه</string>
+    <string name="rate_user">قيّم المستخدم:</string>
+    <string name="leave_comment">اترك تعليقًا (اختياري):</string>
+    <string name="comment_placeholder">تعليقك...</string>
+    <string name="submit_rating">إرسال التقييم</string>
+    <string name="go_to_home">العودة إلى الصفحة الرئيسية</string>
+    <string name="rating_submitted">تم إرسال التقييم</string>
+    <string name="rating_submitted_message">تم إرسال تقييمك وتعليقك.</string>
+    <string name="stop_accept_trips">إيقاف قبول الرحلات</string>
+     <string name="cancellation_reasons">أسباب الإلغاء:</string>
+    <string name="cancel_trip_dialog_title">تأكيد الإلغاء</string>
+    <string name="cancel_trip_dialog_message">هل أنت متأكد أنك تريد إلغاء الرحلة؟ قد يؤدي هذا الإجراء إلى تقليل تقييمك.</string>
+    <string name="cancel_trip_button_confirm">نعم، إلغاء</string>
+    <string name="cancel_trip_button_dismiss">لا، إبقاء الرحلة</string>
+    <string-array name="reasons">
+        <item>الراكب لم يكن في موقع الاستلام</item>
+        <item>الراكب كان لديه عدد كبير من الركاب</item>
+        <item>الراكب جلب أشياء محظورة</item>
+        <item>سلوك الراكب كان غير لائق</item>
+        <item>مخاوف تتعلق بالسلامة في موقع الاستلام</item>
+        <item>مسافة الرحلة قصيرة جدًا</item>
+        <item>الوجهة في منطقة محظورة</item>
+        <item>مشاكل فنية في التطبيق</item>
+        <item>حالة المركبة لا تدعم الرحلة</item>
+        <item>حالة طارئة للسائق</item>
+        <item>الراكب رفض اتباع بروتوكولات السلامة</item>
+        <item>الراكب طلب أنشطة غير قانونية أو غير آمنة</item>
+        <item>الظروف الجوية غير مواتية</item>
+        <item>حركة المرور الكثيفة في المنطقة</item>
+        <item>الوجهة بعيدة جدًا أو خارج التغطية</item>
+        <item>طريقة الدفع الخاصة بالراكب غير صالحة أو مشبوهة</item>
+    </string-array>
+
+    <string name="documents">المستندات</string>
+    <string name="terms_and_conditions">الشروط والأحكام</string>
+    <string name="about_the_app">عن التطبيق</string>
+    <string name="trip_in_progress">الرحلة جارية</string>
+    <string name="destination_address">شارع عباس العقاد</string>
+    <string name="time_left">15 دقيقة متبقية</string>
+     <string name="estimated_fare">التكلفة المقدرة:</string>
+
+        <string name="warning">تحذير</string>
+        <string name="photo_warning_message">الصورة، بمجرد تحميلها، لا يمكن حذفها أو تعديلها لمدة عامين.</string>
+        <string name="understand">أنا أفهم</string>
+    <string name="Send">ارسال</string>
+
+    <string name="payment_message">عذرًا، نود إبلاغك بأن خدمات الدفع لدينا تدعم حاليًا الدفع النقدي فقط. لا تتوفر طرق دفع أخرى في الوقت الحالي.</string>
+</resources>
