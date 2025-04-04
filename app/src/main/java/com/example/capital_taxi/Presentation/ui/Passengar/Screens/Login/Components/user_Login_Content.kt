@@ -58,36 +58,39 @@ fun userLoginContent(
     // Handle login when the button is clicked
     LaunchedEffect(email, password, isLoading) {
         if (isLoading) {
-            val role = "user" // Set role as "user" by default. Change to "driver" based on app logic
+            val role = "user"
             val request = LoginRequest(email = email, password = password, role = role)
             try {
                 val response = LoginApiClient.loginApiService.loginuser(request)
                 if (response.isSuccessful) {
-                    // Get the token from the response (assuming it's in response.body().token)
-                    val token = response.body()?.token
+
+
+                     val token = response.body()?.token
+                    val userID = response.body()?.account!!.userId
 
                     if (token != null) {
-                        // Save token in SharedPreferences
-                        editor.putString("USER_TOKEN", token)
-                        editor.apply()
-                        Log.d("Login", "Token: $token")
-                        Log.d("SharedPreferences", "تم حفظ التوكن: $token")
 
-                        // Navigate to the home screen on success
-                        navController.navigate(Destination.UserHomeScreen.route)
+                        editor.putString("USER_TOKEN", token)
+                        editor.putString("USER_ID",userID)
+                        editor.apply()
+
+                        // الانتقال مع مسح back stack
+                        navController.navigate(Destination.UserHomeScreen.route) {
+                            popUpTo(navController.graph.startDestinationId) {  // امسح كل الشاشات حتى الشاشة الأولى
+                                inclusive = true  // امسح الشاشة الأولى أيضًا
+                            }
+                            launchSingleTop = true  // لا تكرر الشاشة إذا كانت مفتوحة
+                        }
                     } else {
                         loginError = "No token received"
                     }
                 } else {
-                    // Show error message from the response body if login fails
                     val errorMessage = response.errorBody()?.string() ?: response.message()
                     loginError = errorMessage
                 }
             } catch (e: Exception) {
-                // Handle error case and capture errors in the response body
                 loginError = "An error occurred: ${e.localizedMessage}"
             } finally {
-                // Stop the loading indicator after the operation
                 isLoading = false
             }
         }

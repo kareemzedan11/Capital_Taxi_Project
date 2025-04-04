@@ -1,24 +1,15 @@
 package com.example.capital_taxi.domain.shared
 
-import android.Manifest
 import android.content.Context
-import android.content.pm.PackageManager
-import android.os.Looper
 import android.util.Log
 import androidx.compose.runtime.*
-import androidx.core.app.ActivityCompat
 import androidx.lifecycle.ViewModel
-import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.getAddressFromLatLng
 import com.example.capital_taxi.domain.Location
 import com.example.capital_taxi.domain.RetrofitClient
 import com.example.capital_taxi.domain.Trip
 import com.example.capital_taxi.domain.TripRequest
-import com.google.android.gms.location.LocationCallback
-import com.google.android.gms.location.LocationRequest
-import com.google.android.gms.location.LocationResult
-import com.google.android.gms.location.LocationServices
+import com.google.firebase.crashlytics.buildtools.reloc.com.google.common.reflect.TypeToken
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.GeoPoint
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -37,38 +28,8 @@ data class LocationData(
 
 
 
-data class TripResponse(
-    val message: String,
-    val trip: TripDetails?
-)
 
-data class TripDetails(
-    val user: String,
-    val origin: LocationData,
-    val destination: LocationData,
-    val paymentMethod: String,
-    val fare: Double,
-    val distanceInKm: Double,
-    val status: String
-)
 
-interface TripApiService {
-    @POST("api/trips/create")
-    suspend fun requestTrip(
-        @Header("Authorization") token: String,
-        @Body request: TripRequest
-    ): TripResponse
-}
-
-object RetrofitClient {
-    private val retrofit = Retrofit.Builder()
-        .baseUrl("http://192.168.96.1:5000/") // Adjust the base URL
-        .addConverterFactory(GsonConverterFactory.create())
-        .client(OkHttpClient.Builder().build())
-        .build()
-
-    val apiService: TripApiService = retrofit.create(TripApiService::class.java)
-}
 class TripViewModel : ViewModel() {
     private val _availableTrips = mutableStateOf<List<Trip>>(emptyList())
     val availableTrips: State<List<Trip>> get() = _availableTrips
@@ -173,7 +134,7 @@ class TripViewModel : ViewModel() {
     private val _tripDetails = mutableStateOf<com.example.capital_taxi.domain.TripResponse?>(null)
     val tripDetails: State<com.example.capital_taxi.domain.TripResponse?> = _tripDetails
     fun createTrip(
-        context: Context, // ✅ مرّر الـ Context هنا
+        context: Context,
         userId: String,
         origin: Location,
         destination: Location,
@@ -185,26 +146,22 @@ class TripViewModel : ViewModel() {
         onSuccess: (com.example.capital_taxi.domain.TripResponse) -> Unit,
         onError: (String) -> Unit
     ) {
-
-        val originName = getAddressFromLatLng(context, origin.lat, origin.lng) // ✅ استخدم context هنا
-        val destinationName = getAddressFromLatLng(context, destination.lat, destination.lng)
-
         if (userId.isBlank()) {
             Log.e("TripViewModel", "❌ userId فارغ، لا يمكن إنشاء الرحلة!")
             return
         }
 
-        val gson = Gson()
-
         val tripRequest = TripRequest(
-            _id = "", // سيتم إنشاؤه تلقائيًا في السيرفر
+            _id = "",
             user = userId,
-            origin = originName,
-            destination = destinationName,
+            origin = "${origin.lat},${origin.lng}",
+            destination = "${destination.lat},${destination.lng}",
+
             paymentMethod = paymentMethod,
             fare = fare,
             distanceInKm = distance
         )
+
         Log.d("TripViewModel", "🚗 tripRequest: $tripRequest")
 
         coroutineScope.launch {
@@ -215,16 +172,21 @@ class TripViewModel : ViewModel() {
                     val tripResponse = response.body()!!
                     Log.d("TripViewModel", "✅ Trip created successfully: ${tripResponse.trip}")
 
-                    val tripId = UUID.randomUUID().toString() // توليد ID فريد
+                    val tripId = UUID.randomUUID().toString()
                     val db = FirebaseFirestore.getInstance()
-                    db.collection("trips").document(tripId).set(tripResponse.trip)
+                    val gson = Gson()
+                    val tripJson = gson.toJson(tripResponse.trip)
+                    val tripData: Map<String, Any> = gson.fromJson(tripJson, object : TypeToken<Map<String, Any>>() {}.type)
+                    val tripDataWithUserId = tripData.toMutableMap()
+                    tripDataWithUserId["userId"] = userId
+
+                    db.collection("trips").document(tripId).set(tripDataWithUserId)
                         .addOnSuccessListener {
                             Log.d("TripViewModel", "✅ الرحلة أُضيفت إلى Firestore بنجاح!")
                         }
                         .addOnFailureListener { e ->
                             Log.e("TripViewModel", "❌ فشل في إضافة الرحلة: ${e.message}")
                         }
-
 
                     _tripDetails.value = tripResponse
                     onSuccess(tripResponse)
@@ -237,9 +199,8 @@ class TripViewModel : ViewModel() {
                 onError("Error: ${e.message}")
             }
         }
-
-
     }
+
 }
 
 

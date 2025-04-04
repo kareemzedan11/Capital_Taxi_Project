@@ -26,7 +26,6 @@ import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Header
 import okhttp3.OkHttpClient
-import org.osmdroid.util.GeoPoint
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Path
@@ -154,16 +153,16 @@ data class LocationData(
     val lng: Double
 )
 
-// موديل الطلب المرسل لإنشاء الرحلة
 data class TripRequest(
     val _id: String,
     val user: String,
-    val origin: String,  // سيتم تحويله إلى JSON
-    val destination: String,  // سيتم تحويله إلى JSON
+    val origin: String,  // سيتم تخزينها كنص مفصول بفاصلة "lat,lng"
+    val destination: String,  // سيتم تخزينها كنص مفصول بفاصلة "lat,lng"
     val paymentMethod: String,
     val fare: Double,
     val distanceInKm: Double
 )
+
 
 // موديل بيانات الرحلة
 data class Trip(

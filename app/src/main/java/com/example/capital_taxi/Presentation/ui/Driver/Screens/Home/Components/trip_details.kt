@@ -1,19 +1,12 @@
 package com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components
 
 import androidx.compose.runtime.Composable
-import TopBar
 import android.Manifest
-import android.app.Activity
-import android.graphics.drawable.Icon
 import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -36,15 +29,12 @@ import com.example.capital_taxi.R
 import com.example.capital_taxi.domain.Trip
 import com.example.capital_taxi.domain.assignDriver
 import com.example.capital_taxi.domain.shared.TripViewModel
-import drawerContent
-import androidx.compose.ui.platform.LocalContext
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Geocoder
 
 import android.os.Looper
 import androidx.compose.runtime.State
-import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
@@ -53,20 +43,13 @@ import androidx.lifecycle.ViewModel
 
 
 import android.location.Location
-import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.TripViewModel2
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.TripViewModel4
-import com.example.capital_taxi.domain.RetrofitClient.apiService
-import com.example.capital_taxi.domain.UpdateLocationRequest
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
-import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
 import org.osmdroid.util.GeoPoint
 import java.io.IOException
 import java.util.Locale
@@ -76,9 +59,10 @@ fun TripDetailsCard(
     light: Boolean,
     trip: Trip,
     availableTrips: List<Trip>,
+
     tripViewModel: TripViewModel,
     onTripAccepted: () -> Unit,
-    onTripCancelled: () -> Unit // إضافة معالج إلغاء الرحلة
+    onTripCancelled: () -> Unit // إضافة معالج إلغاء الرحلة){}
 ) {
     if (availableTrips.isEmpty()) return // لا تعرض شيئًا إذا لم تكن هناك رحلات
     val tripViewModel2: TripViewModel = viewModel()

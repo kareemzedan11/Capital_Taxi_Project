@@ -2,7 +2,6 @@ package com.example.capital_taxi.Presentation.ui.Driver.Screens.Home
 
 import TopBar
 import android.Manifest
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Geocoder
@@ -22,10 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -36,6 +32,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.app.ui.theme.CustomFontFamily
 import com.example.app.ui.theme.responsiveTextSize
+import com.example.capital_taxi.Presentation.ui.Driver.Components.DriverControls
+import com.example.capital_taxi.Presentation.ui.Driver.Components.MapStateViewModel
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.DriverNavigationDrawer
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.TripDetailsCard
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.captainToPassenger
@@ -45,18 +43,17 @@ import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.d
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.LocationDataStore
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.LocationViewModel5
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.TrackDriverScreen
-import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.Trip_preparation.LocationViewModel
 
 import com.example.capital_taxi.R
 import com.example.capital_taxi.domain.DirectionsViewModel
 import com.example.capital_taxi.domain.Location
 import com.example.capital_taxi.domain.Trip
+import com.example.capital_taxi.domain.driver.model.acceptTripViewModel
 import com.example.capital_taxi.domain.fetchTripDirections
 import com.example.capital_taxi.domain.shared.TripViewModel
 import com.example.capital_taxi.domain.shared.decodePolyline
 import com.example.capital_taxi.domain.shared.saveDriverLocationToRealtimeDatabase
 import com.example.myapplication.DriverMapView
-import com.example.myapplication.MapViewComposable
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -68,15 +65,12 @@ import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
-import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 
 import kotlinx.coroutines.launch
-import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
@@ -120,7 +114,8 @@ fun driverHomeScreen(navController: NavController) {
     val locationDataStore = LocationDataStore(context)
     var tripStatus by remember { mutableStateOf("pending") } // الحالة الابتدائية
     var tripId by remember { mutableStateOf<String?>(null) }
-
+    val accepttrip: acceptTripViewModel = viewModel()
+    val accepttripViewModel by accepttrip.isTripAccepted
      // Firebase Firestore instance
     val db = FirebaseFirestore.getInstance()
 
@@ -295,7 +290,8 @@ fun driverHomeScreen(navController: NavController) {
                     }
                 }
             }
-
+            val mapStateViewModel: MapStateViewModel = viewModel()
+            val shouldShowTracking by mapStateViewModel.shouldShowTracking
             val driverDatabase = FirebaseDatabase.getInstance()
 
 // ✅ تحقق مما إذا كان tripId غير null قبل الوصول إلى بيانات Firebase
@@ -325,16 +321,9 @@ fun driverHomeScreen(navController: NavController) {
 
 
             Box(modifier = Modifier.fillMaxSize()) {
-                if (tripStatus != "accepted") {
-                    DriverMapView(
-                        driverLocation = driverLocationState ?: GeoPoint(30.0444, 31.2357),
-                        bearing = carBearing // تمرير الاتجاه المحسوب
-                    )
-                    Log.d("LocationCheck1", "Before passing: ${passengerLocation.passengerLocation}")
 
-                }
 
-                if (tripStatus == "accepted") {
+                if ( shouldShowTracking) {
                     Log.d("LocationCheck2", "Before passing: ${passengerLocation.passengerLocation}")
 
                     tripId?.let {
@@ -344,10 +333,18 @@ fun driverHomeScreen(navController: NavController) {
                         }}")
                         TrackDriverScreen(
                             tripId = it,
-                            directionsViewModel = directionsViewModel,
-                            PassengerLocation = driverLocationState2?: GeoPoint(30.0444, 31.2357)
+
+                            passengerLocation = driverLocationState2?: GeoPoint(30.0444, 31.2357)
                         )
                     }
+                }
+               else {
+                    DriverMapView(
+                        driverLocation = driverLocationState ?: GeoPoint(30.0444, 31.2357),
+                        bearing = carBearing // تمرير الاتجاه المحسوب
+                    )
+                    Log.d("LocationCheck1", "Before passing: ${passengerLocation.passengerLocation}")
+
                 }
                 LaunchedEffect(Unit) {
                     while (true) {
@@ -411,8 +408,11 @@ fun driverHomeScreen(navController: NavController) {
                                 light = false,
                                 trip = trip,
                                 availableTrips = availableTrips,
-                                tripViewModel = tripViewModel,
+
+                                 tripViewModel = tripViewModel,
                                 onTripAccepted = {
+                                    mapStateViewModel.enableTracking()
+                                    accepttrip.acceptTrip()
                                     tripId=trip._id
                                     tripStatus="accepted"
                                     val destinationPoint = parseGeoPoint(trip.origin)
@@ -421,6 +421,7 @@ fun driverHomeScreen(navController: NavController) {
                                     Log.d("TripDetails", "${trip.origin} ${trip.destination}")
                                     isStart = false
                                     isTripAccepted = true
+
                                     availableTrips = availableTrips.filter { it._id != trip._id }
                                     CoroutineScope(Dispatchers.IO).launch {
                                         if (token != null) {
@@ -433,6 +434,7 @@ fun driverHomeScreen(navController: NavController) {
                                                 ),
                                                 directionsViewModel = directionsViewModel,
                                                 onSuccess = { directionsResponse ->
+
                                                     Log.d(
                                                         "TripDirections",
                                                         "Successfully fetched directions: $directionsResponse"
@@ -466,27 +468,6 @@ fun driverHomeScreen(navController: NavController) {
 
 
 
-                    // TripInProgressCardSimplified()
-                    // DriverArrivedCard()
-                    //  RideInfoCard()
-                    //  captainToPassengar(navController)
-//                        DriverTripAcceptedScreen(
-//                            userName = "Jane Doe",
-//                            userRating = 4.5f,
-//                            pickupLocation = "123 Main St, Cairo",
-//                            dropoffLocation = "456 Elm St, Alexandria",
-//                            etaToPickup = "10 mins",
-//                            distanceToPickup = "5 km",
-//                            onNavigate = { /* Handle Navigation */ },
-//                            onCallUser = { /* Handle Call User */ },
-//                            onMessageUser = { /* Handle Message User */ },
-//                            onCancelTrip = { /* Handle Cancel Trip */ }
-//                        )
-                    //  TripArrivedCard()
-                    //TripDetailsCard(light = false)
-                    //TripArrivedCard()
-                    // TripArrivedCard2()
-                    // DriverArrivedCard()
 
                 }
 
@@ -557,12 +538,12 @@ fun driverHomeScreen(navController: NavController) {
 
 
 
-            if (!isStart && !isTripAccepted) {
+            if (!accepttripViewModel) {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(Color.White)
-                        .height(100.dp)
+                        .height(130.dp)
                         .align(Alignment.BottomCenter)
                         .padding(16.dp),
 
@@ -570,58 +551,20 @@ fun driverHomeScreen(navController: NavController) {
 
                     ) {
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(
-                                horizontal =
-                                10.dp
-                            ),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+               DriverControls(
+                   onClick={isStart=true
+
+                           },
 
 
-                        Icon(
-
-                            modifier = Modifier.size(26.dp),
-                            painter = painterResource(R.drawable.note),
-                            contentDescription = null,
-                            tint = colorResource(R.color.Icons_color)
-                        )
-
-                        Spacer(modifier = Modifier.weight(1f))
-
-                        Button(
-                            colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.primary_color)),
-                            onClick = {
-                                isStart = true // تفعيل استقبال الرحلات
-                                tripLocation?.let {
-                                    updateLocationAndStatus(
-                                        driverId =driverId,
-                                        location = it
-                                    )
-                                }
-
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth(0.4f)
-                                .fillMaxHeight(.8f)
-                        ) {
-                            Text(text = if (isStart) "Online" else "Start", color = Color.White)
-                        }
-                        Spacer(modifier = Modifier.weight(1f))
-                        Icon(
-
-                            tint = colorResource(R.color.Icons_color),
-                            modifier = Modifier.size(26.dp),
-                            painter = painterResource(R.drawable.tools), contentDescription = null
-                        )
-                    }
+                   driverId = driverId,
+                   tripLocation = tripLocation, modifier = Modifier.wrapContentWidth())
                 }
-            } else if (isStart) {
-
-
+            }
+            else {
+                captainToPassenger(
+               navController = navController
+                )
             }
         }
     }
@@ -1030,3 +973,5 @@ fun getAddressFromLatLng(context: Context, latitude: Double, longitude: Double):
 //onMessageDriver = { /* Handle Message Driver */ },
 //onCancelTrip = { /* Handle Cancel Trip */ }
 //)
+
+

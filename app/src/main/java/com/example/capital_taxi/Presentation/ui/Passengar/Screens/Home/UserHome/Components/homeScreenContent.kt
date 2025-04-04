@@ -8,6 +8,7 @@ import android.location.Geocoder
 import android.location.LocationManager
 import android.net.Uri
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,12 +37,14 @@ import kotlinx.coroutines.launch
 import androidx.compose.material.rememberBottomSheetScaffoldState
 
 import androidx.compose.material.BottomSheetScaffold
+import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.capital_taxi.Helper.PartialBottomSheet
@@ -90,6 +93,7 @@ import java.io.IOException
 
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import com.google.maps.android.PolyUtil
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.net.HttpURLConnection
@@ -104,6 +108,8 @@ private val Context.dataStore by preferencesDataStore(name = "location_prefs")
 fun homeScreenContent(navController: NavController) {
     var isConfirmed by remember { mutableStateOf(false) }
     var isSearch by remember { mutableStateOf(false) }
+    var menuIconShow by remember { mutableStateOf(true) }
+
     val tripViewModel2: TripViewModel2 = viewModel()
     val selectedTripId by tripViewModel2.selectedTripId.observeAsState()
 
@@ -115,6 +121,7 @@ fun homeScreenContent(navController: NavController) {
     val fare by fareViewModel.fare.observeAsState(0.0)
     val permissionViewModel: PermissionViewModel = viewModel()
     val context = LocalContext.current
+
 
     LaunchedEffect(context) {
         checkLocationPermission(context, permissionViewModel)
@@ -177,9 +184,16 @@ fun homeScreenContent(navController: NavController) {
                 val latLng = LatLng(it.latitude, it.longitude) // ✅ تحويل الموقع إلى LatLng
 
                 locationViewModel2.updatePassengerLocation(latLng) // ✅ تخزين الموقع مؤقتًا
-                Log.d("Location", "✅pass location: ${ locationViewModel2.passengerLocation?.let { latLng ->
-                    GeoPoint(latLng.latitude, latLng.longitude) // ✅ تحويل LatLng إلى GeoPoint
-                }}")
+                Log.d(
+                    "Location", "✅pass location: ${
+                        locationViewModel2.passengerLocation?.let { latLng ->
+                            GeoPoint(
+                                latLng.latitude,
+                                latLng.longitude
+                            ) // ✅ تحويل LatLng إلى GeoPoint
+                        }
+                    }"
+                )
                 CoroutineScope(Dispatchers.IO).launch {
                     locationDataStore.saveLocation(it.latitude, it.longitude)
                 }
@@ -204,7 +218,12 @@ fun homeScreenContent(navController: NavController) {
         startPoint.value = pickupLatLng?.let { GeoPoint(it.latitude, it.longitude) }
 
         startPoint.value?.let { geoPoint ->
-            locationViewModel2.updatePassengerLocation(LatLng(geoPoint.latitude, geoPoint.longitude)) // ✅ التحويل الصحيح
+            locationViewModel2.updatePassengerLocation(
+                LatLng(
+                    geoPoint.latitude,
+                    geoPoint.longitude
+                )
+            ) // ✅ التحويل الصحيح
         }
 
         endPoint.value = dropoffLatLng?.let { GeoPoint(it.latitude, it.longitude) }
@@ -266,10 +285,16 @@ fun homeScreenContent(navController: NavController) {
 
                                 tripRef.child("passengerLocation").setValue(passengerLocationMap)
                                     .addOnSuccessListener {
-                                        Log.d("FirebaseDB", "✅ Passenger location saved successfully!")
+                                        Log.d(
+                                            "FirebaseDB",
+                                            "✅ Passenger location saved successfully!"
+                                        )
                                     }
                                     .addOnFailureListener { e ->
-                                        Log.e("FirebaseDB", "❌ Failed to save passenger location: ${e.message}")
+                                        Log.e(
+                                            "FirebaseDB",
+                                            "❌ Failed to save passenger location: ${e.message}"
+                                        )
                                     }
                             }
 
@@ -278,8 +303,8 @@ fun homeScreenContent(navController: NavController) {
                                 Log.d("tripId", it)
                                 TrackDriverScreen(
                                     tripId = it,
-                                    directionsViewModel = directionsViewModel,
-                                    PassengerLocation =startPoint.value
+
+                                    passengerLocation = startPoint.value
                                 )
                             }
 
@@ -314,25 +339,29 @@ fun homeScreenContent(navController: NavController) {
                                 }
                             })
                         }
-
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .align(Alignment.TopStart)
-                        ) {
-                            TopBar(
-                                onOpenDrawer = {
-                                    scope.launch {
-                                        if (drawerState.isClosed) {
-                                            drawerState.open()
-                                        } else {
-                                            drawerState.close()
+                        if (menuIconShow == true) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .align(Alignment.TopStart)
+                            ) {
+                                TopBar(
+                                    onOpenDrawer = {
+                                        scope.launch {
+                                            if (drawerState.isClosed) {
+                                                drawerState.open()
+                                            } else {
+                                                drawerState.close()
+                                            }
                                         }
-                                    }
-                                },
-                                navController = navController
-                            )
-                            DraggableIcon(navController = navController)
+                                    },
+                                    navController = navController
+                                )
+
+
+                                DraggableIcon(navController = navController)
+
+                            }
                         }
                     }
                 },
@@ -353,11 +382,13 @@ fun homeScreenContent(navController: NavController) {
 
                             if (currentIsLocationEnabled.value && currentIsLocationGranted.value) {
                                 if (!isConfirmed) {
+
                                     PickupWithDropOffButtons(
                                         navController = navController,
                                         locationName = locationName
                                     )
                                 } else if (isConfirmed) {
+                                    menuIconShow = false;
                                     confirmPickup(onclick = { isSearch = true })
                                 }
                                 if (isSearch) {
@@ -399,10 +430,25 @@ fun homeScreenContent(navController: NavController) {
                 val Savedtoken =
                     token // Fetch or pass the token
                 FindDriverCard(onclick = {
+                    if (startPoint.value == null || endPoint.value == null) {
+                        Toast.makeText(
+                            context,
+                            "Please select both pickup and drop-off locations",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        return@FindDriverCard
+                    }
                     Log.d("TripScreen", "FindDriverCard clicked")
 
-                    val userId = "67ab15a7ea322a3849238319"
+                    val sharedPreferences =
+                        context.getSharedPreferences("your_prefs", Context.MODE_PRIVATE)
+                    val userId = sharedPreferences.getString("USER_ID", null)
+                    val userBalance = sharedPreferences.getFloat("USER_BALANCE", 0f)
 
+                    if (userId == null) {
+                        Toast.makeText(context, "User not logged in", Toast.LENGTH_SHORT).show()
+
+                    }
                     // Use the current location as the origin
                     val origin = Location(
                         startPoint.value?.latitude ?: 0.0,
@@ -429,7 +475,7 @@ fun homeScreenContent(navController: NavController) {
                         if (distanceInKm != null) {
                             tripViewModel.createTrip(
                                 context = context,
-                                userId,
+                                userId!!,
                                 origin,
                                 destination,
                                 paymentMethod,
@@ -467,6 +513,7 @@ class LocationViewModel5 : ViewModel() {
         passengerLocation = latLng
     }
 }
+
 fun getLatLngFromAddressNominatim(address: String, onResult: (LatLng?) -> Unit) {
     val url = "https://nominatim.openstreetmap.org/search?format=json&q=${Uri.encode(address)}"
 
@@ -497,18 +544,55 @@ fun getLatLngFromAddressNominatim(address: String, onResult: (LatLng?) -> Unit) 
 
 @Composable
 fun TrackDriverScreen(
-    PassengerLocation: GeoPoint?,
-    tripId: String,  // ✅ البحث باستخدام `_id`
-    directionsViewModel: DirectionsViewModel
+    passengerLocation: GeoPoint?,
+    tripId: String,
+    context: Context = LocalContext.current
 ) {
-    val database = FirebaseDatabase.getInstance()
-    val tripsRef = FirebaseFirestore.getInstance().collection("trips") // ✅ Firestore
+    // Firebase references
+    val tripsRef = remember { FirebaseFirestore.getInstance().collection("trips") }
 
-
-    var driverLocation by remember { mutableStateOf<LatLng?>(null) }
-    var passengerLocation by remember { mutableStateOf<LatLng?>(null) }
+    // State variables
+    var driverLocation by remember { mutableStateOf<GeoPoint?>(null) }
     var directionsFetched by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
+    var directions by remember { mutableStateOf<List<GeoPoint>>(emptyList()) }
 
+    // دالة جلب الاتجاهات باستخدام OSRM
+    fun fetchOSRMDirections(
+        start: GeoPoint,
+        end: GeoPoint,
+        onSuccess: (List<GeoPoint>) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        isLoading = true
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val response = DirectionsApi.getDirections(start, end)
+
+                withContext(Dispatchers.Main) {
+                    when (response) {
+                        is ResultWrapper.Success -> {
+                            directionsFetched = true
+                            onSuccess(response.value)
+                        }
+
+                        is ResultWrapper.Failure -> {
+                            onError(response.exception.message ?: "Unknown error")
+                        }
+                    }
+                    isLoading = false
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    isLoading = false
+                    onError("Network error: ${e.message ?: "Unknown error"}")
+                }
+            }
+        }
+    }
+
+    // Listen for trip updates
     LaunchedEffect(tripId) {
         tripsRef.whereEqualTo("_id", tripId)
             .addSnapshotListener { documents, error ->
@@ -523,72 +607,103 @@ fun TrackDriverScreen(
                         val driverLng = document.getDouble("driverLocation.longitude")
 
                         if (driverLat != null && driverLng != null) {
-                            driverLocation = LatLng(driverLat, driverLng)
+                            driverLocation = GeoPoint(driverLat, driverLng)
                             Log.d("Firestore", "✅ Driver Location Updated: $driverLocation")
-                        }
-
-                        // ✅ تحديث موقع الراكب
-                        val passengerAddress = document.getString("origin")
-                        passengerAddress?.let { address ->
-                            getLatLngFromAddressNominatim(address) { latLng ->
-                                if (latLng != null) {
-                                    passengerLocation = latLng
-                                    Log.d("Geocoding", "✅ Passenger Location Updated: $passengerLocation")
-                                }
-                            }
                         }
                     }
                 }
             }
     }
 
-
-
-    val context = LocalContext.current
-    val sharedPreferences = context.getSharedPreferences("your_prefs", Context.MODE_PRIVATE)
-    val authToken = sharedPreferences.getString("USER_TOKEN", "") ?: ""
-
-    // تحديث الاتجاهات مرة واحدة فقط بعد وصول أول تحديث لموقع السائق
-    LaunchedEffect(driverLocation) {
-        driverLocation?.let { location ->
-            passengerLocation?.let { passenger ->
-                if (!directionsFetched) {
-                    fetchTripDirections(
-                        token = authToken,
-                        origin = location.toDomainLocation(),
-                        destination = passenger.toDomainLocation(),
-                        directionsViewModel = directionsViewModel,
-                        onSuccess = {
-                            directionsFetched = true
-                            Log.d("TripDirections", "✅ Directions Fetched Successfully")
-                        },
-                        onError = {
-                            Log.e("TripDirections", "❌ Error Fetching Directions: $it")
-                        }
-                    )
+    // Fetch directions when locations are available
+    LaunchedEffect(driverLocation, passengerLocation) {
+        if (driverLocation != null && passengerLocation != null && !directionsFetched) {
+            fetchOSRMDirections(
+                start = driverLocation!!,
+                end = passengerLocation!!,
+                onSuccess = { routePoints ->
+                    directions = routePoints
+                    Log.d("OSRM Directions", "✅ Directions fetched: ${routePoints.size} points")
+                },
+                onError = { error ->
+                    Log.e("OSRM Directions", "❌ Error: $error")
+                    Toast.makeText(context, "خطأ في جلب الاتجاهات: $error", Toast.LENGTH_SHORT)
+                        .show()
                 }
-            }
+            )
         }
     }
 
-    // عرض الخريطة بموقع السائق والراكب
-// ✅ التأكد من أن المواقع صحيحة قبل تمريرها إلى MapViewComposable
-    AcceptanceMap(
-        driverLocation = driverLocation?.let { GeoPoint(it.latitude, it.longitude) }
-            ?: GeoPoint(0.0, 0.0),
-        passengerLocation = PassengerLocation
-    )
+    // UI
+    Box(modifier = Modifier.fillMaxSize()) {
+        AcceptanceMap(
+            driverLocation = driverLocation,
+            passengerLocation = passengerLocation,
+            directions = directions
+        )
 
-
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(16.dp)
+            )
+        }
+    }
 }
 
+// ملف ResultWrapper.kt
+sealed class ResultWrapper<out T> {
+    data class Success<out T>(val value: T) : ResultWrapper<T>()
+    data class Failure(val exception: Throwable) : ResultWrapper<Nothing>()
+}
 
+// DirectionsApi.kt
+object DirectionsApi {
+    private const val OSRM_BASE_URL = "https://router.project-osrm.org/route/v1/driving/"
+    private val client = OkHttpClient()
 
+    suspend fun getDirections(
+        start: GeoPoint,
+        end: GeoPoint
+    ): ResultWrapper<List<GeoPoint>> = withContext(Dispatchers.IO) {
+        try {
+            val url =
+                "$OSRM_BASE_URL${start.longitude},${start.latitude};${end.longitude},${end.latitude}?overview=full"
+
+            val request = Request.Builder()
+                .url(url)
+                .build()
+
+            val response = client.newCall(request).execute()
+
+            if (!response.isSuccessful) {
+                return@withContext ResultWrapper.Failure(Exception("API error: ${response.code}"))
+            }
+
+            val json = response.body?.string()?.let { JSONObject(it) }
+            val geometry = json?.getJSONArray("routes")
+                ?.getJSONObject(0)
+                ?.getString("geometry")
+
+            geometry?.let { decodePolyline(it) }?.let { ResultWrapper.Success(it) }
+                ?: ResultWrapper.Failure(Exception("Invalid response format"))
+        } catch (e: Exception) {
+            ResultWrapper.Failure(e)
+        }
+    }
+
+    private fun decodePolyline(encoded: String): List<GeoPoint> {
+        val poly = PolyUtil.decode(encoded)
+        return poly.map { GeoPoint(it.latitude, it.longitude) }
+    }
+}
+
+// LocationDataStore.kt
 class LocationDataStore(private val context: Context) {
     private val LATITUDE_KEY = doublePreferencesKey("latitude")
     private val LONGITUDE_KEY = doublePreferencesKey("longitude")
 
-    // حفظ الموقع
     suspend fun saveLocation(latitude: Double, longitude: Double) {
         context.dataStore.edit { prefs ->
             prefs[LATITUDE_KEY] = latitude
@@ -596,7 +711,6 @@ class LocationDataStore(private val context: Context) {
         }
     }
 
-    // استرجاع الموقع
     suspend fun getLocation(): Pair<Double, Double>? {
         val prefs = context.dataStore.data.first()
         val lat = prefs[LATITUDE_KEY] ?: return null
@@ -604,16 +718,15 @@ class LocationDataStore(private val context: Context) {
         return Pair(lat, lng)
     }
 
-    // مسح البيانات عند إغلاق التطبيق
     suspend fun clearLocation() {
         context.dataStore.edit { it.clear() }
     }
 }
-// ✅ دالة تحويل `LatLng` إلى `com.example.capital_taxi.domain.Location`
+
+// Extension functions
 fun LatLng.toDomainLocation(): Location {
     return Location(latitude, longitude)
 }
-
 
 suspend fun fetchGraphHopperSuggestions(
     query: String,
@@ -630,8 +743,6 @@ suspend fun fetchGraphHopperSuggestions(
             connection.requestMethod = "GET"
 
             val response = connection.inputStream.bufferedReader().use { it.readText() }
-
-            // طباعة الاستجابة كاملة لمعرفة هيكل البيانات
             Log.d("GraphHopper", "Response: $response")
 
             val jsonObject = JSONObject(response)
@@ -640,27 +751,17 @@ suspend fun fetchGraphHopperSuggestions(
             val suggestions = mutableListOf<String>()
             for (i in 0 until hits.length()) {
                 val hit = hits.getJSONObject(i)
-                val locationName = hit.getString("name")
-
-                // التحقق من وجود lat و lon قبل الوصول إليهما
-                if (hit.has("lat") && hit.has("lon")) {
-                    val lat = hit.getDouble("lat")
-                    val lng = hit.getDouble("lon")
-
-                    // إنشاء LatLng للكائن
-                    val latLng = "LatLng($lat, $lng)"
-
-
-                }
-
-                // إضافة الاقتراح إلى القائمة
-                suggestions.add(locationName)
+                suggestions.add(hit.getString("name"))
             }
 
-            onResult(suggestions)
+            withContext(Dispatchers.Main) {
+                onResult(suggestions)
+            }
         } catch (e: Exception) {
             Log.e("GraphHopper", "Error fetching suggestions", e)
-            onResult(emptyList())
+            withContext(Dispatchers.Main) {
+                onResult(emptyList())
+            }
         }
     }
 }

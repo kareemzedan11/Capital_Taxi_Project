@@ -10,6 +10,7 @@
     <color name="primary_color">#FFf6b700</color>
     <color name="secondary_color">#FFf2edde</color>
     <color name="Icons_color">#FF987200</color>
+    <color name="offline">#FF0000</color>
 
 </resources>
 

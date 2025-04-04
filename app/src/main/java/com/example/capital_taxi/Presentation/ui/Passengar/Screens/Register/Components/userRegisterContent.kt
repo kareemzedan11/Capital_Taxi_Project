@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.capital_taxi.Navigation.Destination
 import com.example.capital_taxi.Presentation.Common.All_Register_textFields
 import com.example.capital_taxi.Presentation.Common.AlreadyHaveAccount
 import com.example.capital_taxi.Presentation.Common.RegisterHeader
@@ -129,7 +130,7 @@ fun registerUser(
                     val message = response.body()?.message ?: "Registration successful"
                     println("✅ Registration successful: $message")
                     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                    navController.navigate("homeScreen")
+                    navController.navigate(Destination.UserLogin.route)
                 } else {
                     val errorResponse = response.errorBody()?.string() ?: "Unknown error"
                     println("❌ Registration failed: $errorResponse")
