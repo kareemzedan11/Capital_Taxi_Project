@@ -2,6 +2,7 @@ package com.example.capital_taxi.Presentation.Common
 
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -20,12 +21,15 @@ fun All_Register_textFields(
     email: MutableState<String>,
     password: MutableState<String>,
     confirmPassword: MutableState<String>,
-    phone: MutableState<String>
+    phone: MutableState<String>,
+    carType: MutableState<String>?=null,
+    carNumber: MutableState<String>?=null
+
 ) {
     RegisterTextField(
         value = name.value,
         onValueChange = { name.value = it },
-        label = stringResource(id = R.string.user_name),
+        label = "Full Name",
         keyboardType = KeyboardType.Text
     )
 
@@ -74,5 +78,21 @@ fun All_Register_textFields(
         onValueChange = { phone.value = it },
         label = stringResource(id = R.string.phone),
         keyboardType = KeyboardType.Phone
+    )
+    Spacer(modifier = Modifier.height(16.dp))
+
+    RegisterTextField(
+        value = carType!!.value,
+        onValueChange = { carType.value = it },
+        label = "Car Type",
+        keyboardType = KeyboardType.Text
+    )
+    Spacer(modifier = Modifier.height(16.dp))
+
+    RegisterTextField(
+        value = carNumber!!.value,
+        onValueChange = { carNumber.value = it },
+        label = "Car Number",
+        keyboardType = KeyboardType.Text
     )
 }

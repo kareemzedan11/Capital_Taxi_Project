@@ -2,6 +2,8 @@ package com.example.capital_taxi.Presentation.ui.Driver.Screens.Home
 
 import TopBar
 import android.Manifest
+import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Geocoder
@@ -25,6 +27,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -34,7 +37,14 @@ import com.example.app.ui.theme.CustomFontFamily
 import com.example.app.ui.theme.responsiveTextSize
 import com.example.capital_taxi.Presentation.ui.Driver.Components.DriverControls
 import com.example.capital_taxi.Presentation.ui.Driver.Components.MapStateViewModel
+import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.DriverArrivedCard
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.DriverNavigationDrawer
+import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.Home_Components.TripViewModel2
+import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.Home_Components.TripViewModel4
+ import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.Home_Components.updateMapWithCurrentLocation
+import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.StartTrip
+import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.StartTripScreen
+import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.TripArrivedCard2
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.TripDetailsCard
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.captainToPassenger
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.dataTripViewModel
@@ -54,6 +64,7 @@ import com.example.capital_taxi.domain.shared.TripViewModel
 import com.example.capital_taxi.domain.shared.decodePolyline
 import com.example.capital_taxi.domain.shared.saveDriverLocationToRealtimeDatabase
 import com.example.myapplication.DriverMapView
+import com.example.myapplication.interpolateLocation
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -82,6 +93,7 @@ import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 
+@SuppressLint("UnrememberedMutableState")
 @Composable
 fun driverHomeScreen(navController: NavController) {
     var isStart by remember { mutableStateOf(false) }
@@ -100,7 +112,7 @@ fun driverHomeScreen(navController: NavController) {
     val authToken = sharedPreferences.getString("driver_token", "") ?: ""
     val driver_id = sharedPreferences.getString("driver_id", "") ?: ""
     val directionsViewModel: DirectionsViewModel = viewModel()
-    val tripViewModel2: TripViewModel2 = viewModel()
+
     val viewmodel: driverlocation = viewModel()
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
     val firestore = FirebaseFirestore.getInstance()
@@ -116,9 +128,15 @@ fun driverHomeScreen(navController: NavController) {
     var tripId by remember { mutableStateOf<String?>(null) }
     val accepttrip: acceptTripViewModel = viewModel()
     val accepttripViewModel by accepttrip.isTripAccepted
+    val startTrip by accepttrip.isTripStarted
+
      // Firebase Firestore instance
     val db = FirebaseFirestore.getInstance()
+    var rotationAngle by mutableStateOf(0f)
 
+    var rawLocation by remember { mutableStateOf<GeoPoint?>(null) }
+    var smoothedLocation by remember { mutableStateOf<GeoPoint?>(null) }
+    var currentLocation by remember { mutableStateOf<GeoPoint?>(null) }
     // تحديث الخريطة واستدعاء getDirections كل ثانيتين
     LaunchedEffect(isTripAccepted, startPoint.value, endPoint.value) {
         while (isTripAccepted && startPoint.value != null && endPoint.value != null) {
@@ -202,7 +220,7 @@ fun driverHomeScreen(navController: NavController) {
 
         val locationRequest = LocationRequest.create().apply {
             interval = 5000 // تحديث كل 5 ثواني
-            fastestInterval = 2000
+            fastestInterval = 5000
             priority = Priority.PRIORITY_HIGH_ACCURACY
         }
 
@@ -211,10 +229,7 @@ fun driverHomeScreen(navController: NavController) {
                 locationResult.locations.lastOrNull()?.let { location ->
                     val newLocation = GeoPoint(location.latitude, location.longitude)
 
-                    // حساب الاتجاه (Bearing) بناءً على التغير في الإحداثيات
-                    previousLocation?.let { oldLocation ->
-                        carBearing = calculateBearing(oldLocation, newLocation)
-                    }
+
                     previousLocation = newLocation
                     driverLocationState = newLocation
                     val geoPoint = GeoPoint(location.latitude, location.longitude)
@@ -226,7 +241,46 @@ fun driverHomeScreen(navController: NavController) {
 
         fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
     }
+    LaunchedEffect(Unit) {
 
+        if (ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            val locationRequest = LocationRequest.create().apply {
+                interval = 2000 // تحديث كل ثانية
+                fastestInterval = 5000
+                priority = Priority.PRIORITY_HIGH_ACCURACY
+            }
+
+            val locationCallback = object : LocationCallback() {
+                override fun onLocationResult(locationResult: LocationResult) {
+                    locationResult.locations.lastOrNull()?.let { location ->
+                        previousLocation = smoothedLocation
+                        rawLocation = GeoPoint(location.latitude, location.longitude)
+
+                        // تطبيق تنعيم إضافي
+                        smoothedLocation = if (smoothedLocation == null) {
+                            rawLocation
+                        } else {
+                            interpolateLocation(
+                                smoothedLocation!!,
+                                rawLocation!!,
+                                0.5f // عامل التنعيم (0.1 - 0.5)
+                            )
+                        }
+                    }
+                }
+            }
+
+            fusedLocationClient.requestLocationUpdates(
+                locationRequest,
+                locationCallback,
+                Looper.getMainLooper()
+            )
+        }
+    }
 
     fun parseGeoPoint(destination: String): GeoPoint {
         val parts = destination.split(",")
@@ -245,22 +299,7 @@ fun driverHomeScreen(navController: NavController) {
         }
     }
 
-    fun getLatLngFromAddress(context: Context, address: String, onResult: (GeoPoint?) -> Unit) {
-        val geocoder = Geocoder(context, Locale.getDefault())
-        try {
-            val addresses = geocoder.getFromLocationName(address, 1)
-            if (addresses!!.isNotEmpty()) {
-                val location = addresses[0]
-                val passengerLocation = GeoPoint(location.latitude, location.longitude)
-                onResult(passengerLocation)
-            } else {
-                onResult(null)
-            }
-        } catch (e: IOException) {
-            e.printStackTrace()
-            onResult(null)
-        }
-    }
+
 
     Box(modifier = Modifier.fillMaxSize()) {
         ModalNavigationDrawer(
@@ -277,8 +316,6 @@ fun driverHomeScreen(navController: NavController) {
             val passengerLocation: LocationViewModel5 = viewModel()
 
 
-            val decodedRoutePoints =
-                decodePolyline("_sgvDotc_E?bBSZKJMFMDM@g@?WCKCICEGEEKe@Ce@DiLB{DFw@B[d@iCYIg@rCGZCZE~Cc@RO@QCMGMKGOEQ_@@B{Y@eTGKKEE?K@IHAfJ]??l@aAH[?[E[GYMWMQOWYU[")
             val tripViewModel4: TripViewModel4 = viewModel()
             val tripLocation by tripViewModel4.tripLocation
             LaunchedEffect(Unit) {
@@ -340,8 +377,9 @@ fun driverHomeScreen(navController: NavController) {
                 }
                else {
                     DriverMapView(
-                        driverLocation = driverLocationState ?: GeoPoint(30.0444, 31.2357),
-                        bearing = carBearing // تمرير الاتجاه المحسوب
+                        currentLocation = smoothedLocation,
+                        previousLocation = previousLocation,
+
                     )
                     Log.d("LocationCheck1", "Before passing: ${passengerLocation.passengerLocation}")
 
@@ -411,8 +449,10 @@ fun driverHomeScreen(navController: NavController) {
 
                                  tripViewModel = tripViewModel,
                                 onTripAccepted = {
+
                                     mapStateViewModel.enableTracking()
                                     accepttrip.acceptTrip()
+
                                     tripId=trip._id
                                     tripStatus="accepted"
                                     val destinationPoint = parseGeoPoint(trip.origin)
@@ -535,7 +575,24 @@ fun driverHomeScreen(navController: NavController) {
                     }
                 }
             }
+          //  TripArrivedCard2()
+         // StartTrip()
+          //  DriverArrivedCard()
+            var showCaptainToPassenger by remember { mutableStateOf(false) }
+            var showStartTrip by remember { mutableStateOf(false) }
 
+            LaunchedEffect(accepttripViewModel) {
+                if (accepttripViewModel) {
+                    delay(2000) // تأخير 1 ثانية (غير الرقم حسب احتياجك)
+                    showCaptainToPassenger = true
+                }
+            }
+            LaunchedEffect(startTrip) {
+                if (startTrip) {
+
+                    showStartTrip = true
+                }
+            }
 
 
             if (!accepttripViewModel) {
@@ -546,432 +603,36 @@ fun driverHomeScreen(navController: NavController) {
                         .height(130.dp)
                         .align(Alignment.BottomCenter)
                         .padding(16.dp),
-
-                    elevation = CardDefaults.cardElevation(defaultElevation = 20.dp),
-
-                    ) {
-
-               DriverControls(
-                   onClick={isStart=true
-
-                           },
-
-
-                   driverId = driverId,
-                   tripLocation = tripLocation, modifier = Modifier.wrapContentWidth())
+                    elevation = CardDefaults.cardElevation(defaultElevation = 20.dp)
+                ) {
+                    DriverControls(
+                        onClick = { isStart = true },
+                        driverId = driverId,
+                        tripLocation = tripLocation,
+                        modifier = Modifier.wrapContentWidth()
+                    )
                 }
             }
-            else {
+
+            if (showCaptainToPassenger) {
                 captainToPassenger(
-               navController = navController
+                    context = context,
+                    navController = navController,
+                    tripId = tripId!!,
+                    onTripStarted =   {accepttrip.startTrip()}
                 )
             }
-        }
-    }
-}
-
-class TripViewModel2 : ViewModel() {
-    private val _selectedTripId = MutableLiveData<String>()
-    val selectedTripId: MutableLiveData<String?> = MutableLiveData(null)
-
-    fun setSelectedTripId(tripId: String) {
-        _selectedTripId.value = tripId
-    }
-}
-
-class TripViewModel4 : ViewModel() {
-    var tripLocation = mutableStateOf<GeoPoint?>(null)
-        private set
-
-    fun updateTripLocation(location: GeoPoint) {
-        tripLocation.value = location
-    }
-}
-
-
-@Composable
-fun driverMapViewComposable(
-    routePoints: List<GeoPoint>? = null,
-    driverLocation: MutableState<GeoPoint?> = mutableStateOf(null)
-) {
-    val context = LocalContext.current
-    val mapView = remember { MapView(context) }
-    val marker = remember { Marker(mapView) }
-
-    LaunchedEffect(mapView) {
-        mapView.setTileSource(TileSourceFactory.MAPNIK)
-        mapView.controller.setZoom(15)
-        mapView.controller.setCenter(GeoPoint(30.033, 31.233))
-
-
-    }
-
-    AndroidView(
-        modifier = Modifier.fillMaxSize(),
-        factory = { mapView },
-        update = { mapView ->
-            mapView.overlays.clear()
-
-            // إضافة المسار على الخريطة
-            routePoints?.let {
-                val polyline = Polyline()
-                polyline.setPoints(it)
-                mapView.overlays.add(polyline)
+            if (showStartTrip) {
+              StartTrip()
             }
 
-            // إضافة السيارة (السائق)
-            driverLocation.value?.let { location ->
-                marker.position = location
-                marker.title = "Driver"
-                marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                marker.icon = ContextCompat.getDrawable(context, R.drawable.uber)
-                mapView.overlays.add(marker)
-            }
-
-            mapView.invalidate()
-        }
-    )
-
-    // تحريك السيارة على المسار
-    LaunchedEffect(routePoints) {
-        routePoints?.let { points ->
-            if (points.isNotEmpty()) {
-                for (i in 0 until points.size - 1) {
-                    val currentPoint = points[i]
-                    val nextPoint = points[i + 1]
-
-                    driverLocation.value = currentPoint
-
-                    // حساب اتجاه السيارة بين النقطتين
-                    val bearing = calculateBearing(currentPoint, nextPoint)
-                    marker.rotation = bearing
-
-                    delay(3000) // يتحرك كل 3 ثوانٍ
-                }
-            }
         }
     }
 }
 
-// حساب زاوية التوجيه بين نقطتين
-fun calculateBearing(start: GeoPoint, end: GeoPoint): Float {
-    val startLat = Math.toRadians(start.latitude)
-    val startLng = Math.toRadians(start.longitude)
-    val endLat = Math.toRadians(end.latitude)
-    val endLng = Math.toRadians(end.longitude)
 
-    val deltaLng = endLng - startLng
-    val y = sin(deltaLng) * cos(endLat)
-    val x = cos(startLat) * sin(endLat) - sin(startLat) * cos(endLat) * cos(deltaLng)
-    return ((Math.toDegrees(atan2(y, x)) + 360) % 360).toFloat()
-}
 
-/**
- * فك تشفير Polyline إلى قائمة من النقاط
- */
-fun decodePolyline(encoded: String): List<GeoPoint> {
-    val poly = mutableListOf<GeoPoint>()
-    var index = 0
-    val len = encoded.length
-    var lat = 0
-    var lng = 0
 
-    while (index < len) {
-        var b: Int
-        var shift = 0
-        var result = 0
 
-        do {
-            b = encoded[index++].code - 63
-            result = result or (b and 0x1f shl shift)
-            shift += 5
-        } while (b >= 0x20)
-
-        val dlat = if (result and 1 != 0) (result shr 1).inv() else result shr 1
-        lat += dlat
-
-        shift = 0
-        result = 0
-
-        do {
-            b = encoded[index++].code - 63
-            result = result or (b and 0x1f shl shift)
-            shift += 5
-        } while (b >= 0x20)
-
-        val dlng = if (result and 1 != 0) (result shr 1).inv() else result shr 1
-        lng += dlng
-
-        poly.add(GeoPoint(lat.toDouble() / 1E5, lng.toDouble() / 1E5))
-    }
-
-    return poly
-}
-
-/**
- * تحريك السيارة على المسار الصحيح خلال 5 دقائق
- */
-suspend fun animateCarOnRoute(
-    routePoints: List<GeoPoint>,
-    updateLocation: (GeoPoint) -> Unit
-) {
-    val duration = 300 // 5 دقائق (300 ثانية)
-    val steps = routePoints.size
-
-    if (steps < 2) return
-
-    val delayTime = duration * 1000 / steps // وقت التأخير بين كل نقطة
-
-    for (i in 0 until steps) {
-        updateLocation(routePoints[i])
-        delay(delayTime.toLong()) // تحرك ببطء وفقًا للمدة المحددة
-    }
-}
-
-fun getAddressFromLatLng(context: Context, latitude: Double, longitude: Double): String {
-    val geocoder = Geocoder(context, Locale.getDefault())
-    return try {
-        val addresses = geocoder.getFromLocation(latitude, longitude, 1)
-        if (!addresses.isNullOrEmpty()) {
-            addresses[0].getAddressLine(0) // أو addresses[0].locality للحصول على المدينة فقط
-        } else {
-            "Location not found"
-        }
-    } catch (e: Exception) {
-        "Error: ${e.message}"
-    }
-}
-
-//
-//@Composable
-//fun UserTripAcceptedScreen(
-//    driverName: String,
-//    driverRating: Float,
-//    vehicleModel: String,
-//    licensePlate: String,
-//    pickupLocation: String,
-//    dropoffLocation: String,
-//    eta: String,
-//    onCallDriver: () -> Unit,
-//    onMessageDriver: () -> Unit,
-//    onCancelTrip: () -> Unit
-//) {
-//    Column(
-//        modifier = Modifier
-//            .fillMaxSize()
-//            .padding(16.dp),
-//        verticalArrangement = Arrangement.spacedBy(16.dp)
-//    ) {
-//        // Driver and Vehicle Details
-//        Card(
-//            modifier = Modifier.fillMaxWidth(),
-//            shape = RoundedCornerShape(16.dp),
-//            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-//        ) {
-//            Column(
-//                modifier = Modifier
-//                    .fillMaxWidth()
-//                    .padding(16.dp),
-//                verticalArrangement = Arrangement.spacedBy(12.dp)
-//            ) {
-//                // Driver Details
-//                Row(
-//                    verticalAlignment = Alignment.CenterVertically,
-//                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-//                ) {
-//                    // Driver Photo
-//                    Box(
-//                        modifier = Modifier
-//                            .size(64.dp)
-//                            .clip(CircleShape)
-//                            .background(Color.LightGray),
-//                        contentAlignment = Alignment.Center
-//                    ) {
-//                        Icon(
-//                            painter = painterResource(R.drawable.person),
-//                            contentDescription = "Driver Photo",
-//                            modifier = Modifier.size(32.dp),
-//                            tint = Color.White
-//                        )
-//                    }
-//
-//                    // Driver Name and Rating
-//                    Column {
-//                        Text(
-//                            text = driverName,
-//                            fontSize = 18.sp,
-//                            fontWeight = FontWeight.Bold,
-//                            color = Color.Black
-//                        )
-//                        Row(
-//                            verticalAlignment = Alignment.CenterVertically,
-//                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-//                        ) {
-//                            Icon(
-//                                painter = painterResource(R.drawable.baseline_star_24),
-//                                contentDescription = "Rating",
-//                                modifier = Modifier.size(16.dp),
-//                                tint = Color.Yellow
-//                            )
-//                            Text(
-//                                text = driverRating.toString(),
-//                                fontSize = 14.sp,
-//                                color = Color.Gray
-//                            )
-//                        }
-//                    }
-//                }
-//
-//                // Vehicle Details
-//                Row(
-//                    verticalAlignment = Alignment.CenterVertically,
-//                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-//                ) {
-//                    Icon(
-//                        painter = painterResource(R.drawable.uber
-//                        ),
-//                        contentDescription = "Vehicle",
-//                        modifier = Modifier.size(32.dp),
-//                        tint = Color.Black
-//                    )
-//                    Column {
-//                        Text(
-//                            text = vehicleModel,
-//                            fontSize = 16.sp,
-//                            fontWeight = FontWeight.Medium,
-//                            color = Color.Black
-//                        )
-//                        Text(
-//                            text = licensePlate,
-//                            fontSize = 14.sp,
-//                            color = Color.Gray
-//                        )
-//                    }
-//                }
-//            }
-//        }
-//
-//        // Trip Details
-//        Card(
-//            modifier = Modifier.fillMaxWidth(),
-//            shape = RoundedCornerShape(16.dp),
-//            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-//        ) {
-//            Column(
-//                modifier = Modifier
-//                    .fillMaxWidth()
-//                    .padding(16.dp),
-//                verticalArrangement = Arrangement.spacedBy(12.dp)
-//            ) {
-//                // Pickup Location
-//                Row(
-//                    verticalAlignment = Alignment.CenterVertically,
-//                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-//                ) {
-//                    Icon(
-//                        painter = painterResource(R.drawable.circle),
-//                        contentDescription = "Pickup",
-//                        modifier = Modifier.size(24.dp),
-//                        tint = colorResource(R.color.primary_color)
-//                    )
-//                    Text(
-//                        text = pickupLocation,
-//                        fontSize = 16.sp,
-//                        color = Color.Black
-//                    )
-//                }
-//
-//                // Dropoff Location
-//                Row(
-//                    verticalAlignment = Alignment.CenterVertically,
-//                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-//                ) {
-//                    Icon(
-//                        painter = painterResource(R.drawable.travel),
-//                        contentDescription = "Dropoff",
-//                        modifier = Modifier.size(24.dp),
-//                        tint = colorResource(R.color.primary_color)
-//                    )
-//                    Text(
-//                        text = dropoffLocation,
-//                        fontSize = 16.sp,
-//                        color = Color.Black
-//                    )
-//                }
-//
-//                // ETA
-//                Row(
-//                    verticalAlignment = Alignment.CenterVertically,
-//                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-//                ) {
-//                    Icon(
-//                        painter = painterResource(R.drawable.clock),
-//                        contentDescription = "ETA",
-//                        modifier = Modifier.size(24.dp),
-//                        tint = colorResource(R.color.primary_color)
-//                    )
-//                    Text(
-//                        text = "ETA: $eta",
-//                        fontSize = 16.sp,
-//                        color = Color.Black
-//                    )
-//                }
-//            }
-//        }
-//
-//        // Call and Message Buttons
-//        Row(
-//            modifier = Modifier.fillMaxWidth(),
-//            horizontalArrangement = Arrangement.spacedBy(16.dp)
-//        ) {
-//            Button(
-//                onClick = onCallDriver,
-//                modifier = Modifier
-//                    .weight(1f)
-//                    .height(50.dp),
-//                colors = ButtonDefaults.buttonColors(colorResource(R.color.primary_color)),
-//                shape = RoundedCornerShape(12.dp)
-//            ) {
-//                Text(text = "Call Driver", color = Color.White, fontSize = 16.sp)
-//            }
-//
-//            Button(
-//                onClick = onMessageDriver,
-//                modifier = Modifier
-//                    .weight(1f)
-//                    .height(50.dp),
-//                colors = ButtonDefaults.buttonColors(Color.Transparent),
-//                border = BorderStroke(1.dp, colorResource(R.color.primary_color)),
-//                shape = RoundedCornerShape(12.dp)
-//            ) {
-//                Text(text = "Message", color = colorResource(R.color.primary_color), fontSize = 16.sp)
-//            }
-//        }
-//
-//        // Cancel Trip Button
-//        Button(
-//            onClick = onCancelTrip,
-//            modifier = Modifier
-//                .fillMaxWidth()
-//                .height(50.dp),
-//            colors = ButtonDefaults.buttonColors(Color.Red),
-//            shape = RoundedCornerShape(12.dp)
-//        ) {
-//            Text(text = "Cancel Trip", color = Color.White, fontSize = 16.sp)
-//        }
-//    }
-//}
-//UserTripAcceptedScreen(
-//driverName = "John Doe",
-//driverRating = 4.7f,
-//vehicleModel = "Toyota Corolla",
-//licensePlate = "ABC-1234",
-//pickupLocation = "123 Main St, Cairo",
-//dropoffLocation = "456 Elm St, Alexandria",
-//eta = "10 mins",
-//onCallDriver = { /* Handle Call Driver */ },
-//onMessageDriver = { /* Handle Message Driver */ },
-//onCancelTrip = { /* Handle Cancel Trip */ }
-//)
 
 

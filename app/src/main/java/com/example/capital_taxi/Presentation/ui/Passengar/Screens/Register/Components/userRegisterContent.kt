@@ -22,6 +22,8 @@ import com.example.capital_taxi.Presentation.Common.SignUpButton
 import com.example.capital_taxi.Presentation.Common.TermsAndConditionsCheckbox
 import com.example.capital_taxi.Presentation.Common.userMediaLoginOption
 import com.example.capital_taxi.R
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
 
 
 import kotlinx.coroutines.CoroutineScope
@@ -211,6 +213,39 @@ fun registerDriver(
             }
         }
     }
+}
+fun sendDriverToFirebase(
+    name: String,
+    username: String,
+    email: String,
+    phone: String,
+    carType: String,
+    carNumber: String,
+    context: Context
+) {
+    val db = FirebaseFirestore.getInstance()
+
+    val driverData = hashMapOf(
+        "id" to "", // مؤقت، هيتحدث بعد تسجيل الدخول
+        "name" to name,
+        "username" to username,
+        "email" to email,
+        "phone" to phone,
+        "carType" to carType,
+        "carNumber" to carNumber,
+        "createdAt" to FieldValue.serverTimestamp()
+    )
+
+    db.collection("drivers")
+        .add(driverData)
+        .addOnSuccessListener { documentRef ->
+            Log.d("FirebaseDriver", "Driver added with ID: ${documentRef.id}")
+            Toast.makeText(context, "Driver added to Firebase", Toast.LENGTH_SHORT).show()
+        }
+        .addOnFailureListener { e ->
+            Log.e("FirebaseDriver", "Error adding driver to Firebase: ${e.message}")
+            Toast.makeText(context, "Firebase add failed", Toast.LENGTH_SHORT).show()
+        }
 }
 
 

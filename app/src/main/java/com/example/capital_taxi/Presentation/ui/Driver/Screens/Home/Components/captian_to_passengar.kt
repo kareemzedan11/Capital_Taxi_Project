@@ -1,5 +1,7 @@
 package com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components
 
+import android.content.Context
+import android.util.Log
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -9,13 +11,20 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.ModalBottomSheetLayout
+import androidx.compose.material.ModalBottomSheetValue
+import androidx.compose.material.rememberModalBottomSheetState
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,277 +42,181 @@ import com.example.app.ui.theme.CustomFontFamily
 import com.example.app.ui.theme.responsiveTextSize
 import com.example.capital_taxi.Navigation.Destination
 import com.example.capital_taxi.R
+import com.example.capital_taxi.data.repository.graphhopper_response.Path
+import com.example.capital_taxi.data.utils.DirectionsPrefs
 import com.example.capital_taxi.domain.DirectionsViewModel
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun captainToPassenger(navController: NavController) {
-    val directionsViewModel: DirectionsViewModel = viewModel()
+fun captainToPassenger(navController: NavController,
+                       onTripStarted:()->Unit,
+                       context: Context, tripId: String) {
 
-    val duration by directionsViewModel.duration.collectAsState()
+    var distance by rememberSaveable { mutableStateOf<Double?>(null) }
+    var duration by rememberSaveable { mutableStateOf<Double?>(null) }
+    val bottomSheetState = rememberModalBottomSheetState(initialValue = ModalBottomSheetValue.Hidden)
+    val scope = rememberCoroutineScope()
+    // Firebase Firestore
+    val db = FirebaseFirestore.getInstance()
+    val tripRef = db.collection("trips")
 
-    // التأكد من أن duration ليس null
-    val hours = duration?.toInt() ?: 0 // إذا كانت duration null، استخدم 0
-    val minutes = ((duration?.minus(hours ?: 0))?.times(60))?.toInt() ?: 0 // إذا كانت duration null، استخدم 0
+    // الاستماع للتحديثات بناءً على TripId
+    LaunchedEffect(tripId) {
+        tripRef.whereEqualTo("_id", tripId)
+            .addSnapshotListener { snapshot, e ->
+                if (e != null) {
+                    Log.e("Firebase", "Error fetching trip data: ${e.message}")
+                    return@addSnapshotListener
+                }
+
+                // تحقق من وجود البيانات
+                if (snapshot != null && !snapshot.isEmpty) {
+                    val document = snapshot.documents[0]
+                    val data = document.data
+
+                    // التأكد من أن البيانات موجودة وتحديث المسافة والوقت
+                    data?.let {
+                        distance = it["distance"] as? Double
+                        val durationValue = it["time"] as? Long ?: 0L
+                        duration = durationValue.toDouble() / 1000.0  // تحويل من milliseconds إلى seconds
+
+                        Log.d("Firebase", "Data updated: Distance = $distance, Duration = $duration")
+                    }
+                }
+            }
+    }
+
+    // تحويل المسافة إلى كيلومترات أو متر
+    val formattedDistance = distance?.let {
+        if (it >= 1000) {
+            "${String.format("%.2f", it / 1000)} km" // تحويل للمتر إلى كيلومتر
+        } else {
+            "${it.toInt()}  m" // إبقاءها متر إذا كانت أقل من 1000 متر
+        }
+    } ?: "Loading..." // عرض Loading إذا كانت المسافة null
+
+    // تحويل الوقت إلى ساعات ودقائق
+    val formattedDuration = duration?.let {
+        val hours = (it / 3600).toInt() // حساب الساعات
+        val minutes = ((it % 3600) / 60).toInt() // حساب الدقائق
+        if (hours > 0) {
+            "$hours hour${if (hours > 1) "s" else ""} ${minutes} min"
+        } else {
+            "${minutes} min"
+        }
+    } ?: "Loading..." // عرض Loading إذا كانت المدة null
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(130.dp)
-                .align(Alignment.BottomCenter)
-                .padding(16.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 20.dp),
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 10.dp),
-                horizontalArrangement = Arrangement.Start,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    modifier = Modifier.clickable { navController.navigate(Destination.TripDetailsForDriver.route) },
-                    contentDescription = null,
-                    painter = painterResource(R.drawable.baseline_segment_24)
-                )
+        // Loader: لو لسه البيانات ما وصلتش
+        if (duration == null || distance == null) {
+            CircularProgressIndicator(
+                modifier = Modifier.align(Alignment.Center),
+                color = MaterialTheme.colorScheme.primary
+            )
+            DirectionsPrefs.clear(context)
 
-                Spacer(modifier = Modifier.weight(1f))
-
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = stringResource(R.string.meet_passenger),
-                        fontSize = responsiveTextSize(
-                            fraction = 0.06f,
-                            minSize = 14.sp,
-                            maxSize = 18.sp
-                        ),
-                        fontFamily = CustomFontFamily,
-                        color = Color.Black,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                Spacer(modifier = Modifier.weight(1f))
-            }
-        }
-    }
-}
+        } else {
+            Top_Navigation_Box(tripId)
+            ModalBottomSheetLayout(
+                sheetState = bottomSheetState,
+                sheetContent = {
 
 
-@Composable
-fun DriverTripAcceptedScreen(
-    userName: String,
-    userRating: Float,
-    pickupLocation: String,
-    dropoffLocation: String,
-    etaToPickup: String,
-    distanceToPickup: String,
-    onNavigate: () -> Unit,
-    onCallUser: () -> Unit,
-    onMessageUser: () -> Unit,
-    onCancelTrip: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // User Details
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // User Photo and Name
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // User Photo
-                    Box(
+                        TripDetailsForDriver(navController,
+
+                       onTripStarted = onTripStarted,
+                            menu_close = {bottomSheetState.hide()})
+
+
+                },
+                content = {
+                    Card(
                         modifier = Modifier
-                            .size(64.dp)
-                            .clip(CircleShape)
-                            .background(Color.LightGray),
-                        contentAlignment = Alignment.Center
+                            .fillMaxWidth()
+                            .height(150.dp)
+                            .align(Alignment.BottomCenter)
+                            .padding(16.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 20.dp),
+                        shape = RoundedCornerShape(16.dp)
                     ) {
-                        Icon(
-                            painter = painterResource(R.drawable.person),
-                            contentDescription = "User Photo",
-                            modifier = Modifier.size(32.dp),
-                            tint = Color.White
-                        )
-                    }
-
-                    // User Name and Rating
-                    Column {
-                        Text(
-                            text = userName,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Black
-                        )
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(12.dp),
+                            verticalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Icon(
-                                painter = painterResource(R.drawable.baseline_star_24),
-                                contentDescription = "Rating",
-                                modifier = Modifier.size(16.dp),
-                                tint = Color.Yellow
-                            )
-                            Text(
-                                text = userRating.toString(),
-                                fontSize = 14.sp,
-                                color = Color.Gray
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    modifier = Modifier.clickable {
+                                        // عند الضغط على الأيقونة، نعرض الـ Bottom Sheet
+                                        scope.launch { bottomSheetState.show() }
+                                    },
+                                    contentDescription = null,
+                                    painter = painterResource(R.drawable.baseline_segment_24),
+                                    tint = Color.Black
+                                )
+
+                                Spacer(modifier = Modifier.weight(1f))
+
+                                Text(
+                                    text = stringResource(R.string.meet_passenger),
+                                    fontSize = responsiveTextSize(0.06f, 14.sp, 18.sp),
+                                    fontFamily = CustomFontFamily,
+                                    color = Color.Black,
+                                    fontWeight = FontWeight.Bold
+                                )
+
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier.weight(1f), // يوزع المساحة بالتساوي بين الأعمدة
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(
+                                            text = "Time Left: \n$formattedDuration",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
+
+                                Box(
+                                    modifier = Modifier.weight(1f), // نفس الشيء هنا
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(
+                                            text = "Left Distance: \n $formattedDistance",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
-
-                // Pickup and Dropoff Locations
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    // Pickup Location
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.circle),
-                            contentDescription = "Pickup",
-                            modifier = Modifier.size(24.dp),
-                            tint = colorResource(R.color.primary_color)
-                        )
-                        Text(
-                            text = pickupLocation,
-                            fontSize = 16.sp,
-                            color = Color.Black
-                        )
-                    }
-
-                    // Dropoff Location
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.travel),
-                            contentDescription = "Dropoff",
-                            modifier = Modifier.size(24.dp),
-                            tint = colorResource(R.color.primary_color)
-                        )
-                        Text(
-                            text = dropoffLocation,
-                            fontSize = 16.sp,
-                            color = Color.Black
-                        )
-                    }
+            )
                 }
             }
         }
 
-        // Trip Details
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // ETA to Pickup
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.clock),
-                        contentDescription = "ETA",
-                        modifier = Modifier.size(24.dp),
-                        tint = colorResource(R.color.primary_color)
-                    )
-                    Text(
-                        text = "ETA to Pickup: $etaToPickup",
-                        fontSize = 16.sp,
-                        color = Color.Black
-                    )
-                }
 
-                // Distance to Pickup
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.travel),
-                        contentDescription = "Distance",
-                        modifier = Modifier.size(24.dp),
-                        tint = colorResource(R.color.primary_color)
-                    )
-                    Text(
-                        text = "Distance: $distanceToPickup",
-                        fontSize = 16.sp,
-                        color = Color.Black
-                    )
-                }
-            }
-        }
-
-        // Navigation and Contact Buttons
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Button(
-                onClick = onNavigate,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(50.dp),
-                colors = ButtonDefaults.buttonColors(colorResource(R.color.primary_color)),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text(text = "Navigate", color = Color.White, fontSize = 16.sp)
-            }
-
-            Button(
-                onClick = onCallUser,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(50.dp),
-                colors = ButtonDefaults.buttonColors(Color.Transparent),
-                border = BorderStroke(1.dp, colorResource(R.color.primary_color)),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text(text = "Call User", color = colorResource(R.color.primary_color), fontSize = 16.sp)
-            }
-        }
-
-        // Cancel Trip Button
-        Button(
-            onClick = onCancelTrip,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp),
-            colors = ButtonDefaults.buttonColors(Color.Red),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Text(text = "Cancel Trip", color = Color.White, fontSize = 16.sp)
-        }
-    }
-}

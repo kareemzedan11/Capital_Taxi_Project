@@ -40,6 +40,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,12 +57,19 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.capital_taxi.R
+import com.example.capital_taxi.domain.driver.model.acceptTripViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TripDetailsForDriver(navController: NavController) {
+fun TripDetailsForDriver(navController: NavController,
+                         onTripStarted:()->Unit,
+
+                         menu_close: suspend  () -> Unit) {
+
+    val coroutineScope = rememberCoroutineScope()
     var showBottomSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true,
@@ -88,57 +96,26 @@ fun TripDetailsForDriver(navController: NavController) {
             .background(colorResource(R.color.secondary_color))
     ) {
         Column(modifier = Modifier.background(colorResource(R.color.secondary_color))) {
-            // Back Icon and Title
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.White)
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = { navController.popBackStack() }) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .background(Color.Transparent)
-                            .border(2.dp, color = Color.Black, RoundedCornerShape(30.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            modifier = Modifier.size(26.dp),
-                            painter = painterResource(id = R.drawable.baseline_arrow_back_ios_new_24),
-                            contentDescription = "Back",
-                            tint = Color.Black
-                        )
-                    }
-                }
 
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = stringResource(R.string.trip_details),
-                    color = Color.Black,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
 
-            Column(modifier = Modifier.padding(vertical = 20.dp)) {
+            Column(modifier = Modifier.padding(vertical = 5.dp).background(colorResource(R.color.secondary_color))) {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(10.dp),
                     shape = RoundedCornerShape(8.dp),
                     elevation = CardDefaults.elevatedCardElevation(8.dp)
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color.White)
+                            .background(colorResource(R.color.secondary_color))
                     ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp)
+                                .background(colorResource(R.color.secondary_color))
+                                .padding(vertical =  16.dp)
                         ) {
                             // User Details
                             Row(
@@ -286,7 +263,12 @@ fun TripDetailsForDriver(navController: NavController) {
 
                 // Stop Accepting Trips Button
                 Button(
-                    onClick = { /* Handle invite */ },
+                    onClick = {
+
+                        coroutineScope.launch {
+                            menu_close()
+                        }
+                        onTripStarted() },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -295,7 +277,7 @@ fun TripDetailsForDriver(navController: NavController) {
                     colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black)
                 ) {
                     Text(
-                        text = stringResource(R.string.stop_accept_trips),
+                        text = "I'm There",
                         color = Color.White,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold

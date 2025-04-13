@@ -33,6 +33,7 @@ import com.example.capital_taxi.Presentation.Common.RegisterHeader
 import com.example.capital_taxi.Presentation.Common.TermsAndConditionsCheckbox
 import com.example.capital_taxi.Presentation.Common.userMediaLoginOption
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Register.Components.registerDriver
+import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Register.Components.sendDriverToFirebase
 import com.example.capital_taxi.R
 import java.io.File
 import java.io.FileOutputStream
@@ -48,7 +49,10 @@ fun driverSignupContent(navController: NavController) {
     val email = remember { mutableStateOf("") }
     val password = remember { mutableStateOf("") }
     val confirmPassword = remember { mutableStateOf("") }
+
     val phone = remember { mutableStateOf("") }
+    val carType = remember { mutableStateOf("") }
+    val carNumber = remember { mutableStateOf("") }
     var isChecked by remember { mutableStateOf(false) }
 
     val profileImage = remember { mutableStateOf<Bitmap?>(null) }
@@ -76,6 +80,8 @@ fun driverSignupContent(navController: NavController) {
             password = password,
             confirmPassword = confirmPassword,
             phone = phone,
+            carType = carType,
+            carNumber = carNumber
         )
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -96,6 +102,17 @@ fun driverSignupContent(navController: NavController) {
         driverSignUpButton(
             isEnabled = isChecked,
             onClick = {
+                sendDriverToFirebase(
+                    name.value,
+                    username.value,
+                    email.value,
+                    phone.value,
+                    carType.value,
+                    carNumber.value,
+                    context
+                )
+
+
                 registerDriver(
                     name.value,
                     username.value,

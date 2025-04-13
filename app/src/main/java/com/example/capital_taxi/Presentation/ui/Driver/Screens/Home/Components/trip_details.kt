@@ -43,7 +43,19 @@ import androidx.lifecycle.ViewModel
 
 
 import android.location.Location
-import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.TripViewModel4
+import android.media.MediaPlayer
+import androidx.annotation.OptIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackParameters
+import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.RawResourceDataSource
+import androidx.media3.exoplayer.ExoPlayer
+import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.Home_Components.TripViewModel4
+import com.example.capital_taxi.domain.driver.model.Instruction
+import com.example.capital_taxi.domain.driver.model.getInstructionsFromFirebase
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
@@ -54,31 +66,61 @@ import org.osmdroid.util.GeoPoint
 import java.io.IOException
 import java.util.Locale
 
+@OptIn(UnstableApi::class)
 @Composable
 fun TripDetailsCard(
     light: Boolean,
     trip: Trip,
     availableTrips: List<Trip>,
-
     tripViewModel: TripViewModel,
     onTripAccepted: () -> Unit,
-    onTripCancelled: () -> Unit // إضافة معالج إلغاء الرحلة){}
+    onTripCancelled: () -> Unit
 ) {
-    if (availableTrips.isEmpty()) return // لا تعرض شيئًا إذا لم تكن هناك رحلات
+    if (availableTrips.isEmpty()) return
     val tripViewModel2: TripViewModel = viewModel()
     val StatusTripViewModel: StatusTripViewModel = viewModel()
     val driverlocation: driverlocation = viewModel()
-    val trip = availableTrips.first() // أخذ أول رحلة متاحة
+    val trip = availableTrips.first()
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    // متغيرات لإدارة الرسالة الوامضة
+    var isMessageBlinking by remember { mutableStateOf(false) }
+    var notificationMessage by remember { mutableStateOf<String?>(null) }
+
+     var previousMessage by remember { mutableStateOf<String?>(null) }
+    // الدالة لتشغيل الصوت
+
+    fun playNotificationSoundSlow(context: Context) {
+        val exoPlayer = ExoPlayer.Builder(context).build()
+
+        val rawUri = RawResourceDataSource.buildRawResourceUri(R.raw.notification_sound)
+        val mediaItem = MediaItem.fromUri(rawUri)
+        exoPlayer.setMediaItem(mediaItem)
+
+        exoPlayer.setPlaybackParameters(PlaybackParameters(0.7f))
+        exoPlayer.prepare()
+        exoPlayer.play()
+
+        exoPlayer.addListener(object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == Player.STATE_ENDED) {
+                    exoPlayer.release()
+                }
+            }
+        })
+    }
+
+    val scrollState = rememberScrollState()
 
 
-    // متغير لتخزين الموقع مؤقتًا
-    val driverLocationState = remember { mutableStateOf<Location?>(null) }
-    var tripLocation by remember { mutableStateOf<com.example.capital_taxi.domain.Location?>(null) }
+
+
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .height(500.dp)
             .padding(16.dp),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
@@ -88,7 +130,7 @@ fun TripDetailsCard(
                 .fillMaxWidth()
                 .background(Color.White)
         ) {
-            // Blinking Light Animation
+            // تأثير الوميض للخلفية
             var blinkState by remember { mutableStateOf(true) }
             LaunchedEffect(Unit) {
                 while (true) {
@@ -112,10 +154,16 @@ fun TripDetailsCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .verticalScroll(scrollState) // ✅ أضف هذا السطر للتمرير
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+
+//                playNotificationSoundSlow(
+//                    context =context
+//                )
+                isMessageBlinking = true
                 // Trip Type and Price
                 Text(
                     text = "Comfort",
@@ -211,7 +259,7 @@ fun TripDetailsCard(
                         if (addresses != null && addresses.isNotEmpty()) {
                             val location = addresses[0]
                             val geoPoint =
-                                org.osmdroid.util.GeoPoint(location.latitude, location.longitude)
+                                GeoPoint(location.latitude, location.longitude)
                             onSuccess(geoPoint)
                         } else {
                             onError("🚫 لم يتم العثور على الإحداثيات لهذا العنوان")
@@ -231,6 +279,8 @@ fun TripDetailsCard(
                                     originAddress,
                                     onSuccess = { geoPoint ->
                                         tripViewModel3.updateTripLocation(geoPoint) // ✅ تحديث الحالة بعد التحويل
+
+
                                     },
                                     onError = { errorMessage ->
                                         Log.e(
@@ -249,6 +299,7 @@ fun TripDetailsCard(
 
 
 
+                val instructionState = remember { mutableStateOf<Instruction?>(null) }
 
                 Button(
                     onClick = {
@@ -282,6 +333,18 @@ fun TripDetailsCard(
                                 Log.e("TripDetailsCard", "❌ Error assigning driver: $errorMessage")
                             }
                         )
+                        getInstructionsFromFirebase(trip._id!!) { instructions ->
+                            if (instructions != null) {
+                                instructions.forEach {
+                                    Log.d("INSTRUCTION", it.text)
+                                }
+
+                                // مثلاً: خزن أول Instruction في State لعرضها في الواجهة
+                                instructionState.value = instructions.firstOrNull()
+                            } else {
+                                Log.e("INSTRUCTION", "Failed to get instructions")
+                            }
+                        }
 
                         // قبول الرحلة
                         tripViewModel.acceptTrip(
@@ -330,9 +393,21 @@ fun TripDetailsCard(
 
 
             }
+            notificationMessage?.let { message ->
+                Text(
+                    text = message,
+                    color = if (isMessageBlinking) Color.Red else Color.Black,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(8.dp),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }
+
 fun startUpdatingDriverLocation(tripId: String, driverId: String, context: Context) {
     val db = FirebaseFirestore.getInstance()
     val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)

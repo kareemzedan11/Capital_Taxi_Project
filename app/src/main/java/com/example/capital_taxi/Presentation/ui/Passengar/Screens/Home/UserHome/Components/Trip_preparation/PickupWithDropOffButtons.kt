@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -45,6 +47,7 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
@@ -58,6 +61,7 @@ import kotlinx.coroutines.launch
 import org.osmdroid.util.GeoPoint
 import java.util.Locale
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.capital_taxi.Navigation.Destination
 import com.example.capital_taxi.domain.DirectionsViewModel
 import com.example.capital_taxi.domain.FareViewModel
 import com.example.capital_taxi.domain.Location
@@ -135,7 +139,7 @@ fun PickupWithDropOffButtons(
                     coroutineScope.launch {
                         fetchGraphHopperSuggestions(
                             text,
-                            "71ab0bb4-9572-4423-ab8f-332deb2827a7"
+                            "e315c5d2-3d52-42f1-a338-f5e57fc3e82f"
                         ) { result ->
                             pickupSuggestions = result
                         }
@@ -320,82 +324,71 @@ fun PickupWithDropOffButtons(
                 )
             }
 
-                // LazyRow to display vehicle options
-            LazyRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(20.dp),
-                contentPadding = PaddingValues(16.dp)
-            ) {
-                itemsIndexed(vehicleOptionsState.value) { index, vehicle ->
-                    Box(
-                        modifier = Modifier
-                            .width(170.dp)
-                            .height(150.dp)
-                            .scale(if (selectedVehicleIndex == index) 1.16f else 1f)
-                            .shadow(
-                                elevation = 8.dp,
-                                shape = RoundedCornerShape(20.dp),
-                                clip = false
-                            )
-                            .background(color = Color.White, shape = RoundedCornerShape(20.dp))
-                            .clickable {
-                                selectedVehicleIndex = index
-                                selectedVehicleName = vehicle.name
-                            }
-                    ) {
-                        Column {
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxWidth()
-                                    .background(
-                                        color = colorResource(R.color.primary_color),
-                                        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Image(
-                                    painter = painterResource(vehicle.imageRes),
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
+            if (vehicleOptionsState.value.isNotEmpty()) {
+                val vehicle = vehicleOptionsState.value.first() // أول عربية في القائمة
 
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxWidth()
-                                    .background(
-                                        color = if (selectedVehicleIndex == index)
-                                            colorResource(R.color.primary_color)
-                                        else Color.White,
-                                        shape = RoundedCornerShape(
-                                            bottomStart = 20.dp,
-                                            bottomEnd = 20.dp
-                                        )
-                                    )
+                Box(
+                    modifier = Modifier
+                        .width(170.dp)
+                        .height(150.dp)
+                        .padding(top = 10.dp)
+                        .shadow(
+                            elevation = 8.dp,
+                            shape = RoundedCornerShape(20.dp),
+                            clip = false
+                        )
+                        .background(color = colorResource(R.color.primary_color) , shape = RoundedCornerShape(20.dp))
+                ) {
+                    Column {
+                        Box(
+                            modifier = Modifier
+                                .height(70.dp)
+
+                                .background(
+                                    color = colorResource(R.color.primary_color),
+                                    shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Image(
+                                painter = painterResource(vehicle.imageRes),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+
+                                .fillMaxWidth()
+                                .wrapContentHeight()
+                                .background(
+                                    color = colorResource(R.color.primary_color),
+                                    shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)
+                                )
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(start = 10.dp, top = 10.dp),
+                                verticalArrangement = Arrangement.Center
                             ) {
-                                Column(
-                                    modifier = Modifier.padding(start = 10.dp, top = 10.dp),
-                                    verticalArrangement = Arrangement.Center
-                                ) {
-                                    Text(
-                                        text = vehicle.name,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 20.sp,
-                                        color = if (selectedVehicleIndex == index) Color.White else Color.Black
-                                    )
-                                    Text(
-                                        text = "£${vehicle.price}",
-                                        fontSize = 18.sp,
-                                        color = if (selectedVehicleIndex == index) Color.White else Color.Black
-                                    )
-                                }
+                                Text(
+                                    text = vehicle.name,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 20.sp,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = "£${vehicle.price}",
+                                    fontSize = 18.sp,
+                                    color = Color.White
+                                )
                             }
                         }
                     }
-                }}}}
+                }
+            }
+        }}
     Spacer(modifier = Modifier.padding(top = 15.dp))
 
     if (selectedVehicleIndex != -1) {
@@ -439,4 +432,10 @@ class LocationViewModel : ViewModel() {
     fun setDropoffLocation(latLng: LatLng) {
         _dropoffLocation.value = latLng
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PickupWithDropOffButtonsPreview(){
+    PickupWithDropOffButtons(navController = NavController(LocalContext.current))
 }

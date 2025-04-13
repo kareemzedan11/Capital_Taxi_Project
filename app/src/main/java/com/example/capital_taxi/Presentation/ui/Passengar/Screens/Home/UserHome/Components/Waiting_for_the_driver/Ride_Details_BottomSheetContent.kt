@@ -21,8 +21,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Text
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.capital_taxi.Presentation.ui.Driver.Components.fetchDriverCarDetails
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.HorizontalImageScroll
 import com.example.capital_taxi.R
 import com.example.capital_taxi.domain.RetrofitClient
@@ -44,7 +49,23 @@ import kotlinx.coroutines.launch
 
 
 @Composable
-fun RideDetailsBottomSheetContent(navController:NavController) {
+fun RideDetailsBottomSheetContent(navController:NavController,tripid:String) {
+
+
+    val carType = remember { mutableStateOf("") }
+    val carNumber = remember { mutableStateOf("") }
+    val driverusername = remember { mutableStateOf("") }
+
+    LaunchedEffect(tripid) {
+        fetchDriverCarDetails(tripId = tripid, onResult = { type, number,username ->
+            carType.value = type
+            carNumber.value = number
+            driverusername.value=username
+
+        })
+    }
+
+
     Column(
         modifier = Modifier
             .background(Color.White)
@@ -130,25 +151,33 @@ fun RideDetailsBottomSheetContent(navController:NavController) {
                                         modifier = Modifier.padding(16.dp),
                                     ) {
                                         Column {
-                                            androidx.compose.material3.Text(
-                                                "Car Number ",
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 20.sp,
-                                                color = Color.Black.copy(alpha = .3f)
-                                            )
-                                            Spacer(modifier = Modifier.padding(10.dp))
+                                            // تحقق إذا كانت القيم فارغة
+                                            if (carNumber.value.isEmpty() || carType.value.isEmpty()) {
+                                                // عرض الدائرة عند تحميل البيانات
+                                                CircularProgressIndicator(
+                                                    color = Color.Blue, // يمكنك تعديل اللون
+                                                    strokeWidth = 4.dp // سمك الخط
+                                                )
+                                            } else {
+                                                // إذا كانت القيم موجودة، عرض النص
+                                                androidx.compose.material3.Text(
+                                                    carNumber.value,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 20.sp,
+                                                    color = Color.Black.copy(alpha = .3f)
+                                                )
+                                                Spacer(modifier = Modifier.padding(10.dp))
 
-                                            androidx.compose.material3.Text(
-                                                "Car Type",
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 20.sp,
-                                            )
-                                        }
-                                    }
-                                }
+                                                androidx.compose.material3.Text(
+                                                    carType.value,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 20.sp,
+                                                )
+                                            }
+                                        }}}
 
-                                Spacer(modifier = Modifier.padding(top = 16.dp))
-                                driverDetails()
+                                    Spacer(modifier = Modifier.padding(top = 16.dp))
+                                driverDetails(driverusername= driverusername.value)
                                 Spacer(modifier = Modifier.padding(top = 16.dp))
 
                                 callAndChat(navController )

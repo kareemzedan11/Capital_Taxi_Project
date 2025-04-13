@@ -105,6 +105,7 @@ fun RideHistoryCard(
         }
     }
 }
+
 @Composable
 fun RideHistoryList(token: String) {
     var trips by remember { mutableStateOf<List<Trip>>(emptyList()) }

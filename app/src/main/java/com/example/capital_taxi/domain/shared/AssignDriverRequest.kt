@@ -4,21 +4,15 @@ import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.*
 import androidx.lifecycle.ViewModel
-import com.example.capital_taxi.domain.Location
 import com.example.capital_taxi.domain.RetrofitClient
 import com.example.capital_taxi.domain.Trip
 import com.example.capital_taxi.domain.TripRequest
+import com.example.capital_taxi.domain.TripResponse
 import com.google.firebase.crashlytics.buildtools.reloc.com.google.common.reflect.TypeToken
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import okhttp3.OkHttpClient
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
-import retrofit2.http.Body
-import retrofit2.http.Header
-import retrofit2.http.POST
 import java.util.UUID
 
 data class LocationData(
@@ -136,14 +130,14 @@ class TripViewModel : ViewModel() {
     fun createTrip(
         context: Context,
         userId: String,
-        origin: Location,
-        destination: Location,
+        origin: String,
+        destination: String,
         paymentMethod: String,
         fare: Double,
         distance: Double,
         token: String,
         coroutineScope: CoroutineScope,
-        onSuccess: (com.example.capital_taxi.domain.TripResponse) -> Unit,
+        onSuccess: (TripResponse) -> Unit,
         onError: (String) -> Unit
     ) {
         if (userId.isBlank()) {
@@ -154,8 +148,8 @@ class TripViewModel : ViewModel() {
         val tripRequest = TripRequest(
             _id = "",
             user = userId,
-            origin = "${origin.lat},${origin.lng}",
-            destination = "${destination.lat},${destination.lng}",
+            origin =origin,
+            destination = destination,
 
             paymentMethod = paymentMethod,
             fare = fare,

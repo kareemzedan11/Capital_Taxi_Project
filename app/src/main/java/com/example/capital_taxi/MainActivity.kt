@@ -71,6 +71,7 @@ class MainActivity : ComponentActivity() {
         Configuration.getInstance().load(applicationContext, androidx.preference.PreferenceManager.getDefaultSharedPreferences(applicationContext))
 
         setContent {
+
             val currentLanguage = remember { mutableStateOf(languageCode) }
             CompositionLocalProvider(
                 LocalLayoutDirection provides if (currentLanguage.value == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr
@@ -108,5 +109,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
-

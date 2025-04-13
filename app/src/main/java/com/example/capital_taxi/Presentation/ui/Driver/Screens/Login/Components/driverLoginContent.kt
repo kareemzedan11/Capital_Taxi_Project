@@ -66,6 +66,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.firestore
 import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.tasks.await
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
@@ -118,9 +119,24 @@ fun driverLoginContent(
                         editor.putString("driver_id", userId)
                         editor.apply()
 
+                        val db = FirebaseFirestore.getInstance()
+                        val driverRef = db.collection("drivers")
+                            .whereEqualTo("email", email)
+                            .get()
+                            .await()
 
+                        if (!driverRef.isEmpty) {
+                            val driverDoc = driverRef.documents[0]
 
-
+                            // ✅ تحديث حقل id بالقيمة الصحيحة من السيرفر
+                            driverDoc.reference.update("id", userId)
+                                .addOnSuccessListener {
+                                    Log.d("Login", "✅ تم تحديث الـ driver ID في Firebase بنجاح")
+                                }
+                                .addOnFailureListener { e ->
+                                    Log.e("Login", "❌ فشل تحديث الـ driver ID في Firebase: ${e.message}")
+                                }
+                        }
 
                         Log.d("Login", "✅ تسجيل الدخول ناجح | Token: $token | UserID: $userId")
                         navController.navigate(Destination.DriverHomeScreen.route)
@@ -137,6 +153,8 @@ fun driverLoginContent(
             }
         }
     }
+
+
 
 
 

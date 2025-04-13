@@ -82,6 +82,8 @@ dependencies {
     implementation ("androidx.compose.material3:material3:")
     implementation ("androidx.compose.foundation:foundation:")
     implementation ("androidx.navigation:navigation-compose:")
+    implementation ("androidx.media3:media3-exoplayer:1.2.1")
+    implementation ("androidx.media3:media3-ui:1.2.1")
 
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -105,6 +107,7 @@ dependencies {
     implementation(libs.androidx.runtime.livedata)
     implementation(libs.firebase.database.ktx)
     implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.media3.exoplayer)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

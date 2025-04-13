@@ -27,28 +27,6 @@ import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.
 import com.example.capital_taxi.R
 
 
-@Composable
-fun RideDetailsScreen(navController: NavController) {
-
-
-    Column(
-        modifier = Modifier.fillMaxSize()
-
-    ) {
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxSize()
-
-
-        ) {
-            DraggableBottomSheet(sheetContent =  { RideDetailsBottomSheetContent(navController) } )
-        }
-
-
-    }
-}
 
 
 

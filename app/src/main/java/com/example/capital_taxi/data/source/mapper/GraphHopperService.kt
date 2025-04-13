@@ -9,6 +9,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
@@ -19,17 +23,29 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.car_anamite.calculateBearing
 import com.example.capital_taxi.R
 import com.example.capital_taxi.domain.shared.decodePolyline
 import com.example.capital_taxi.domain.storedPoints
 import com.google.android.gms.location.*
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
 
-
+  fun interpolateLocation(
+    start: GeoPoint,
+    end: GeoPoint,
+    fraction: Float
+): GeoPoint {
+    return GeoPoint(
+        start.latitude + (end.latitude - start.latitude) * fraction,
+        start.longitude + (end.longitude - start.longitude) * fraction
+    )
+}
 @Composable
 fun MapViewComposable(
     startPoint: GeoPoint? = null,
@@ -57,6 +73,7 @@ fun MapViewComposable(
                 val startMarker = Marker(mapView)
                 startMarker.position = start
                 startMarker.title = "Start"
+
                 mapView.overlays.add(startMarker)
             }
 
@@ -64,6 +81,7 @@ fun MapViewComposable(
                 val endMarker = Marker(mapView)
                 endMarker.position = end
                 endMarker.title = "End"
+
                 mapView.overlays.add(endMarker)
             }
             var encodedPolyline = storedPoints
@@ -80,33 +98,95 @@ fun MapViewComposable(
             endPoint?.let { mapView.controller.setZoom(15) }
         }
     )
-}@Composable
-fun DriverMapView(driverLocation: GeoPoint?, bearing: Float) {
+}
+@Composable
+fun DriverMapView(
+    currentLocation: GeoPoint?,
+    previousLocation: GeoPoint?, // Add previous location for bearing calculation
+    bearing: Float? = null // Optional manual bearing override
+) {
     val context = LocalContext.current
     val mapView = remember { MapView(context) }
 
-    LaunchedEffect(mapView) {
-        mapView.setTileSource(org.osmdroid.tileprovider.tilesource.TileSourceFactory.MAPNIK)
-        mapView.controller.setZoom(15)
-        driverLocation?.let { mapView.controller.setCenter(it) }
+    // حالة للاتجاه الحالي مع تحريك سلس
+    val animatedBearing = remember { Animatable(0f) }
+
+    // حالة للموقع الحالي مع تحريك سلس
+    val animatedPosition = remember { mutableStateOf<GeoPoint?>(null) }
+
+    // حالة لتقدم التحريك
+    val animationProgress = remember { Animatable(0f) }
+
+    // حساب الاتجاه عند تغيير الموقع
+    LaunchedEffect(currentLocation, previousLocation) {
+        if (currentLocation != null && previousLocation != null) {
+            val newBearing = calculateBearing(previousLocation, currentLocation).toFloat()
+
+            // إعادة تعيين التحريك
+            animationProgress.snapTo(0f)
+            animatedPosition.value = previousLocation
+
+            // بدء تحريك الموقع والاتجاه
+            launch {
+                animationProgress.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(
+                        durationMillis = 2000, // مدة التحريك 2 ثانية
+                        easing = LinearEasing
+                    )
+                )
+            }
+
+            launch {
+                animatedBearing.animateTo(
+                    targetValue = newBearing,
+                    animationSpec = tween(
+                        durationMillis = 2000,
+                        easing = LinearOutSlowInEasing // تأثير تدريجي
+                    )
+                )
+            }
+        } else if (currentLocation != null) {
+            animatedPosition.value = currentLocation
+        }
     }
 
+    // تحديث الموضع المتحرك أثناء التحريك
+    LaunchedEffect(animationProgress.value) {
+        if (currentLocation != null && previousLocation != null) {
+            animatedPosition.value = interpolateLocation(
+                previousLocation,
+                currentLocation,
+                animationProgress.value
+            )
+        }
+    }
+
+    // تهيئة الخريطة
+    LaunchedEffect(mapView) {
+        mapView.setTileSource(TileSourceFactory.MAPNIK)
+        mapView.controller.setZoom(18.0)
+        currentLocation?.let { mapView.controller.setCenter(it) }
+    }
+
+    // واجهة الخريطة
     AndroidView(
         modifier = Modifier.fillMaxSize(),
         factory = { mapView },
         update = { mapView ->
             mapView.overlays.clear()
 
-            driverLocation?.let { location ->
+            animatedPosition.value?.let { location ->
                 val driverMarker = Marker(mapView).apply {
                     position = location
-                    title = "Driver Location"
-                    icon = ContextCompat.getDrawable(context, R.drawable.ic_car)
-                    rotation = bearing // ضبط اتجاه السيارة
+                    icon = ContextCompat.getDrawable(context, R.drawable.ic_car)?.apply {
+                        setTint(0xff0000)
+                    }
+                    rotation = animatedBearing.value
+                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                 }
                 mapView.overlays.add(driverMarker)
 
-                // تحريك الكاميرا بسلاسة مع السيارة
                 mapView.controller.animateTo(location)
             }
         }

@@ -2,9 +2,11 @@ package com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -38,12 +40,13 @@ fun TripArrivedCard2() {
     var rating by remember { mutableStateOf(0f) } // Store the rating value
     var comment by remember { mutableStateOf("") } // Store the comment
     var showDialog by remember { mutableStateOf(false) } // Show dialog after submission
-
+Box(modifier = Modifier.fillMaxSize()){
     Card(
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(8.dp),
         modifier = Modifier
             .fillMaxWidth()
+            .align(Alignment.BottomCenter)
             .padding(16.dp)
     ) {
         Column(
@@ -209,7 +212,7 @@ fun TripArrivedCard2() {
             }
         )
     }
-}
+}}
 
 
 

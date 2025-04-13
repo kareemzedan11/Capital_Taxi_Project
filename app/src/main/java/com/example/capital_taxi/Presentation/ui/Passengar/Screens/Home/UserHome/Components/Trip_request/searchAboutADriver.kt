@@ -1,5 +1,6 @@
 package com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.Trip_request
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -38,10 +39,50 @@ import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.example.capital_taxi.R
 import kotlinx.coroutines.delay
+import java.time.LocalTime
+import android.content.Context
+import android.util.Log
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.capital_taxi.domain.DirectionsViewModel
+import com.example.capital_taxi.domain.shared.TripInfo
+import com.example.capital_taxi.domain.shared.TripInfoViewModel
+import com.example.capital_taxi.domain.shared.TripViewModel
+import java.time.Duration
+ import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.tasks.await
 
 
+@SuppressLint("NewApi")
 @Composable
 fun searchAboutADriver() {
+
+    val tripInfoViewModel: DirectionsViewModel = viewModel()
+    val durationState by tripInfoViewModel.duration.collectAsState() // اقرأ القيمة من الـ ViewModel
+
+    val currentTime = LocalTime.now()
+    val formattedArrivalTime = remember(durationState) {
+        durationState?.let {
+            Log.d("ARRIVAL_DEBUG", "Duration in minutes = $it")
+            val durationLeft = Duration.ofMillis((it * 60_000).toLong()) // يحوّل الدقايق إلى millis بدقة
+
+            val arrivalTime = currentTime.plus(durationLeft)
+            arrivalTime.format(DateTimeFormatter.ofPattern("hh:mm a"))
+        } ?: "..."
+    }
+
+
     Column {
         Box(
             modifier = Modifier
@@ -146,7 +187,7 @@ fun searchAboutADriver() {
                             Spacer(modifier = Modifier.padding(start = 10.dp))
 
                                 Text(
-                                    "3:24 ${stringResource(R.string.Pm)}",
+                                    formattedArrivalTime,
 
                                     fontSize = 18.sp,
                                     fontWeight = FontWeight.W600

@@ -16,6 +16,7 @@ import com.google.gson.annotations.SerializedName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -218,6 +219,21 @@ class DirectionsViewModel : ViewModel() {
     }
 
 }
+
+
+class mapDirectionsViewModel : ViewModel() {
+    private val _duration = MutableStateFlow<Int?>(null)
+    val duration: StateFlow<Int?> = _duration
+
+    private val _distance = MutableStateFlow<Double?>(null)
+    val distance: StateFlow<Double?> = _distance
+
+    fun updateDirections(newDuration: Int, newDistance: Double) {
+        _duration.value = newDuration
+        _distance.value = newDistance
+    }
+}
+
 data class UpdateLocationRequest(
     val driverId: String,
     val lat: Double,

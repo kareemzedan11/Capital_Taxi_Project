@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- للملفات في مجلد Music الخارجي -->
+    <external-files-path name="music" path="Music/" />
+
+    <!-- للملفات في التخزين الداخلي -->
+    <files-path name="internal" path="recordings/" />
+
+    <!-- للملفات المؤقتة -->
+    <cache-path name="cache" path="audio_cache/" />
+</paths>

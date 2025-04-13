@@ -3,6 +3,7 @@ package com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome
 
 import AcceptanceMap
 import TopBar
+import android.annotation.SuppressLint
 import android.content.Context
 import android.location.Geocoder
 import android.location.LocationManager
@@ -54,10 +55,8 @@ import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.Trip_preparation.PickupWithDropOffButtons
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.Trip_request.searchAboutADriver
 import com.example.capital_taxi.domain.Location
-import com.example.capital_taxi.domain.fetchTripDirections
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.StatusTripViewModel
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.driverlocation
-import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.TripViewModel2
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.Trip_preparation.LocationViewModel
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.Waiting_for_the_driver.RideDetailsBottomSheetContent
 import com.example.capital_taxi.domain.DirectionsViewModel
@@ -93,9 +92,21 @@ import java.io.IOException
 
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.Home_Components.TripViewModel2
+import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.Home_Components.getAddressFromLatLng
+import com.example.capital_taxi.data.repository.graphhopper_response.Details
+import com.example.capital_taxi.data.repository.graphhopper_response.Hints
+import com.example.capital_taxi.data.repository.graphhopper_response.Info
+import com.example.capital_taxi.data.repository.graphhopper_response.Instruction
+import com.example.capital_taxi.data.repository.graphhopper_response.Path
+import com.example.capital_taxi.data.repository.graphhopper_response.graphhopper_response
+import com.example.capital_taxi.domain.shared.TripInfoViewModel
+import com.google.firebase.firestore.SetOptions
 import com.google.maps.android.PolyUtil
+import findNearestIndex
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.tasks.await
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
@@ -122,6 +133,7 @@ fun homeScreenContent(navController: NavController) {
     val permissionViewModel: PermissionViewModel = viewModel()
     val context = LocalContext.current
 
+    val tripInfoViewmodel: TripInfoViewModel = viewModel()
 
     LaunchedEffect(context) {
         checkLocationPermission(context, permissionViewModel)
@@ -160,6 +172,8 @@ fun homeScreenContent(navController: NavController) {
     var destinationLat by remember { mutableStateOf(0.0) }
     var destinationLng by remember { mutableStateOf(0.0) }
     val tripViewModel: TripViewModel = viewModel()
+
+
     var tripId by remember { mutableStateOf<String?>(null) }
 
     var startPoint = remember { mutableStateOf<GeoPoint?>(null) }
@@ -304,6 +318,7 @@ fun homeScreenContent(navController: NavController) {
                                 TrackDriverScreen(
                                     tripId = it,
 
+
                                     passengerLocation = startPoint.value
                                 )
                             }
@@ -376,7 +391,7 @@ fun homeScreenContent(navController: NavController) {
                             )
                     ) {
                         if (tripStatus == "accepted") {
-                            RideDetailsBottomSheetContent(navController)
+                            RideDetailsBottomSheetContent(navController,tripId!!)
                         } else {
                             Log.d("UI", "🚀 تم تغيير الرحلة: $selectedTripId ، الحالة: $tripStatus")
 
@@ -450,15 +465,20 @@ fun homeScreenContent(navController: NavController) {
 
                     }
                     // Use the current location as the origin
-                    val origin = Location(
-                        startPoint.value?.latitude ?: 0.0,
-                        startPoint.value?.longitude ?: 0.0
+                    val origin = getAddressFromLatLng(
+                        context,
+
+                        latitude = startPoint.value?.latitude ?: 0.0,
+                        longitude = startPoint.value?.longitude ?: 0.0
                     )
 
                     // Use the selected destination as the destination
                     val destination =
-                        Location(endPoint.value?.latitude ?: 0.0, endPoint.value?.longitude ?: 0.0)
+                        getAddressFromLatLng(context,
+                            latitude = endPoint.value?.latitude ?: 0.0,
+                            longitude = endPoint.value?.longitude ?: 0.0
 
+                        )
                     val fare = fare
                     val distanceInKm = distance
                     val paymentMethod = "cash"
@@ -565,17 +585,29 @@ fun TrackDriverScreen(
         onError: (String) -> Unit
     ) {
         isLoading = true
+        Log.d("tripId 2 ", tripId)
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val response = DirectionsApi.getDirections(start, end)
+                val response = DirectionsApi.getDirections(
+                    start, end,
+                    apiKey =  "71ab0bb4-9572-4423-ab8f-332deb2827a7",
+                    tripId = tripId
+                )
 
                 withContext(Dispatchers.Main) {
                     when (response) {
                         is ResultWrapper.Success -> {
-                            directionsFetched = true
-                            onSuccess(response.value)
+                            val path = response.value.paths.firstOrNull()
+                            if (path != null) {
+                                val geoPoints = PolyUtil.decode(path.points).map {
+                                    GeoPoint(it.latitude, it.longitude)
+                                }
+                                directionsFetched = true
+                                onSuccess(geoPoints)
+                            }
                         }
+
 
                         is ResultWrapper.Failure -> {
                             onError(response.exception.message ?: "Unknown error")
@@ -623,7 +655,9 @@ fun TrackDriverScreen(
                 end = passengerLocation!!,
                 onSuccess = { routePoints ->
                     directions = routePoints
-                    Log.d("OSRM Directions", "✅ Directions fetched: ${routePoints.size} points")
+                    driverLocation?.let { findNearestIndex(current = it, path =routePoints ) }
+                    directionsFetched = true  // ✅ ضروري يتكتب هنا أول ما النجاح يحصل
+                    Log.d("OSRM Directions", "✅ Directions fetched: ${routePoints} points")
                 },
                 onError = { error ->
                     Log.e("OSRM Directions", "❌ Error: $error")
@@ -636,6 +670,9 @@ fun TrackDriverScreen(
 
     // UI
     Box(modifier = Modifier.fillMaxSize()) {
+
+
+
         AcceptanceMap(
             driverLocation = driverLocation,
             passengerLocation = passengerLocation,
@@ -658,42 +695,204 @@ sealed class ResultWrapper<out T> {
     data class Failure(val exception: Throwable) : ResultWrapper<Nothing>()
 }
 
-// DirectionsApi.kt
 object DirectionsApi {
-    private const val OSRM_BASE_URL = "https://router.project-osrm.org/route/v1/driving/"
+    private const val BASE_URL = "https://graphhopper.com/api/1/route?"
     private val client = OkHttpClient()
 
     suspend fun getDirections(
         start: GeoPoint,
-        end: GeoPoint
-    ): ResultWrapper<List<GeoPoint>> = withContext(Dispatchers.IO) {
+        end: GeoPoint,
+        apiKey: String,
+        context: Context? = null,
+        tripId:String,
+
+    ): ResultWrapper<graphhopper_response> = withContext(Dispatchers.IO) {
         try {
-            val url =
-                "$OSRM_BASE_URL${start.longitude},${start.latitude};${end.longitude},${end.latitude}?overview=full"
+            val url = "${BASE_URL}point=${start.latitude},${start.longitude}" +
+                    "&point=${end.latitude},${end.longitude}" +
+                    "&instructions=true&points_encoded=true&key=$apiKey"
 
-            val request = Request.Builder()
-                .url(url)
-                .build()
-
+            val request = Request.Builder().url(url).build()
             val response = client.newCall(request).execute()
 
             if (!response.isSuccessful) {
-                return@withContext ResultWrapper.Failure(Exception("API error: ${response.code}"))
+                return@withContext ResultWrapper.Failure(Exception("API Error: ${response.code}"))
             }
 
-            val json = response.body?.string()?.let { JSONObject(it) }
-            val geometry = json?.getJSONArray("routes")
-                ?.getJSONObject(0)
-                ?.getString("geometry")
+            val json = JSONObject(
+                response.body?.string()
+                    ?: return@withContext ResultWrapper.Failure(Exception("Empty response"))
+            )
+            val result = parseGraphHopperResponse(json,  context,tripId)
+            ResultWrapper.Success(result)
 
-            geometry?.let { decodePolyline(it) }?.let { ResultWrapper.Success(it) }
-                ?: ResultWrapper.Failure(Exception("Invalid response format"))
         } catch (e: Exception) {
             ResultWrapper.Failure(e)
         }
     }
 
-    private fun decodePolyline(encoded: String): List<GeoPoint> {
+      @SuppressLint("SuspiciousIndentation")
+      fun parseGraphHopperResponse(
+        json: JSONObject,
+        context: Context? = null,
+        tripId:String,
+        tripViewModel: TripInfoViewModel ?=null
+
+      ): graphhopper_response {
+        val info = json.getJSONObject("info")
+        val pathsJson = json.getJSONArray("paths")
+        val paths = mutableListOf<Path>()
+
+        fun JSONArray.toListString(): List<String> {
+            return List(length()) { getString(it) }
+        }
+
+        val infoObj = Info(
+            copyrights = info.getJSONArray("copyrights").toListString(),
+            road_data_timestamp = info.getString("road_data_timestamp"),
+            took = info.getInt("took")
+        ).also { println("Info: $it") }
+
+        for (i in 0 until pathsJson.length()) {
+            val pathObj = pathsJson.getJSONObject(i)
+            val instructions = mutableListOf<Instruction>()
+
+            val instructionsJson = pathObj.getJSONArray("instructions")
+            for (j in 0 until instructionsJson.length()) {
+                val instObj = instructionsJson.getJSONObject(j)
+                instructions.add(
+                    Instruction(
+                        distance = instObj.getDouble("distance"),
+                        exit_number = instObj.optInt("exit_number", 0),
+                        exited = instObj.optBoolean("exited", false),
+                        interval = instObj.getJSONArray("interval").let { arr ->
+                            List(arr.length()) { arr.getInt(it) }
+                        },
+                        last_heading = instObj.optDouble("last_heading", 0.0),
+                        sign = instObj.getInt("sign"),
+                        street_destination = instObj.optString("street_destination", ""),
+                        street_name = instObj.optString("street_name", ""),
+                        text = instObj.getString("text"),
+                        time = instObj.getInt("time"),
+                        turn_angle = instObj.optDouble("turn_angle", 0.0)
+                    )
+                )
+            }
+
+            val path = Path(
+                ascend = pathObj.getDouble("ascend"),
+                bbox = pathObj.getJSONArray("bbox").let { arr ->
+                    List(arr.length()) { arr.getDouble(it) }
+                },
+                descend = pathObj.getDouble("descend"),
+                details = Details(),
+                distance = pathObj.getDouble("distance"),
+                instructions = instructions,
+                legs = emptyList(),
+                points = pathObj.getString("points"),
+                points_encoded = pathObj.getBoolean("points_encoded"),
+                points_encoded_multiplier = pathObj.getDouble("points_encoded_multiplier"),
+                snapped_waypoints = pathObj.getString("snapped_waypoints"),
+                time = pathObj.getInt("time"),
+                transfers = pathObj.getInt("transfers"),
+                weight = pathObj.getDouble("weight")
+            )
+
+            Log.d("New", "New path:   time=${pathObj.getInt("time")}")
+            paths.add(path)
+
+// تجهيز التعليمات بصيغة Map
+            val instructionList = instructions.map { inst ->
+                mapOf(
+                    "text" to inst.text,
+                    "distance" to inst.distance,
+                    "time" to inst.time,
+                    "sign" to inst.sign,
+                    "street_name" to inst.street_name,
+                    "street_destination" to inst.street_destination,
+                    "exit_number" to inst.exit_number,
+                    "exited" to inst.exited,
+                    "interval" to inst.interval,
+                    "last_heading" to inst.last_heading,
+                    "turn_angle" to inst.turn_angle
+                )
+            }
+
+            val db = FirebaseFirestore.getInstance()
+
+            val tripId = tripId
+            val tripRef = db.collection("trips") // افترض أن الـ collection التي تحتوي على البيانات اسمها "trips"
+
+// Coroutine للبحث المتكرر مع تأخير
+            GlobalScope.launch {
+                var attempts = 0
+                val maxAttempts = 5  // عدد المحاولات
+                var success = false
+
+                while (attempts < maxAttempts && !success) {
+                    try {
+                        // استرجاع البيانات من Firebase باستخدام الـ Tripid
+                        val querySnapshot = tripRef.whereEqualTo("_id", tripId).get().await()  // await تجعلها متماثلة مع التأخير
+
+                        if (!querySnapshot.isEmpty) {
+                            // إذا تم العثور على بيانات تطابق الـ Tripid
+                            val document = querySnapshot.documents[0] // البيانات المتطابقة من Firebase
+                            val data = document.data
+
+                            // الآن تحقق إذا كان _id في البيانات الموجودة يساوي Tripid
+                            if (data != null && data["_id"] == tripId) {
+                                // البيانات تطابقت، يمكنك الآن إضافة بيانات جديدة أو تحديثها
+                                val newTripInfo = hashMapOf(
+                                    "distance" to path.distance,
+                                    "points" to path.points,
+                                    "time" to pathObj.getInt("time"),
+                                    "instructions" to instructionList // ✅ تم إضافة التعليمات هنا
+                                )
+
+                                Log.d("Firebase", "New path: distance=${path.distance}, time=${path.time}")
+
+                                // إرسال أو تحديث البيانات على Firebase تحت هذا الـ Tripid
+                                document.reference.set(newTripInfo, SetOptions.merge()) // استخدام merge للتحديث بدون مسح البيانات السابقة
+
+                                Log.d("Firebase", "Data successfully updated in Firebase!")
+                                success = true  // لو تم التحديث بنجاح
+                            } else {
+                                Log.d("Firebase", "ID mismatch: _id does not match TripId")
+                            }
+                        } else {
+                            Log.d("Firebase", "No matching Trip found with the given Trip ID.")
+                        }
+                    } catch (e: Exception) {
+                        // في حالة حدوث أي خطأ
+                        Log.e("Firebase", "Error retrieving trip data: ${e.message}")
+                    }
+
+                    if (!success) {
+                        attempts++
+                        Log.d("Firebase", "Attempt #$attempts failed, retrying in 3 seconds...")
+                        delay(3000) // تأخير لمدة 3 ثواني قبل المحاولة مرة أخرى
+                    }
+                }
+
+                if (!success) {
+                    Log.e("Firebase", "Max attempts reached. Data update failed.")
+                }
+
+            }
+
+
+        }
+
+        val hints = Hints(
+            visitedNodesSum = json.getJSONObject("hints").getInt("visited_nodes.sum"),
+            visitedNodesAverage = json.getJSONObject("hints").getDouble("visited_nodes.average")
+        )
+
+          return graphhopper_response(info = infoObj, paths = paths, hints = hints)
+    }
+
+
+private fun decodePolyline(encoded: String): List<GeoPoint> {
         val poly = PolyUtil.decode(encoded)
         return poly.map { GeoPoint(it.latitude, it.longitude) }
     }
@@ -737,7 +936,7 @@ suspend fun fetchGraphHopperSuggestions(
         try {
             val encodedQuery = URLEncoder.encode(query, "UTF-8")
             val url =
-                "https://graphhopper.com/api/1/geocode?q=$encodedQuery&locale=en&limit=5&key=$apiKey"
+                "https://graphhopper.com/api/1/geocode?q=$encodedQuery&locale=en&limit=5&key=71ab0bb4-9572-4423-ab8f-332deb2827a7"
 
             val connection = URL(url).openConnection() as HttpURLConnection
             connection.requestMethod = "GET"

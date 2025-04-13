@@ -23,7 +23,7 @@ import com.example.capital_taxi.R
 
 
 @Composable
-fun driverDetails() {
+fun driverDetails(driverusername:String) {
     Row (modifier = Modifier.padding(horizontal = 10.dp)){
         Image(
             modifier = Modifier.size(40.dp),
@@ -37,7 +37,7 @@ fun driverDetails() {
                 Spacer(modifier = Modifier.padding(5.dp))
 
                 Text(
-                    "Mohamed",
+                    driverusername,
                     fontWeight = FontWeight.Bold,
                     fontSize = 20.sp,
                     color = Color.Black.copy(alpha = .3f)
@@ -61,7 +61,7 @@ fun driverDetails() {
                 )
                 Spacer(modifier = Modifier.padding(6.dp))
                 Text(
-                    "+2000 ${stringResource(R.string.Trips)}",
+                    "+1 ${stringResource(R.string.Trips)}",
                     fontWeight = FontWeight.Bold,
                     fontSize = 20.sp,
                     color = Color.Black.copy(alpha = .3f)
