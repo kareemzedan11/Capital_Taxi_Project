@@ -1,6 +1,7 @@
 package com.example.capital_taxi.domain.shared
 
 import android.content.Context
+import android.location.Geocoder
 import android.util.Log
 import androidx.compose.runtime.*
 import androidx.lifecycle.ViewModel
@@ -10,9 +11,11 @@ import com.example.capital_taxi.domain.TripRequest
 import com.example.capital_taxi.domain.TripResponse
 import com.google.firebase.crashlytics.buildtools.reloc.com.google.common.reflect.TypeToken
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.GeoPoint
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import java.util.Locale
 import java.util.UUID
 
 data class LocationData(
@@ -27,6 +30,7 @@ data class LocationData(
 class TripViewModel : ViewModel() {
     private val _availableTrips = mutableStateOf<List<Trip>>(emptyList())
     val availableTrips: State<List<Trip>> get() = _availableTrips
+
     fun getTripStatusById(
         tripId: String,
         onSuccess: (String) -> Unit,
@@ -127,6 +131,7 @@ class TripViewModel : ViewModel() {
     var responseMessage = mutableStateOf("")
     private val _tripDetails = mutableStateOf<com.example.capital_taxi.domain.TripResponse?>(null)
     val tripDetails: State<com.example.capital_taxi.domain.TripResponse?> = _tripDetails
+
     fun createTrip(
         context: Context,
         userId: String,
@@ -148,9 +153,8 @@ class TripViewModel : ViewModel() {
         val tripRequest = TripRequest(
             _id = "",
             user = userId,
-            origin =origin,
+            origin = origin,
             destination = destination,
-
             paymentMethod = paymentMethod,
             fare = fare,
             distanceInKm = distance
@@ -173,6 +177,23 @@ class TripViewModel : ViewModel() {
                     val tripData: Map<String, Any> = gson.fromJson(tripJson, object : TypeToken<Map<String, Any>>() {}.type)
                     val tripDataWithUserId = tripData.toMutableMap()
                     tripDataWithUserId["userId"] = userId
+
+                    val originLatLng = getLatLngFromAddress(context, origin)
+                    val destinationLatLng = getLatLngFromAddress(context, destination)
+
+                    if (originLatLng != null) {
+                        tripDataWithUserId["originMap"] = mapOf(
+                            "lat" to originLatLng.first,
+                            "lng" to originLatLng.second
+                        )
+                    }
+
+                    if (destinationLatLng != null) {
+                        tripDataWithUserId["destinationMap"] = mapOf(
+                            "lat" to destinationLatLng.first,
+                            "lng" to destinationLatLng.second
+                        )
+                    }
 
                     db.collection("trips").document(tripId).set(tripDataWithUserId)
                         .addOnSuccessListener {
@@ -198,3 +219,16 @@ class TripViewModel : ViewModel() {
 }
 
 
+private fun getLatLngFromAddress(context: Context, address: String): Pair<Double, Double>? {
+    return try {
+        val geocoder = Geocoder(context, Locale.getDefault())
+        val results = geocoder.getFromLocationName(address, 1)
+        if (!results.isNullOrEmpty()) {
+            val location = results[0]
+            Pair(location.latitude, location.longitude)
+        } else null
+    } catch (e: Exception) {
+        Log.e("TripViewModel", "❌ Error getting lat/lng from address: ${e.message}")
+        null
+    }
+}

@@ -3,10 +3,8 @@ package com.example.capital_taxi.Presentation.ui.Driver.Screens.Home
 import TopBar
 import android.Manifest
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
-import android.location.Geocoder
 import android.os.Looper
 import android.util.Log
 import androidx.compose.foundation.background
@@ -14,54 +12,50 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.app.ui.theme.CustomFontFamily
 import com.example.app.ui.theme.responsiveTextSize
+import com.example.capital_taxi.Navigation.Destination
 import com.example.capital_taxi.Presentation.ui.Driver.Components.DriverControls
+import com.example.capital_taxi.Presentation.ui.Driver.Components.InProgressMap
 import com.example.capital_taxi.Presentation.ui.Driver.Components.MapStateViewModel
-import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.DriverArrivedCard
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.DriverNavigationDrawer
-import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.Home_Components.TripViewModel2
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.Home_Components.TripViewModel4
- import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.Home_Components.updateMapWithCurrentLocation
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.StartTrip
-import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.StartTripScreen
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.TripArrivedCard2
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.TripDetailsCard
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.captainToPassenger
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.dataTripViewModel
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.driverHomeScreenContent
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.driverlocation
+import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.DirectionsApi
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.LocationDataStore
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.LocationViewModel5
+import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.ResultWrapper
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.TrackDriverScreen
 
-import com.example.capital_taxi.R
 import com.example.capital_taxi.domain.DirectionsViewModel
 import com.example.capital_taxi.domain.Location
 import com.example.capital_taxi.domain.Trip
 import com.example.capital_taxi.domain.driver.model.acceptTripViewModel
 import com.example.capital_taxi.domain.fetchTripDirections
 import com.example.capital_taxi.domain.shared.TripViewModel
-import com.example.capital_taxi.domain.shared.decodePolyline
 import com.example.capital_taxi.domain.shared.saveDriverLocationToRealtimeDatabase
 import com.example.myapplication.DriverMapView
 import com.example.myapplication.interpolateLocation
@@ -77,21 +71,14 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.maps.android.PolyUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 
 import kotlinx.coroutines.launch
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import kotlinx.coroutines.tasks.await
 import org.osmdroid.util.GeoPoint
-import org.osmdroid.views.MapView
-import org.osmdroid.views.overlay.Marker
-import org.osmdroid.views.overlay.Polyline
-import java.io.IOException
-import java.util.Locale
-import kotlin.math.atan2
-import kotlin.math.cos
-import kotlin.math.sin
 
 @SuppressLint("UnrememberedMutableState")
 @Composable
@@ -114,11 +101,17 @@ fun driverHomeScreen(navController: NavController) {
     val directionsViewModel: DirectionsViewModel = viewModel()
 
     val viewmodel: driverlocation = viewModel()
+
+
+
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
     val firestore = FirebaseFirestore.getInstance()
     val driverId = driver_id // يجب أن يكون معرف السائق الحقيقي
     var driverLocation = viewmodel.driverLocation.value
     var driverLocationState2 by remember { mutableStateOf<GeoPoint?>(null) }
+    var Destination by remember { mutableStateOf<String?>(null) }
+    var fare by remember { mutableStateOf<Double?>(null) }
+    var distance by remember { mutableStateOf<Double?>(null) }
 
     var driverLocationState by remember { mutableStateOf<GeoPoint?>(null) }
     var previousLocation by remember { mutableStateOf<GeoPoint?>(null) }
@@ -129,6 +122,7 @@ fun driverHomeScreen(navController: NavController) {
     val accepttrip: acceptTripViewModel = viewModel()
     val accepttripViewModel by accepttrip.isTripAccepted
     val startTrip by accepttrip.isTripStarted
+    val EndTrip by accepttrip.isTripCompleted
 
      // Firebase Firestore instance
     val db = FirebaseFirestore.getInstance()
@@ -329,61 +323,131 @@ fun driverHomeScreen(navController: NavController) {
             }
             val mapStateViewModel: MapStateViewModel = viewModel()
             val shouldShowTracking by mapStateViewModel.shouldShowTracking
-            val driverDatabase = FirebaseDatabase.getInstance()
 
-// ✅ تحقق مما إذا كان tripId غير null قبل الوصول إلى بيانات Firebase
-            tripId?.let { id ->
-                val driverTripRef = driverDatabase.getReference("trips").child(id)
+// ✅ تحقق مما إذا كان tripId غير null قبل الوصول إلى بيانات Fi
+            val db = FirebaseFirestore.getInstance()
+            val directions = remember { mutableStateListOf<GeoPoint>() }
 
-                driverTripRef.child("passengerLocation").addValueEventListener(object : ValueEventListener {
-                    override fun onDataChange(snapshot: DataSnapshot) {
-                        val lat = snapshot.child("latitude").getValue(Double::class.java)
-                        val lng = snapshot.child("longitude").getValue(Double::class.java)
+            // متغير لتخزين الموقع
+            var passengerLocation2 by remember { mutableStateOf(GeoPoint(30.0444, 31.2357)) } // قيمة مبدئية
+            var isDataLoading by remember { mutableStateOf(true) }  // حالة التحميل
+            var driverLocation2 by remember { mutableStateOf(GeoPoint(30.0444, 31.2357)) } // قيمة مبدئية
 
-                        if (lat != null && lng != null) {
-                            val passengerGeoPoint = GeoPoint(lat, lng)
-                            Log.d("DriverView", "📍 Passenger Location: $passengerGeoPoint")
+            LaunchedEffect(tripId) {
+                isDataLoading = true
 
-                            driverLocationState2 = passengerGeoPoint
-                        } else {
-                            Log.e("DriverView", "❌ Passenger location not found in Firebase")
+                try {
+                    val querySnapshot = db.collection("trips")
+                        .whereEqualTo("_id", tripId)
+                        .get()
+                        .await()
+
+                    if (!querySnapshot.isEmpty) {
+                        val document = querySnapshot.documents.first()
+
+
+
+
+                        Destination =document.get("destination") as?String
+
+                          fare = document.get("fare") as? Double ?: 0.0 // تعيين قيمة افتراضية إذا كانت null
+                          distance = document.get("distanceInKm") as? Double ?: 0.0 // تعيين قيمة افتراضية إذا كانت null
+
+                        // جلب بيانات originMap
+                        val originMap = document.get("originMap") as? Map<String, Any>
+                        val originLat = originMap?.get("lat") as? Double
+                        val originLng = originMap?.get("lng") as? Double
+
+                        // جلب بيانات destinationMap
+                        val destinationMap = document.get("destinationMap") as? Map<String, Any>
+                        val destinationLat = destinationMap?.get("lat") as? Double
+                        val destinationLng = destinationMap?.get("lng") as? Double
+
+                        if (originLat != null && originLng != null && destinationLat != null && destinationLng != null) {
+                            passengerLocation2 = GeoPoint(originLat, originLng)
+                            driverLocation2 = GeoPoint(destinationLat, destinationLng)
+
+                            val result = DirectionsApi.getDirections(
+                                start = passengerLocation2,
+                                end = driverLocation2,
+                                apiKey = "c69abe50-60d2-43bc-82b1-81cbdcebeddc",
+                                context = context,
+                                tripId = tripId!!
+                            )
+
+                            when (result) {
+                                is ResultWrapper.Success -> {
+                                    val response = result.value
+                                    val encodedPolyline = response.paths.firstOrNull()?.points
+                                    if (encodedPolyline != null) {
+                                        // Decode the polyline string into a list of GeoPoints
+                                        val decodedPoints = PolyUtil.decode(encodedPolyline).map { latLng ->
+                                            GeoPoint(latLng.latitude, latLng.longitude)
+                                        }
+
+                                        directions.clear()
+                                        directions.addAll(decodedPoints)
+                                    }
+                                }
+
+                                is ResultWrapper.Failure -> {
+                                    Log.e("Directions", "فشل في جلب الاتجاهات: ${result.exception.message}")
+                                }
+                            }
                         }
                     }
-
-                    override fun onCancelled(error: DatabaseError) {
-                        Log.e("DriverView", "❌ Error fetching passenger location: ${error.message}")
-                    }
-                })
-            } ?: Log.e("DriverView", "❌ tripId is null, skipping Firebase reference")
-
+                } catch (e: Exception) {
+                    Log.e("Firebase", "Error fetching trip data: ${e.message}")
+                } finally {
+                    isDataLoading = false
+                }
+            }
 
             Box(modifier = Modifier.fillMaxSize()) {
+                if (mapStateViewModel.isTripInProgress.value) {
+                    // عرض الخريطة الخاصة بالرحلة الجارية
+                    InProgressMap(
+                        directions = directions ,
+                        driverLocation =passengerLocation2  ,
+                        Destination = driverLocation2
+                    )
 
-
-                if ( shouldShowTracking) {
-                    Log.d("LocationCheck2", "Before passing: ${passengerLocation.passengerLocation}")
-
+                    // عرض دائرة مؤشر التحميل أثناء تحميل البيانات
+                    if (isDataLoading) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .alpha(0.7f)
+                        ) {
+                            CircularProgressIndicator(
+                                color = Color.Blue,
+                                strokeWidth = 5.dp // سمك الحد
+                            )
+                        }
+                    }
+                } else if (shouldShowTracking) {
+                    // لو tracking مفعّل لكن الرحلة لسه ما بدأتش
                     tripId?.let {
                         Log.d("tripId", it)
-                        Log.d("Location3", "✅pass location: ${ passengerLocation.passengerLocation?.let { latLng ->
-                            GeoPoint(latLng.latitude, latLng.longitude) // ✅ تحويل LatLng إلى GeoPoint
-                        }}")
+                        Log.d("LocationCheck2", "Before trip start. Location: ${passengerLocation2}")
+
                         TrackDriverScreen(
                             tripId = it,
-
-                            passengerLocation = driverLocationState2?: GeoPoint(30.0444, 31.2357)
+                            passengerLocation = passengerLocation2
                         )
                     }
-                }
-               else {
+                } else {
+                    // لو مفيش تتبع أو رحلة شغالة، اعرض الخريطة العادية
                     DriverMapView(
                         currentLocation = smoothedLocation,
-                        previousLocation = previousLocation,
-
+                        previousLocation = previousLocation
                     )
-                    Log.d("LocationCheck1", "Before passing: ${passengerLocation.passengerLocation}")
 
+                    Log.d("LocationCheck1", "Showing DriverMapView. Location: ${passengerLocation2}")
                 }
+
+
                 LaunchedEffect(Unit) {
                     while (true) {
                         delay(2000)
@@ -580,6 +644,7 @@ fun driverHomeScreen(navController: NavController) {
           //  DriverArrivedCard()
             var showCaptainToPassenger by remember { mutableStateOf(false) }
             var showStartTrip by remember { mutableStateOf(false) }
+            var showTripCompleted by remember { mutableStateOf(false) }
 
             LaunchedEffect(accepttripViewModel) {
                 if (accepttripViewModel) {
@@ -593,7 +658,12 @@ fun driverHomeScreen(navController: NavController) {
                     showStartTrip = true
                 }
             }
+            LaunchedEffect(EndTrip) {
+                if (EndTrip) {
 
+                    showTripCompleted = true
+                }
+            }
 
             if (!accepttripViewModel) {
                 Card(
@@ -619,11 +689,19 @@ fun driverHomeScreen(navController: NavController) {
                     context = context,
                     navController = navController,
                     tripId = tripId!!,
+                    mapchangetoInPrograss = { mapStateViewModel.startTrip() } ,
                     onTripStarted =   {accepttrip.startTrip()}
                 )
             }
             if (showStartTrip) {
-              StartTrip()
+              StartTrip(tripId!!, TripEnd = {accepttrip.EndTrip()})
+            }
+            if (EndTrip) {
+                TripArrivedCard2(
+                    Destintaion = Destination?:"",
+                    fare = fare.toString()?:"",
+                    Distance = distance.toString()?:""
+                )
             }
 
         }

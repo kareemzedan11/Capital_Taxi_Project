@@ -11,7 +11,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,9 +19,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.layout.wrapContentWidth
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Text
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,6 +27,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,7 +35,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -61,7 +57,8 @@ import kotlinx.coroutines.launch
 import org.osmdroid.util.GeoPoint
 import java.util.Locale
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.capital_taxi.Navigation.Destination
+import com.example.capital_taxi.Helper.getCurrentLocation
+import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.Home_Components.getAddressFromLatLng
 import com.example.capital_taxi.domain.DirectionsViewModel
 import com.example.capital_taxi.domain.FareViewModel
 import com.example.capital_taxi.domain.Location
@@ -76,12 +73,12 @@ import kotlinx.coroutines.Dispatchers
 fun PickupWithDropOffButtons(
     navController: NavController,
     locationName: String? = "Select Pickup Location",
-    viewModel: LocationViewModel = viewModel() // الحصول على ViewModel
-
+    viewModel: LocationViewModel = viewModel()
 ) {
     var showBottomSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val context = LocalContext.current
+
     if (showBottomSheet) {
         ModalBottomSheet(
             modifier = Modifier
@@ -97,19 +94,59 @@ fun PickupWithDropOffButtons(
     val locationViewModel: LocationViewModel = viewModel()
     val pickupLatLng = locationViewModel.pickupLocation
     val dropoffLatLng = locationViewModel.dropoffLocation
-    // نقاط البداية والنهاية
-    var startPoint = remember { mutableStateOf<GeoPoint?>(null) }
+
+    val startPoint = remember { mutableStateOf<GeoPoint?>(null) }
     val endPoint = remember { mutableStateOf<GeoPoint?>(null) }
+
     val sharedPreferences = context.getSharedPreferences("your_prefs", Context.MODE_PRIVATE)
     val token = sharedPreferences.getString("USER_TOKEN", null)
     val directionsViewModel: DirectionsViewModel = viewModel()
+
+    val coroutineScope = rememberCoroutineScope()
+
     var pickupLocation by remember { mutableStateOf("") }
     var pickupSuggestions by remember { mutableStateOf(emptyList<String>()) }
     var dropOffLocation by remember { mutableStateOf("") }
     var dropOffSuggestions by remember { mutableStateOf(emptyList<String>()) }
-    val coroutineScope = rememberCoroutineScope()
+
     var selectedVehicleIndex by remember { mutableStateOf(-1) }
-    var selectedVehicleName by remember { mutableStateOf("") } // Track the selected vehicle name
+    var selectedVehicleName by remember { mutableStateOf("") }
+    fun getAddressFromLatLng2(
+        context: Context,
+        latitude: Double,
+        longitude: Double,
+        callback: (String?) -> Unit
+    ) {
+        val geocoder = Geocoder(context)
+        try {
+            val addresses = geocoder.getFromLocation(latitude, longitude, 1)
+            if (!addresses.isNullOrEmpty()) {
+                callback(addresses[0].getAddressLine(0))
+            } else {
+                callback(null)
+            }
+        } catch (e: Exception) {
+            callback(null)
+        }
+    }
+
+    // ضبط الموقع الحالي تلقائيًا عند فتح الشاشة لأول مرة
+    LaunchedEffect(Unit) {
+        getCurrentLocation(context) { location ->
+            location?.let {
+                val latLng = LatLng(it.latitude, it.longitude)
+                getAddressFromLatLng2(context, latLng.latitude, latLng.longitude) { address ->
+                    if (address != null) {
+                        pickupLocation = address.toString()
+                        startPoint.value = GeoPoint(latLng.latitude, latLng.longitude)
+                        viewModel.setPickupLocation(latLng)
+                    }
+                }
+            }
+        }
+    }
+
+//    }
 
     Column(
         modifier = Modifier
@@ -148,7 +185,7 @@ fun PickupWithDropOffButtons(
                     pickupSuggestions = emptyList()
                 }
             },
-            value = pickupLocation // تأكد من ربط القيمة هنا
+            value = pickupLocation
         )
 
         repeat(9) {
@@ -178,8 +215,9 @@ fun PickupWithDropOffButtons(
                     dropOffSuggestions = emptyList()
                 }
             },
-            value = dropOffLocation // تمرير القيمة
+            value = dropOffLocation
         )
+
         if (pickupSuggestions.isNotEmpty()) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 pickupSuggestions.forEach { suggestion ->
@@ -191,21 +229,10 @@ fun PickupWithDropOffButtons(
                                 pickupLocation = suggestion
                                 pickupSuggestions = emptyList()
 
-                                // تحديث startPoint عند اختيار اقتراح
                                 getLatLngFromAddress(context, suggestion) { latLng ->
-                                    if (latLng != null) {
-                                        startPoint.value =
-                                            GeoPoint(latLng.latitude, latLng.longitude)
-                                        viewModel.setPickupLocation(latLng)
-                                        Log.d(
-                                            "PickupLocation",
-                                            "Selected Pickup Location: $pickupLocation, Lat: ${latLng.latitude}, Lng: ${latLng.longitude}"
-                                        )
-                                    } else {
-                                        Log.d(
-                                            "PickupLocation",
-                                            "Location not found for: $pickupLocation"
-                                        )
+                                    latLng?.let {
+                                        startPoint.value = GeoPoint(it.latitude, it.longitude)
+                                        viewModel.setPickupLocation(it)
                                     }
                                 }
                             }
@@ -228,55 +255,28 @@ fun PickupWithDropOffButtons(
                                 dropOffLocation = suggestion
                                 dropOffSuggestions = emptyList()
 
-                                // تحديث endPoint عند اختيار اقتراح
                                 getLatLngFromAddress(context, suggestion) { latLng ->
-                                    if (latLng != null) {
-                                        endPoint.value = GeoPoint(latLng.latitude, latLng.longitude)
-
-                                        viewModel.setDropoffLocation(latLng)
-                                        Log.d(
-                                            "DropOffLocation",
-                                            "Selected Drop-Off Location: $dropOffLocation, Lat: ${latLng.latitude}, Lng: ${latLng.longitude}"
-                                        )
+                                    latLng?.let {
+                                        endPoint.value = GeoPoint(it.latitude, it.longitude)
+                                        viewModel.setDropoffLocation(it)
 
                                         if (startPoint.value != null && endPoint.value != null) {
-                                            val origin = Location(
-                                                startPoint.value!!.latitude,
-                                                startPoint.value!!.longitude
-                                            )
-                                            val destination = Location(
-                                                endPoint.value!!.latitude,
-                                                endPoint.value!!.longitude
-                                            )
-
-
-
+                                            val origin = Location(startPoint.value!!.latitude, startPoint.value!!.longitude)
+                                            val destination = Location(endPoint.value!!.latitude, endPoint.value!!.longitude)
 
                                             CoroutineScope(Dispatchers.IO).launch {
-                                                if (token != null) {
+                                                token?.let {
                                                     fetchTripDirections(
                                                         token = token,
                                                         origin = origin,
                                                         destination = destination,
-                                                        directionsViewModel = directionsViewModel, // ✅ أضف هذا السطر
-                                                        onSuccess = { directionsResponse ->
-                                                            Log.d("TripDirections", "Successfully fetched directions: $directionsResponse")
-                                                        },
-                                                        onError = { errorMessage ->
-                                                            Log.e("TripDirections", "Error fetching directions: $errorMessage")
-                                                        }
+                                                        directionsViewModel = directionsViewModel,
+                                                        onSuccess = { Log.d("TripDirections", "Successfully fetched directions.") },
+                                                        onError = { Log.e("TripDirections", "Error: $it") }
                                                     )
-
                                                 }
                                             }
-
-
                                         }
-                                    } else {
-                                        Log.d(
-                                            "DropOffLocation",
-                                            "Location not found for: $dropOffLocation"
-                                        )
                                     }
                                 }
                             }

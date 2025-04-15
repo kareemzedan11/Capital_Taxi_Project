@@ -8,16 +8,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.TabRowDefaults.Divider
 import androidx.compose.material3.Card
@@ -29,17 +26,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.capital_taxi.R
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForward  // Alternative to Directions
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,12 +41,13 @@ import androidx.compose.ui.platform.LocalContext
 import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.delay
 import android.media.AudioRecord
- import android.os.Build
-import androidx.compose.runtime.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 
 @Composable
-fun StartTrip() {
+fun StartTrip(tripId:String,TripEnd:()->Unit) {
     val backgroundColor = colorResource(id = R.color.secondary_color)
     val primaryColor = colorResource(id = R.color.primary_color)
     val Icons_color = colorResource(id = R.color.Icons_color)
@@ -72,8 +65,10 @@ fun StartTrip() {
             isLoading = false
             tripStarted = true
             triggerStart = false // نرجّعها تاني عشان نقدر نضغط الزر مرة تانية لو حبيت
-            showToast = true  // عرض الرسالة بعد بدء الرحلة
-            startRecording() // بدء التسجيل الصوتي هنا
+
+
+            //  showToast = true  // عرض الرسالة بعد بدء الرحلة
+          //  startRecording() // بدء التسجيل الصوتي هنا
         }
     }
 
@@ -154,9 +149,22 @@ fun StartTrip() {
 
                     Button(
                         onClick = {
-                            if (!isLoading && !tripStarted) {
-                                triggerStart = true
+                            if (!isLoading) {
+                                if (!tripStarted) {
+                                    // بدء الرحلة
+                                    triggerStart = true
+                                    CoroutineScope(Dispatchers.IO).launch {
+                                        updateTripStatus(tripId,"Started") // تحديث الحالة إلى "Started"
+                                    }
+                                } else {
+                                    TripEnd()
+                                    // إنهاء الرحلة
+                                    CoroutineScope(Dispatchers.IO).launch {
+                                        updateTripStatus(tripId, "Completed") // تحديث الحالة إلى "Completed"
+                                    }
+                                }
                             }
+
                         },
                         modifier = Modifier.height(48.dp),
                         colors = ButtonDefaults.buttonColors(

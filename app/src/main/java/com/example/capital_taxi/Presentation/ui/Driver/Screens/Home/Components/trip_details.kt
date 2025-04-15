@@ -232,7 +232,7 @@ fun TripDetailsCard(
                     Destinationicon = R.drawable.travel,
                     LocationText = trip.origin,
                     DestinationText = trip.destination,
-                    distance1 = "${trip.distanceInKm} km",
+
                     distance2 = "${trip.distanceInKm} km",
                     isDestance = true,
                     onClick = { }
@@ -539,13 +539,13 @@ fun RidePointDetails(
             Column {
                 distance2?.let {
                     Text(
-                        text = it,
+                        text = "${it.take(5)} km",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black
+                        color = colorResource(R.color.primary_color)
                     )
                 }
-                Text(
+                    Text(
                     text = DestinationText,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.W600,

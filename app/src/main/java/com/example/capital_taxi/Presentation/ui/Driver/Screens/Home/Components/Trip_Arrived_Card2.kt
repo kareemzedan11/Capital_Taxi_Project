@@ -36,7 +36,11 @@ import androidx.compose.ui.unit.sp
 import com.example.capital_taxi.R
 
 @Composable
-fun TripArrivedCard2() {
+fun TripArrivedCard2(Destintaion:String,
+                     fare:String,
+                     Distance:String
+
+                     ) {
     var rating by remember { mutableStateOf(0f) } // Store the rating value
     var comment by remember { mutableStateOf("") } // Store the comment
     var showDialog by remember { mutableStateOf(false) } // Show dialog after submission
@@ -74,7 +78,7 @@ Box(modifier = Modifier.fillMaxSize()){
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Abbas El-Akkad Strt",
+                        text =Destintaion.take(20),
                         fontSize = 14.sp
                     )
                 }
@@ -104,7 +108,7 @@ Box(modifier = Modifier.fillMaxSize()){
                         fontSize = 14.sp
                     )
                     Text(
-                        text = stringResource(R.string.distance_value),
+                        text ="$Distance Km",
 
                         fontSize = 14.sp
                     )
@@ -117,7 +121,7 @@ Box(modifier = Modifier.fillMaxSize()){
                         fontSize = 14.sp
                     )
                     Text(
-                        text = stringResource(R.string.fare_value),
+                        text ="$fare EGP",
 
                         fontSize = 14.sp,
                         color = Color(0xFF4CAF50)

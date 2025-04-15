@@ -1,8 +1,8 @@
 package com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components
 
 
+import android.util.Log
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,7 +30,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -44,7 +43,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -57,14 +55,17 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.capital_taxi.R
-import com.example.capital_taxi.domain.driver.model.acceptTripViewModel
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TripDetailsForDriver(navController: NavController,
+                         tripId:String,
+                         mapchangetoInPrograss:()->Unit,
                          onTripStarted:()->Unit,
 
                          menu_close: suspend  () -> Unit) {
@@ -264,11 +265,14 @@ fun TripDetailsForDriver(navController: NavController,
                 // Stop Accepting Trips Button
                 Button(
                     onClick = {
+                        mapchangetoInPrograss()
 
                         coroutineScope.launch {
                             menu_close()
+                            updateTripStatus(tripId,"InProgress") // مرر الـ tripId هنا
+                            onTripStarted()
                         }
-                        onTripStarted() },
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -283,10 +287,34 @@ fun TripDetailsForDriver(navController: NavController,
                         fontWeight = FontWeight.Bold
                     )
                 }
+
             }
         }
     }
 }
+
+suspend fun updateTripStatus(tripId: String, status:String) {
+    val db = FirebaseFirestore.getInstance()
+    val tripsCollection = db.collection("trips")
+
+    try {
+        // ابحث عن المستند اللي فيه tripId يساوي الـ _id اللي بعته
+        val querySnapshot = tripsCollection.whereEqualTo("_id", tripId).get().await()
+
+        if (!querySnapshot.isEmpty) {
+            for (document in querySnapshot.documents) {
+                // حدث الفيلد status
+                document.reference.update("status", status).await()
+                Log.d("Firestorm", "Status updated to InProgress for tripId: $tripId")
+            }
+        } else {
+            Log.d("Firestore", "No trip found with _id = $tripId")
+        }
+    } catch (e: Exception) {
+        Log.e("Firestore", "Error updating status: ${e.message}", e)
+    }
+}
+
 class dataTripViewModel : ViewModel() {
     private val _origin = MutableStateFlow("")
     val origin: StateFlow<String> = _origin

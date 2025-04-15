@@ -38,7 +38,6 @@ fun GoogleAndPhone(onSignInClick: () -> Unit,navController: NavController,modifi
 
     // Configure Google Sign-In options
     val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-        .requestIdToken(context.getString(R.string.default_web_client_id))
         .requestEmail()
         .build()
 

@@ -56,6 +56,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun captainToPassenger(navController: NavController,
                        onTripStarted:()->Unit,
+                       mapchangetoInPrograss:()->Unit,
                        context: Context, tripId: String) {
 
     var distance by rememberSaveable { mutableStateOf<Double?>(null) }
@@ -131,6 +132,8 @@ fun captainToPassenger(navController: NavController,
                         TripDetailsForDriver(navController,
 
                        onTripStarted = onTripStarted,
+                            tripId = tripId,
+                            mapchangetoInPrograss =mapchangetoInPrograss ,
                             menu_close = {bottomSheetState.hide()})
 
 

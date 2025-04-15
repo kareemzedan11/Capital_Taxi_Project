@@ -14,6 +14,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.BottomSheetValue
@@ -39,8 +40,10 @@ import androidx.compose.material.rememberBottomSheetScaffoldState
 
 import androidx.compose.material.BottomSheetScaffold
 import androidx.compose.material.CircularProgressIndicator
+import androidx.compose.material3.Text
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -92,8 +95,17 @@ import java.io.IOException
 
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.capital_taxi.Navigation.Destination
+import com.example.capital_taxi.Presentation.ui.Driver.Components.InProgressMap
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.Home_Components.TripViewModel2
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.Home_Components.getAddressFromLatLng
+import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.updateTripStatus
+import com.example.capital_taxi.Presentation.ui.Passengar.Components.StateTripViewModel
+import com.example.capital_taxi.Presentation.ui.Passengar.Components.fetchDriverInfoWithRetry
+import com.example.capital_taxi.Presentation.ui.Passengar.Components.waitForDriverIdFromTrip
+import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.During_the_trip.DriverArrivalCard
+import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.During_the_trip.RideInProgressScreen
+import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.Trip_Rating.TripCompletedScreen
 import com.example.capital_taxi.data.repository.graphhopper_response.Details
 import com.example.capital_taxi.data.repository.graphhopper_response.Hints
 import com.example.capital_taxi.data.repository.graphhopper_response.Info
@@ -118,9 +130,20 @@ private val Context.dataStore by preferencesDataStore(name = "location_prefs")
 @Composable
 fun homeScreenContent(navController: NavController) {
     var isConfirmed by remember { mutableStateOf(false) }
+    var isTripBegin by remember { mutableStateOf(false) }
+
+
     var isSearch by remember { mutableStateOf(false) }
     var menuIconShow by remember { mutableStateOf(true) }
-
+    var isstart by remember { mutableStateOf(false) }
+    var passengerLocation2 by remember {
+        mutableStateOf(
+            GeoPoint(
+                30.0444,
+                31.2357
+            )
+        )
+    }
     val tripViewModel2: TripViewModel2 = viewModel()
     val selectedTripId by tripViewModel2.selectedTripId.observeAsState()
 
@@ -173,6 +196,8 @@ fun homeScreenContent(navController: NavController) {
     var destinationLng by remember { mutableStateOf(0.0) }
     val tripViewModel: TripViewModel = viewModel()
 
+    val stateTripViewModel: StateTripViewModel = viewModel()
+    val state = stateTripViewModel.uiState.value
 
     var tripId by remember { mutableStateOf<String?>(null) }
 
@@ -183,8 +208,12 @@ fun homeScreenContent(navController: NavController) {
     val directionsViewModel: DirectionsViewModel = viewModel()
     val distance by directionsViewModel.distance.collectAsState()
     val duration by directionsViewModel.duration.collectAsState()
-
-
+    var originString by remember { mutableStateOf<String?>(null) }
+    var destinationString by remember { mutableStateOf<String?>(null) }
+    var Time by remember { mutableStateOf<Long?>(null) }
+    var formattedTime by remember { mutableStateOf<String?>(null) }
+    var driverName by remember { mutableStateOf<String?>(null) }
+    var carType by remember { mutableStateOf<String?>(null) }
     val locationDataStore = LocationDataStore(context)
 
 // ✅ إنشاء ViewModel مرة واحدة داخل Composable
@@ -226,6 +255,154 @@ fun homeScreenContent(navController: NavController) {
 
     val viewmodel3: driverlocation = viewModel()
 
+    val db = FirebaseFirestore.getInstance()
+    val directions = remember { mutableStateListOf<GeoPoint>() }
+
+    // متغير لتخزين الموقع
+    // قيمة مبدئية
+    var isDataLoading by remember { mutableStateOf(true) }  // حالة التحميل
+    var driverLocation2 by remember {
+        mutableStateOf(
+            GeoPoint(
+                30.0444,
+                31.2357
+            )
+        )
+    } // قيمة مبدئية
+
+    LaunchedEffect(tripId) {
+        isDataLoading = true
+
+        try {
+            val querySnapshot = db.collection("trips")
+                .whereEqualTo("_id", tripId)
+                .get()
+                .await()
+
+            if (!querySnapshot.isEmpty) {
+                val document = querySnapshot.documents.first()
+                fun formatDuration(durationInMillis: Long): String {
+                    val minutes = (durationInMillis / 1000) / 60
+                    val hours = minutes / 60
+                    val remainingMinutes = minutes % 60
+
+                    return if (hours > 0)
+                        "$hours ${if (hours == 1L) "hour" else "hours"} and $remainingMinutes ${if (remainingMinutes == 1L) "minute" else "minutes"}"
+                    else
+                        "$remainingMinutes ${if (remainingMinutes == 1L) "minute" else "minutes"}"
+                }
+
+
+                // جلب بيانات originMap
+                val originMap = document.get("originMap") as? Map<String, Any>
+                val originLat = originMap?.get("lat") as? Double
+                val originLng = originMap?.get("lng") as? Double
+
+                originString =  document.get("origin") as? String
+                  destinationString =  document.get("destination") as? String
+
+// تحديد أقصى عدد للمحاولات
+                val maxRetries = 5
+                var retryCount = 0
+                var time: Long? = null
+
+// محاولة جلب القيمة عدة مرات
+                while (time == null && retryCount < maxRetries) {
+                    try {
+                        val querySnapshot = db.collection("trips")
+                            .whereEqualTo("_id", tripId)
+                            .get()
+                            .await()
+
+                        if (!querySnapshot.isEmpty) {
+                            val document = querySnapshot.documents.first()
+                            time = document.get("time") as? Long
+
+                            // في حالة كانت القيمة موجودة، نوقف المحاولات
+                            if (time != null) {
+                                  formattedTime = formatDuration(time)
+                                Log.d("CheckType", "Formatted Time: $formattedTime")
+                                break
+                            }
+                        } else {
+                            Log.d("CheckType", "No document found with the specified tripId")
+                        }
+
+                        // زيادة عدد المحاولات
+                        retryCount++
+
+                        // انتظار فترة قصيرة قبل المحاولة التالية (تأخير 2 ثانية)
+                        delay(2000) // تأخير لمدة 2 ثانية (يمكنك تعديله حسب الحاجة)
+
+                    } catch (e: Exception) {
+                        Log.e("CheckType", "Error fetching data: ${e.localizedMessage}")
+                        retryCount++
+                        delay(2000) // تأخير لمدة 2 ثانية بين المحاولات
+                    }
+                }
+
+                if (time == null) {
+                    Log.d("CheckType", "Failed to fetch time after $maxRetries retries.")
+                    // تعامل مع الحالة عندما تكون القيمة غير موجودة بعد محاولات متعددة
+                      formattedTime = "غير متوفر"
+                }
+
+
+
+                // جلب بيانات destinationMap
+                val destinationMap =
+                    document.get("destinationMap") as? Map<String, Any>
+                val destinationLat = destinationMap?.get("lat") as? Double
+                val destinationLng = destinationMap?.get("lng") as? Double
+
+                if (originLat != null && originLng != null && destinationLat != null && destinationLng != null) {
+                    passengerLocation2 = GeoPoint(originLat, originLng)
+                    driverLocation2 = GeoPoint(destinationLat, destinationLng)
+
+                    val result = DirectionsApi.getDirections(
+                        start = passengerLocation2,
+                        end = driverLocation2,
+                        apiKey = "71ab0bb4-9572-4423-ab8f-332deb2827a7",
+                        context = context,
+                        tripId = tripId!!
+                    )
+
+                    when (result) {
+                        is ResultWrapper.Success -> {
+                            val response = result.value
+                            val encodedPolyline =
+                                response.paths.firstOrNull()?.points
+                            if (encodedPolyline != null) {
+                                // Decode the polyline string into a list of GeoPoints
+                                val decodedPoints =
+                                    PolyUtil.decode(encodedPolyline)
+                                        .map { latLng ->
+                                            GeoPoint(
+                                                latLng.latitude,
+                                                latLng.longitude
+                                            )
+                                        }
+
+                                directions.clear()
+                                directions.addAll(decodedPoints)
+                            }
+                        }
+
+                        is ResultWrapper.Failure -> {
+                            Log.e(
+                                "Directions",
+                                "فشل في جلب الاتجاهات: ${result.exception.message}"
+                            )
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("Firebase", "Error fetching trip data: ${e.message}")
+        } finally {
+            isDataLoading = false
+        }
+    }
 // الحصول على الموقع المخزن من ViewModel
     val driverLocation = viewmodel3.driverLocation.value
     LaunchedEffect(pickupLatLng, dropoffLatLng) {
@@ -245,6 +422,92 @@ fun homeScreenContent(navController: NavController) {
     }
 
 
+
+    val directions2 = remember { mutableStateListOf<GeoPoint>() }
+
+    // متغير لتخزين الموقع
+    // قيمة مبدئية
+    var isDataLoading2 by remember { mutableStateOf(true) }  // حالة التحميل
+    var driverLocation3 by remember {
+        mutableStateOf(
+            GeoPoint(
+                30.0444,
+                31.2357
+            )
+        )
+    } // قيمة مبدئية
+
+    LaunchedEffect(tripId) {
+        isDataLoading2 = true
+
+        try {
+            val querySnapshot = db.collection("trips")
+                .whereEqualTo("_id", tripId)
+                .get()
+                .await()
+
+            if (!querySnapshot.isEmpty) {
+                val document = querySnapshot.documents.first()
+
+                // جلب بيانات originMap
+                val originMap = document.get("originMap") as? Map<String, Any>
+                val originLat = originMap?.get("lat") as? Double
+                val originLng = originMap?.get("lng") as? Double
+
+                // جلب بيانات destinationMap
+                val destinationMap =
+                    document.get("destinationMap") as? Map<String, Any>
+                val destinationLat = destinationMap?.get("lat") as? Double
+                val destinationLng = destinationMap?.get("lng") as? Double
+
+                if (originLat != null && originLng != null && destinationLat != null && destinationLng != null) {
+                    passengerLocation2 = GeoPoint(originLat, originLng)
+                    driverLocation3 = GeoPoint(destinationLat, destinationLng)
+
+                    val result = DirectionsApi.getDirections(
+                        start = passengerLocation2,
+                        end = driverLocation3,
+                        apiKey = "c69abe50-60d2-43bc-82b1-81cbdcebeddc",
+                        context = context,
+                        tripId = tripId!!
+                    )
+
+                    when (result) {
+                        is ResultWrapper.Success -> {
+                            val response = result.value
+                            val encodedPolyline =
+                                response.paths.firstOrNull()?.points
+                            if (encodedPolyline != null) {
+                                // Decode the polyline string into a list of GeoPoints
+                                val decodedPoints =
+                                    PolyUtil.decode(encodedPolyline)
+                                        .map { latLng ->
+                                            GeoPoint(
+                                                latLng.latitude,
+                                                latLng.longitude
+                                            )
+                                        }
+
+                                directions2.clear()
+                                directions2.addAll(decodedPoints)
+                            }
+                        }
+
+                        is ResultWrapper.Failure -> {
+                            Log.e(
+                                "Directions",
+                                "فشل في جلب الاتجاهات: ${result.exception.message}"
+                            )
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("Firebase", "Error fetching trip data: ${e.message}")
+        } finally {
+            isDataLoading = false
+        }
+    }
 // إعادة تحميل الخريطة باستخدام `key`
 
     var showBottomSheet by remember { mutableStateOf(false) }
@@ -257,13 +520,46 @@ fun homeScreenContent(navController: NavController) {
     var driverLocationState by remember { mutableStateOf<LatLng?>(null) }
     // Main Container
     Box(modifier = Modifier.fillMaxSize()) {
+
+
+when{
+    state.isEnd->{
+        TripCompletedScreen(
+            startLocation = originString ?: "undefined", // "غير محدد"
+            endLocation = destinationString ?:"undefined", // "غير محدد"
+            fare = fare?.toString()?.plus(" EGP") ?: "undefined", // "غير متاح"
+            duration = formattedTime ?: "{undefined}", // "غير متاح"
+            distance = distance?.let { "$it km" } ?: "undefined", // "غير متاح"
+            driverName = driverName?:"undefined", // "سائق غير معروف"
+            carModel =carType?: "undefied", // "مركبة غير معروفة"
+            onRateClick = {
+                // Open rating dialog or bottom sheet
+                navController.navigate("RateDriver/${tripId}")
+            },
+            onReturnHomeClick = {
+                // Return to home and clear back stack
+                navController.navigate(Destination.UserHomeScreen.route) {
+                    popUpTo("TripScreen") { inclusive = true }
+                }
+            },
+            onReceiptClick = {
+                // Show detailed receipt
+                navController.navigate("TripReceipt/${tripId}")
+            },
+            modifier = Modifier
+                .fillMaxSize()
+                .navigationBarsPadding()
+        )
+
+    }
+    else->{
         // Drawer
         ModalNavigationDrawer(
             drawerState = drawerState,
             gesturesEnabled = gesturesEnabled,
             drawerContent = {
                 ModalDrawerSheet(
-                    modifier = Modifier.fillMaxWidth(0.8f) // Set drawer width to 60% of screen
+                    modifier = Modifier.fillMaxWidth(0.7f) // Set drawer width to 60% of screen
                 ) {
                     drawerContent(navController)
                 }
@@ -271,7 +567,12 @@ fun homeScreenContent(navController: NavController) {
         ) {
             BottomSheetScaffold(
                 scaffoldState = bottomSheetState,
-                sheetPeekHeight = if (isConfirmed) 200.dp else 500.dp,
+                sheetPeekHeight = when {
+                    state.isTripBegin  ->0.dp
+
+                    isConfirmed -> 200.dp  // إذا كان مؤكدًا ولكن ليس بدء
+                    else -> 500.dp  // الحالة الافتراضية
+                },
                 content = { padding ->
                     Box(
                         modifier = Modifier
@@ -279,7 +580,7 @@ fun homeScreenContent(navController: NavController) {
                             .padding(padding)
                     ) {
 
-                        if (tripStatus != "accepted") {
+                        if (tripStatus != "accepted"&&tripStatus != "Completed") {
 
                             MapViewComposable(
                                 startPoint = startPoint.value,
@@ -287,31 +588,6 @@ fun homeScreenContent(navController: NavController) {
                             )
                         }
                         if (tripStatus == "accepted") {
-                            val database = FirebaseDatabase.getInstance()
-                            val tripRef = database.getReference("trips").child(tripId!!)
-
-
-                            startPoint.value?.let { geoPoint ->
-                                val passengerLocationMap = mapOf(
-                                    "latitude" to geoPoint.latitude,
-                                    "longitude" to geoPoint.longitude
-                                )
-
-                                tripRef.child("passengerLocation").setValue(passengerLocationMap)
-                                    .addOnSuccessListener {
-                                        Log.d(
-                                            "FirebaseDB",
-                                            "✅ Passenger location saved successfully!"
-                                        )
-                                    }
-                                    .addOnFailureListener { e ->
-                                        Log.e(
-                                            "FirebaseDB",
-                                            "❌ Failed to save passenger location: ${e.message}"
-                                        )
-                                    }
-                            }
-
 
                             tripId?.let {
                                 Log.d("tripId", it)
@@ -319,12 +595,22 @@ fun homeScreenContent(navController: NavController) {
                                     tripId = it,
 
 
-                                    passengerLocation = startPoint.value
+                                    passengerLocation = passengerLocation2
                                 )
                             }
 
                         }
 
+
+                        if (tripStatus == "InProgress"||tripStatus == "Started") {
+                            isTripBegin=true
+                            isstart = true
+                            InProgressMap(
+                                directions = directions2,
+                                driverLocation = passengerLocation2,
+                                Destination = driverLocation3
+                            )
+                        }
 
                         LaunchedEffect("67b0b246322cf017e42a9d3c") {
                             val database = FirebaseDatabase.getInstance()
@@ -378,6 +664,39 @@ fun homeScreenContent(navController: NavController) {
 
                             }
                         }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .align(Alignment.BottomCenter)
+                        ) {
+                            when {state.isTripBegin ->{
+
+
+
+                                LaunchedEffect(tripStatus) {
+                                    if (tripStatus == "Started") {
+                                        stateTripViewModel.updateTripStatus("Started")
+                                    }
+                                }
+
+                                Log.d("UI", "Starting Trip")
+                                DriverArrivalCard(
+                                    onTripCancelled = {
+                                        CoroutineScope(Dispatchers.IO).launch {
+
+
+                                            updateTripStatus(tripId!!, "Cancelled")
+                                        }
+                                        // Handle trip cancellation
+                                        println("Trip automatically cancelled")
+                                    },
+
+                                    tripId = tripId!!,
+
+                                    modifier =Modifier.fillMaxWidth()
+                                )
+                            }}
+                        }
                     }
                 },
                 sheetContent = {
@@ -390,32 +709,84 @@ fun homeScreenContent(navController: NavController) {
                                 shape = RoundedCornerShape(16.dp)
                             )
                     ) {
-                        if (tripStatus == "accepted") {
-                            RideDetailsBottomSheetContent(navController,tripId!!)
-                        } else {
-                            Log.d("UI", "🚀 تم تغيير الرحلة: $selectedTripId ، الحالة: $tripStatus")
 
-                            if (currentIsLocationEnabled.value && currentIsLocationGranted.value) {
-                                if (!isConfirmed) {
+                        when {
 
-                                    PickupWithDropOffButtons(
-                                        navController = navController,
-                                        locationName = locationName
+                            state.inProgress -> {
+
+                                LaunchedEffect(tripStatus) {
+                                    if (tripStatus == "Completed") {
+                                        stateTripViewModel.updateTripStatus("Completed")
+                                    }
+                                }
+                                RideInProgressScreen(
+                                    startLocation = originString?:"",
+                                    endLocation = destinationString?:"مطار القاهرة الدولي",
+                                    estimatedTime = formattedTime?: "30 دقيقة",
+
+                                    onEmergencyClick = {
+                                        // هنا ترسل alert للطوارئ أو Firebase
+                                        Log.d("EMERGENCY", "🚨 تم الضغط على زر الطوارئ!")
+                                        // تقدر تبعت location أو تعمل أي logic إضافي
+                                    }
+                                )
+
+                            }
+                            state.isAccepted -> {
+                                LaunchedEffect(Unit) {
+                                    waitForDriverIdFromTrip(
+                                        tripId = tripId!!,
+                                        onDriverIdReady = { driverId ->
+                                            fetchDriverInfoWithRetry(
+                                                driverId,
+                                                onSuccess = { name, car ->
+                                                    driverName = name
+                                                    carType = car
+                                                    Log.d("DriverData", "🚗 الاسم: $driverName - النوع: $carType")
+                                                },
+                                                maxRetries = 5 // عدد المحاولات لجلب driverId (تقدر تزوده لو حابب)
+                                            )
+                                        },
+                                        maxRetries = 5 // عدد المحاولات لجلب driverId
                                     )
-                                } else if (isConfirmed) {
-                                    menuIconShow = false;
-                                    confirmPickup(onclick = { isSearch = true })
                                 }
-                                if (isSearch) {
-                                    isConfirmed = false
-                                    searchAboutADriver()
+
+
+                                RideDetailsBottomSheetContent(navController, tripId!!)
+                                LaunchedEffect(tripStatus) {
+                                    if (tripStatus == "InProgress") {
+
+                                        stateTripViewModel.updateTripStatus("InProgress")
+                                    }
                                 }
-                            } else {
-                                EnableLocationServices(
-                                    permissionViewModel = permissionViewModel,
-                                    context = context
+
+                            }
+                            state.isConfirmed -> {
+                                isSearch=true
+                                confirmPickup(onclick = {
+                                    isConfirmed=false
+                                    stateTripViewModel.searchDriver()  })
+
+                            }
+                            state.isSearch -> {
+                                searchAboutADriver()
+                                LaunchedEffect(tripStatus) {
+                                    if (tripStatus == "accepted") {
+                                        stateTripViewModel.updateTripStatus("accepted")
+                                    }
+                                }
+                            }
+                            state.isInitialPickup -> {
+
+
+
+                                PickupWithDropOffButtons(
+                                    navController = navController,
+                                    locationName = locationName
                                 )
                             }
+
+
                         }
 
                     }
@@ -441,10 +812,13 @@ fun homeScreenContent(navController: NavController) {
 
 
             val context = LocalContext.current
-            if (currentIsLocationEnabled.value && currentIsLocationGranted.value && !isConfirmed && !isSearch) {
+            if (currentIsLocationEnabled.value && currentIsLocationGranted.value && !isConfirmed && !isSearch&&!isstart&&!isTripBegin&&state.isInitialPickup) {
                 val Savedtoken =
                     token // Fetch or pass the token
                 FindDriverCard(onclick = {
+
+                    stateTripViewModel.confirmPickup()
+
                     if (startPoint.value == null || endPoint.value == null) {
                         Toast.makeText(
                             context,
@@ -483,7 +857,7 @@ fun homeScreenContent(navController: NavController) {
                     val distanceInKm = distance
                     val paymentMethod = "cash"
                     val apiKey =
-                        "71ab0bb4-9572-4423-ab8f-332deb2827a7" // Replace with your actual API key
+                        "c69abe50-60d2-43bc-82b1-81cbdcebeddc" // Replace with your actual API key
 
                     Log.d(
                         "TripScreen",
@@ -523,6 +897,12 @@ fun homeScreenContent(navController: NavController) {
             }
         }
     }
+    }
+
+}
+
+
+
 }
 
 class LocationViewModel5 : ViewModel() {
@@ -591,7 +971,7 @@ fun TrackDriverScreen(
             try {
                 val response = DirectionsApi.getDirections(
                     start, end,
-                    apiKey =  "71ab0bb4-9572-4423-ab8f-332deb2827a7",
+                    apiKey =  "c69abe50-60d2-43bc-82b1-81cbdcebeddc",
                     tripId = tripId
                 )
 
@@ -936,7 +1316,7 @@ suspend fun fetchGraphHopperSuggestions(
         try {
             val encodedQuery = URLEncoder.encode(query, "UTF-8")
             val url =
-                "https://graphhopper.com/api/1/geocode?q=$encodedQuery&locale=en&limit=5&key=71ab0bb4-9572-4423-ab8f-332deb2827a7"
+                "https://graphhopper.com/api/1/geocode?q=$encodedQuery&locale=en&limit=5&key=c69abe50-60d2-43bc-82b1-81cbdcebeddc"
 
             val connection = URL(url).openConnection() as HttpURLConnection
             connection.requestMethod = "GET"
