@@ -689,8 +689,9 @@ fun driverHomeScreen(navController: NavController) {
                     context = context,
                     navController = navController,
                     tripId = tripId!!,
-                    mapchangetoInPrograss = { mapStateViewModel.startTrip() } ,
-                    onTripStarted =   {accepttrip.startTrip()}
+                    mapchangetoInPrograss = { mapStateViewModel.startTrip() },
+                    onTripStarted = { accepttrip.startTrip() },
+
                 )
             }
             if (showStartTrip) {

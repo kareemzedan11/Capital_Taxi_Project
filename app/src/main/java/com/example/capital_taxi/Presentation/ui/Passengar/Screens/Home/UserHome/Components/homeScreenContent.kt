@@ -781,6 +781,7 @@ when{
 
 
                                 PickupWithDropOffButtons(
+
                                     navController = navController,
                                     locationName = locationName
                                 )
@@ -817,7 +818,7 @@ when{
                     token // Fetch or pass the token
                 FindDriverCard(onclick = {
 
-                    stateTripViewModel.confirmPickup()
+
 
                     if (startPoint.value == null || endPoint.value == null) {
                         Toast.makeText(
@@ -827,8 +828,9 @@ when{
                         ).show()
                         return@FindDriverCard
                     }
-                    Log.d("TripScreen", "FindDriverCard clicked")
 
+                    Log.d("TripScreen", "FindDriverCard clicked")
+                    stateTripViewModel.confirmPickup()
                     val sharedPreferences =
                         context.getSharedPreferences("your_prefs", Context.MODE_PRIVATE)
                     val userId = sharedPreferences.getString("USER_ID", null)

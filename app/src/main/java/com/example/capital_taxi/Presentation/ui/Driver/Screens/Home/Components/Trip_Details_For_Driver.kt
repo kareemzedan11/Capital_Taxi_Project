@@ -2,6 +2,7 @@ package com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components
 
 
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -44,6 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
@@ -60,6 +62,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.pow
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,6 +82,8 @@ fun TripDetailsForDriver(navController: NavController,
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true,
     )
+    val context = LocalContext.current
+
     val tripViewModel: dataTripViewModel = viewModel()
     val origin by tripViewModel.origin.collectAsState()
     val destination by tripViewModel.destination.collectAsState()
@@ -265,15 +274,50 @@ fun TripDetailsForDriver(navController: NavController,
                 // Stop Accepting Trips Button
                 Button(
                     onClick = {
-                        mapchangetoInPrograss()
-
                         coroutineScope.launch {
-                            menu_close()
-                            updateTripStatus(tripId,"InProgress") // مرر الـ tripId هنا
-                            onTripStarted()
+                            val tripDoc = FirebaseFirestore.getInstance()
+                                .collection("trips")
+                                .whereEqualTo("_id", tripId)
+                                .get()
+                                .await()
+
+                            if (!tripDoc.isEmpty) {
+                                val document = tripDoc.documents.first()
+
+                                // جلب driverLocation
+                                val driverLocationMap = document.get("driverLocation") as? Map<*, *>
+                                val driverLat = driverLocationMap?.get("latitude") as? Double
+                                val driverLng = driverLocationMap?.get("longitude") as? Double
+
+                                // جلب originMap
+                                val originMap = document.get("originMap") as? Map<*, *>
+                                val originLat = originMap?.get("lat") as? Double
+                                val originLng = originMap?.get("lng") as? Double
+
+                                if (driverLat != null && driverLng != null && originLat != null && originLng != null) {
+                                    val distance = calculateDistance(
+                                        driverLat,
+                                        driverLng,
+                                        originLat,
+                                        originLng
+                                    )
+
+                                    if (distance <= 5) {
+                                        mapchangetoInPrograss()
+                                        menu_close()
+                                        updateTripStatus(tripId, "InProgress")
+                                        onTripStarted()
+                                    } else {
+                                        Toast.makeText(context, "You are not at the pickup point", Toast.LENGTH_SHORT).show()
+                                    }
+                                } else {
+                                    Toast.makeText(context, "Location data is missing", Toast.LENGTH_SHORT).show()
+                                }
+                            }
                         }
                     },
-                    modifier = Modifier
+
+                            modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                         .height(60.dp),
@@ -291,6 +335,19 @@ fun TripDetailsForDriver(navController: NavController,
             }
         }
     }
+}
+fun calculateDistance(
+    lat1: Double, lon1: Double,
+    lat2: Double, lon2: Double
+): Double {
+    val earthRadius = 6371000.0 // in meters
+    val dLat = Math.toRadians(lat2 - lat1)
+    val dLon = Math.toRadians(lon2 - lon1)
+    val a = sin(dLat / 2).pow(2.0) +
+            cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) *
+            sin(dLon / 2).pow(2.0)
+    val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+    return earthRadius * c
 }
 
 suspend fun updateTripStatus(tripId: String, status:String) {

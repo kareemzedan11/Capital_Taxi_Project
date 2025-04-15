@@ -27,6 +27,10 @@ import com.example.capital_taxi.Presentation.ui.shared.Language.components.updat
 import com.google.firebase.messaging.BuildConfig
 import org.osmdroid.config.Configuration
 
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import androidx.core.content.ContextCompat.startActivity
 
 class MainActivity : ComponentActivity() {
 
@@ -56,14 +60,13 @@ class MainActivity : ComponentActivity() {
             StrictMode.setThreadPolicy(StrictMode.ThreadPolicy.Builder().permitAll().build())
         }
 
-
         // Get the saved language and update the locale
         val languageCode = LanguagePreference.getSavedLanguage(this)
         updateLocale(this, languageCode)
 
 
         requestPermissions()
-
+        checkDrawOverAppsPermission() // ← هنا تضيفها
         // Set the layout direction based on the saved language
         window.decorView.layoutDirection = if (languageCode == "ar") View.LAYOUT_DIRECTION_RTL else View.LAYOUT_DIRECTION_LTR
 
@@ -83,7 +86,18 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-
+    private fun checkDrawOverAppsPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!Settings.canDrawOverlays(this)) {
+                val intent = Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:$packageName")
+                )
+                startActivity(intent)
+                Toast.makeText(this, "Please enable 'Draw over other apps' permission", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
     // Request permissions method
     private fun requestPermissions() {
         val permissionsToRequest = mutableListOf<String>()

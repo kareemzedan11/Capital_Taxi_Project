@@ -41,9 +41,12 @@ import androidx.compose.ui.platform.LocalContext
 import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.delay
 import android.media.AudioRecord
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 
 @Composable
@@ -56,6 +59,7 @@ fun StartTrip(tripId:String,TripEnd:()->Unit) {
     var tripStarted by remember { mutableStateOf(false) }
     var triggerStart by remember { mutableStateOf(false) }
     var showToast by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     // ده اللي بيعمل delay لما الزر يتضغط
     LaunchedEffect(triggerStart) {
@@ -151,21 +155,90 @@ fun StartTrip(tripId:String,TripEnd:()->Unit) {
                         onClick = {
                             if (!isLoading) {
                                 if (!tripStarted) {
-                                    // بدء الرحلة
-                                    triggerStart = true
+                                    // فحص المسافة قبل بدء الرحلة
                                     CoroutineScope(Dispatchers.IO).launch {
-                                        updateTripStatus(tripId,"Started") // تحديث الحالة إلى "Started"
+                                        val tripDoc = FirebaseFirestore.getInstance()
+                                            .collection("trips")
+                                            .whereEqualTo("_id", tripId)
+                                            .get()
+                                            .await()
+
+                                        if (!tripDoc.isEmpty) {
+                                            val document = tripDoc.documents.first()
+
+                                            val driverLocationMap = document.get("driverLocation") as? Map<*, *>
+                                            val driverLat = driverLocationMap?.get("latitude") as? Double
+                                            val driverLng = driverLocationMap?.get("longitude") as? Double
+
+                                            val originMap = document.get("originMap") as? Map<*, *>
+                                            val originLat = originMap?.get("lat") as? Double
+                                            val originLng = originMap?.get("lng") as? Double
+
+                                            if (driverLat != null && driverLng != null && originLat != null && originLng != null) {
+                                                val distance = calculateDistance(driverLat, driverLng, originLat, originLng)
+
+                                                if (distance <= 5) {
+                                                    triggerStart = true
+                                                    updateTripStatus(tripId, "Started")
+                                                } else {
+                                                    withContext(Dispatchers.Main) {
+                                                        Toast.makeText(context, "You are not at the pickup point", Toast.LENGTH_SHORT).show()
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
                                 } else {
-                                    TripEnd()
-                                    // إنهاء الرحلة
                                     CoroutineScope(Dispatchers.IO).launch {
-                                        updateTripStatus(tripId, "Completed") // تحديث الحالة إلى "Completed"
-                                    }
-                                }
-                            }
+                                        val tripDoc = FirebaseFirestore.getInstance()
+                                            .collection("trips")
+                                            .whereEqualTo("_id", tripId)
+                                            .get()
+                                            .await()
 
-                        },
+                                        if (!tripDoc.isEmpty) {
+                                            val document = tripDoc.documents.first()
+
+                                            val driverLocationMap =
+                                                document.get("driverLocation") as? Map<*, *>
+                                            val driverLat =
+                                                driverLocationMap?.get("latitude") as? Double
+                                            val driverLng =
+                                                driverLocationMap?.get("longitude") as? Double
+
+                                            val destinationMap =
+                                                document.get("destinationMap") as? Map<*, *>
+                                            val destLat = destinationMap?.get("lat") as? Double
+                                            val destLng = destinationMap?.get("lng") as? Double
+
+                                            if (driverLat != null && driverLng != null && destLat != null && destLng != null) {
+                                                val distance = calculateDistance(
+                                                    driverLat,
+                                                    driverLng,
+                                                    destLat,
+                                                    destLng
+                                                )
+
+                                                if (distance <= 5) {
+                                                    updateTripStatus(tripId, "Completed")
+                                                    withContext(Dispatchers.Main) {
+                                                        TripEnd()
+                                                    }
+                                                } else {
+                                                    withContext(Dispatchers.Main) {
+                                                        Toast.makeText(
+                                                            context,
+                                                            "You are not at the drop-off point",
+                                                            Toast.LENGTH_SHORT
+                                                        ).show()
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }}
+
+                            },
                         modifier = Modifier.height(48.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = primaryColor,

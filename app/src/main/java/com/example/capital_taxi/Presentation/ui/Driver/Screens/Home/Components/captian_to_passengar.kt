@@ -56,6 +56,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun captainToPassenger(navController: NavController,
                        onTripStarted:()->Unit,
+
                        mapchangetoInPrograss:()->Unit,
                        context: Context, tripId: String) {
 
@@ -134,6 +135,7 @@ fun captainToPassenger(navController: NavController,
                        onTripStarted = onTripStarted,
                             tripId = tripId,
                             mapchangetoInPrograss =mapchangetoInPrograss ,
+
                             menu_close = {bottomSheetState.hide()})
 
 
