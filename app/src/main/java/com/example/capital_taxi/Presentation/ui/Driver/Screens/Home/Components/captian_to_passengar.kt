@@ -134,6 +134,7 @@ fun captainToPassenger(navController: NavController,
 
                        onTripStarted = onTripStarted,
                             tripId = tripId,
+
                             mapchangetoInPrograss =mapchangetoInPrograss ,
 
                             menu_close = {bottomSheetState.hide()})

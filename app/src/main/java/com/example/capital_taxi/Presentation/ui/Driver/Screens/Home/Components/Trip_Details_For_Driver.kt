@@ -308,7 +308,11 @@ fun TripDetailsForDriver(navController: NavController,
                                         updateTripStatus(tripId, "InProgress")
                                         onTripStarted()
                                     } else {
-                                        Toast.makeText(context, "You are not at the pickup point", Toast.LENGTH_SHORT).show()
+                                        mapchangetoInPrograss()
+                                        menu_close()
+                                        updateTripStatus(tripId, "InProgress")
+                                        onTripStarted()
+                                       // Toast.makeText(context, "You are not at the pickup point", Toast.LENGTH_SHORT).show()
                                     }
                                 } else {
                                     Toast.makeText(context, "Location data is missing", Toast.LENGTH_SHORT).show()

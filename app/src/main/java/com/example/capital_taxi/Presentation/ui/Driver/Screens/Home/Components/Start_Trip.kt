@@ -181,9 +181,11 @@ fun StartTrip(tripId:String,TripEnd:()->Unit) {
                                                     triggerStart = true
                                                     updateTripStatus(tripId, "Started")
                                                 } else {
-                                                    withContext(Dispatchers.Main) {
-                                                        Toast.makeText(context, "You are not at the pickup point", Toast.LENGTH_SHORT).show()
-                                                    }
+                                                    triggerStart = true
+                                                    updateTripStatus(tripId, "Started")
+//                                                    withContext(Dispatchers.Main) {
+//                                                        Toast.makeText(context, "You are not at the pickup point", Toast.LENGTH_SHORT).show()
+//                                                    }
                                                 }
                                             }
                                         }
@@ -225,13 +227,17 @@ fun StartTrip(tripId:String,TripEnd:()->Unit) {
                                                         TripEnd()
                                                     }
                                                 } else {
+                                                    updateTripStatus(tripId, "Completed")
                                                     withContext(Dispatchers.Main) {
-                                                        Toast.makeText(
-                                                            context,
-                                                            "You are not at the drop-off point",
-                                                            Toast.LENGTH_SHORT
-                                                        ).show()
+                                                        TripEnd()
                                                     }
+//                                                    withContext(Dispatchers.Main) {
+//                                                        Toast.makeText(
+//                                                            context,
+//                                                            "You are not at the drop-off point",
+//                                                            Toast.LENGTH_SHORT
+//                                                        ).show()
+//                                                    }
                                                 }
                                             }
                                         }

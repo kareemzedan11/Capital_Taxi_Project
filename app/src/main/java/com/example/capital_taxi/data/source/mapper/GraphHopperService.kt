@@ -56,7 +56,7 @@ fun MapViewComposable(
 
     // تعيين المصدر لأول مرة
     LaunchedEffect(mapView) {
-        mapView.setTileSource(org.osmdroid.tileprovider.tilesource.TileSourceFactory.MAPNIK)
+        mapView.setTileSource(TileSourceFactory.MAPNIK)
         mapView.controller.setZoom(15)
         mapView.controller.setCenter(startPoint ?: GeoPoint(30.033, 31.233))
     }
@@ -240,7 +240,7 @@ fun decodePolyline(encoded: String): List<GeoPoint> {
         var shift = 0
         var result = 0
         while (true) {
-            val byte = encoded[index++].toInt() - 63
+            val byte = encoded[index++].code - 63
             result = result or ((byte and 0x1f) shl shift)
             shift += 5
             if (byte < 0x20) break
@@ -251,7 +251,7 @@ fun decodePolyline(encoded: String): List<GeoPoint> {
         shift = 0
         result = 0
         while (true) {
-            val byte = encoded[index++].toInt() - 63
+            val byte = encoded[index++].code - 63
             result = result or ((byte and 0x1f) shl shift)
             shift += 5
             if (byte < 0x20) break
@@ -299,7 +299,7 @@ fun driverMapViewComposable(
         }
     }
     LaunchedEffect(mapView, userLocation) {
-        mapView.setTileSource(org.osmdroid.tileprovider.tilesource.TileSourceFactory.MAPNIK)
+        mapView.setTileSource(TileSourceFactory.MAPNIK)
 
         val zoomLevel = if (isDriver) 18.0 else 15.0  // تكبير أكثر للسائقين
         mapView.controller.setZoom(zoomLevel)
@@ -337,7 +337,7 @@ fun driverMapViewComposable(
                 userMarker.title = "Your Location"
 
                 if (isDriver) {
-                    userMarker.setIcon(context.getDrawable(R.drawable.uber)) // أيقونة السائق
+                    userMarker.icon = context.getDrawable(R.drawable.uber) // أيقونة السائق
                 }
 
                 mapView.overlays.add(userMarker)

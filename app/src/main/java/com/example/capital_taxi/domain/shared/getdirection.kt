@@ -100,7 +100,7 @@ fun fetchRoute(
     val apiService = retrofit.create(GraphHopperApi::class.java)
     val call = apiService.getDirections(startPoint, endPoint, "car", apiKey)
 
-    call.enqueue(object : retrofit2.Callback<RouteResponse> {
+    call.enqueue(object : Callback<RouteResponse> {
         override fun onResponse(call: Call<RouteResponse>, response: Response<RouteResponse>) {
             if (response.isSuccessful) {
                 val rawResponse = response.body()?.toString() // Log the raw response

@@ -211,7 +211,7 @@ fun GoogleMapsWithSimulatedMovement(
                     .target(point)
                     .zoom(15f)
                     .build()
-                kotlinx.coroutines.delay(500) // Adjust delay for smoothness
+                delay(500) // Adjust delay for smoothness
             }
         }
     }

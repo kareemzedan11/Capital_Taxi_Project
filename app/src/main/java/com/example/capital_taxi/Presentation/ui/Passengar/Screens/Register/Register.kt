@@ -54,7 +54,7 @@ fun UserRegister(navController: NavController) {
                     .align(Alignment.TopEnd)
             ) {
                appBar_background_curve(generalColor)
-                UserRegisterContent(navController)
+                 UserRegisterContent(navController)
             }
         }
     }

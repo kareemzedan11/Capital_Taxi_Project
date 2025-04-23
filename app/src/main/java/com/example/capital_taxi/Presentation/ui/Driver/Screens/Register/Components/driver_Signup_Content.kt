@@ -33,7 +33,7 @@ import com.example.capital_taxi.Presentation.Common.RegisterHeader
 import com.example.capital_taxi.Presentation.Common.TermsAndConditionsCheckbox
 import com.example.capital_taxi.Presentation.Common.userMediaLoginOption
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Register.Components.registerDriver
-import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Register.Components.sendDriverToFirebase
+import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Register.Components.sendDriverData
 import com.example.capital_taxi.R
 import java.io.File
 import java.io.FileOutputStream
@@ -53,6 +53,8 @@ fun driverSignupContent(navController: NavController) {
     val phone = remember { mutableStateOf("") }
     val carType = remember { mutableStateOf("") }
     val carNumber = remember { mutableStateOf("") }
+    val carModel = remember { mutableStateOf("") }
+    val carColor = remember { mutableStateOf("") }
     var isChecked by remember { mutableStateOf(false) }
 
     val profileImage = remember { mutableStateOf<Bitmap?>(null) }
@@ -81,7 +83,9 @@ fun driverSignupContent(navController: NavController) {
             confirmPassword = confirmPassword,
             phone = phone,
             carType = carType,
-            carNumber = carNumber
+            carNumber = carNumber,
+            carColor = carColor,
+            carModel = carModel
         )
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -102,14 +106,24 @@ fun driverSignupContent(navController: NavController) {
         driverSignUpButton(
             isEnabled = isChecked,
             onClick = {
-                sendDriverToFirebase(
+                sendDriverData(
                     name.value,
                     username.value,
                     email.value,
                     phone.value,
                     carType.value,
                     carNumber.value,
-                    context
+                    carColor = carColor.value,
+                    carModel = carModel.value,
+                    profile = profileImage.value?.let { bitmapToFile(context, it, "profile.jpg") },
+                    nationalIdFront = nationalIdFront.value?.let { bitmapToFile(context, it, "national_id_front.jpg") },
+                    nationalIdBack = nationalIdBack.value?.let { bitmapToFile(context, it, "national_id_back.jpg") },
+                    licenseFront = licenseFront.value?.let { bitmapToFile(context, it, "license_front.jpg") },
+                    licenseBack = licenseBack.value?.let { bitmapToFile(context, it, "license_back.jpg") },
+                    carLicenseFront = carLicenseFront.value?.let { bitmapToFile(context, it, "car_license_front.jpg") },
+                    carLicenseBack = carLicenseBack.value?.let { bitmapToFile(context, it, "car_license_back.jpg") }
+,
+                            context =   context,
                 )
 
 
@@ -128,6 +142,8 @@ fun driverSignupContent(navController: NavController) {
                     licenseBack = licenseBack.value?.let { bitmapToFile(context, it, "license_back.jpg") },
                     carLicenseFront = carLicenseFront.value?.let { bitmapToFile(context, it, "car_license_front.jpg") },
                     carLicenseBack = carLicenseBack.value?.let { bitmapToFile(context, it, "car_license_back.jpg") }
+
+
                 )
             },
             text = R.string.Continue

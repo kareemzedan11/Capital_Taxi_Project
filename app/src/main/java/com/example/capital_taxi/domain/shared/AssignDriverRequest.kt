@@ -129,8 +129,8 @@ class TripViewModel : ViewModel() {
     }
 
     var responseMessage = mutableStateOf("")
-    private val _tripDetails = mutableStateOf<com.example.capital_taxi.domain.TripResponse?>(null)
-    val tripDetails: State<com.example.capital_taxi.domain.TripResponse?> = _tripDetails
+    private val _tripDetails = mutableStateOf<TripResponse?>(null)
+    val tripDetails: State<TripResponse?> = _tripDetails
 
     fun createTrip(
         context: Context,

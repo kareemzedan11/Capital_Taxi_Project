@@ -85,6 +85,9 @@ dependencies {
     implementation ("androidx.media3:media3-exoplayer:1.2.1")
     implementation ("androidx.media3:media3-ui:1.2.1")
 
+
+    implementation("io.github.jan-tennert.supabase:storage-kt:1.4.0") // لـ Storage
+
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))

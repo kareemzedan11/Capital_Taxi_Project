@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -61,16 +62,20 @@ import com.example.capital_taxi.R
 
 import com.google.firebase.Firebase
 import com.google.firebase.database.database
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.firestore
 import com.google.firebase.messaging.FirebaseMessaging
+import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.tasks.await
+import org.json.JSONObject
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
+import java.io.File
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -101,7 +106,6 @@ fun driverLoginContent(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
-
     LaunchedEffect(isLoading) {
         if (isLoading) {
             val role = "driver"
@@ -115,10 +119,21 @@ fun driverLoginContent(
                     val userId = responseBody?.account?.userId
 
                     if (token != null && userId != null) {
+                        // 1. حفظ بيانات تسجيل الدخول في SharedPreferences
                         editor.putString("driver_token", token)
                         editor.putString("driver_id", userId)
                         editor.apply()
 
+                        // 2. الحصول على ملفات السائق من SharedPreferences
+                        val sharedPref = context.getSharedPreferences("DriverDocuments", Context.MODE_PRIVATE)
+                        val updates = hashMapOf<String, Any>(
+                            "id" to userId,
+                            "updatedAt" to FieldValue.serverTimestamp()
+                        )
+
+
+
+                        // 4. البحث عن السائق في Firebase وتحديث بياناته
                         val db = FirebaseFirestore.getInstance()
                         val driverRef = db.collection("drivers")
                             .whereEqualTo("email", email)
@@ -128,34 +143,48 @@ fun driverLoginContent(
                         if (!driverRef.isEmpty) {
                             val driverDoc = driverRef.documents[0]
 
-                            // ✅ تحديث حقل id بالقيمة الصحيحة من السيرفر
-                            driverDoc.reference.update("id", userId)
+                            // 5. تنفيذ التحديث
+                            driverDoc.reference.update(updates)
                                 .addOnSuccessListener {
-                                    Log.d("Login", "✅ تم تحديث الـ driver ID في Firebase بنجاح")
+                                    Log.d("Login", "✅ تم تحديث بيانات السائق بنجاح")
+
+                                    // 6. مسح بيانات SharedPreferences بعد التحديث
+                                    with(sharedPref.edit()) {
+                                        clear()
+                                        apply()
+                                    }
+
+                                    // 7. الانتقال إلى الشاشة الرئيسية
+                                    navController.navigate(Destination.DriverHomeScreen.route)
                                 }
                                 .addOnFailureListener { e ->
-                                    Log.e("Login", "❌ فشل تحديث الـ driver ID في Firebase: ${e.message}")
+                                    Log.e("Login", "❌ فشل تحديث بيانات السائق: ${e.message}")
+                                    loginError = "⚠️ فشل في تحديث بيانات السائق"
                                 }
+                        } else {
+                            Log.e("Login", "❌ لم يتم العثور على مستند السائق")
+                            loginError = "⚠️ لا يوجد حساب سائق مسجل بهذا البريد"
                         }
-
-                        Log.d("Login", "✅ تسجيل الدخول ناجح | Token: $token | UserID: $userId")
-                        navController.navigate(Destination.DriverHomeScreen.route)
                     } else {
                         loginError = "🚨 لم يتم استلام التوكن أو معرف المستخدم من السيرفر"
                     }
                 } else {
-                    loginError = response.errorBody()?.string() ?: response.message()
+                    loginError = response.errorBody()?.string()?.let {
+                        try {
+                            JSONObject(it).getString("message")
+                        } catch (e: Exception) {
+                            response.message()
+                        }
+                    } ?: response.message()
                 }
             } catch (e: Exception) {
                 loginError = "⚠️ حدث خطأ أثناء تسجيل الدخول: ${e.localizedMessage}"
+                Log.e("Login", "Exception: ${e.stackTraceToString()}")
             } finally {
                 isLoading = false
             }
         }
     }
-
-
-
 
 
 
@@ -311,7 +340,7 @@ fun driverMapViewComposable(
 
     // إضافة علامة السيارة
     LaunchedEffect(mapView) {
-        carMarker.setIcon(ContextCompat.getDrawable(context, R.drawable.uber)) // أيقونة السيارة
+        carMarker.icon = ContextCompat.getDrawable(context, R.drawable.uber) // أيقونة السيارة
         carMarker.position = startPoint
         mapView.overlays.add(carMarker)
     }
@@ -379,7 +408,7 @@ fun decodePolyline(encoded: String): List<GeoPoint> {
         var shift = 0
         var result = 0
         while (true) {
-            val byte = encoded[index++].toInt() - 63
+            val byte = encoded[index++].code - 63
             result = result or ((byte and 0x1f) shl shift)
             shift += 5
             if (byte < 0x20) break
@@ -390,7 +419,7 @@ fun decodePolyline(encoded: String): List<GeoPoint> {
         shift = 0
         result = 0
         while (true) {
-            val byte = encoded[index++].toInt() - 63
+            val byte = encoded[index++].code - 63
             result = result or ((byte and 0x1f) shl shift)
             shift += 5
             if (byte < 0x20) break

@@ -13,10 +13,10 @@ import com.example.capital_taxi.domain.shared.LocationData
 import com.example.capital_taxi.utils.Constants.ApiConstants
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
+import com.google.type.LatLng
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -163,13 +163,13 @@ data class TripRequest(
     val fare: Double,
     val distanceInKm: Double
 )
-
-
-// موديل بيانات الرحلة
 data class Trip(
     val _id: String,
     val user: String,
     val driver: Driver,
+    val originMap: Map<String, Any>? = null,
+    val destinationMap: Map<String, Any>? = null,
+
     val origin: String,  // JSON String
     val destination: String,  // JSON String
     val distanceInKm: Double,
@@ -179,11 +179,25 @@ data class Trip(
     val createdAt: String,
     val updatedAt: String
 ) {
-    // ✅ Constructor فارغ مطلوب من Firebase
+    // Empty constructor for Firebase
     constructor() : this(
-        "", "", Driver(), "", "", 0.0, 0.0, "", "", "", ""
+        _id = "",
+        user = "",
+        driver = Driver(),
+        originMap = null,
+        destinationMap = null,
+        origin = "",
+        destination = "",
+        distanceInKm = 0.0,
+        fare = 0.0,
+        paymentMethod = "",
+        status = "",
+        createdAt = "",
+        updatedAt = "",
+
     )
 }
+
 
 // موديل بيانات السائق
 data class Driver(
@@ -470,7 +484,7 @@ suspend fun fetchTripDirections(
         )
 
         // Log the raw response for debugging
-        Log.d("API Raw Response", "Raw Response: ${response.raw().toString()}")
+        Log.d("API Raw Response", "Raw Response: ${response.raw()}")
 
         // Log the response body for debugging
         Log.d("API Full Response", "Full Response: ${response.body()}")

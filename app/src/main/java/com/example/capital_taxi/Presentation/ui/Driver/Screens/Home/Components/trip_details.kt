@@ -98,7 +98,7 @@ fun TripDetailsCard(
         val mediaItem = MediaItem.fromUri(rawUri)
         exoPlayer.setMediaItem(mediaItem)
 
-        exoPlayer.setPlaybackParameters(PlaybackParameters(0.7f))
+        exoPlayer.playbackParameters = PlaybackParameters(0.7f)
         exoPlayer.prepare()
         exoPlayer.play()
 
@@ -333,7 +333,7 @@ fun TripDetailsCard(
                                 Log.e("TripDetailsCard", "❌ Error assigning driver: $errorMessage")
                             }
                         )
-                        getInstructionsFromFirebase(trip._id!!) { instructions ->
+                        getInstructionsFromFirebase(trip._id) { instructions ->
                             if (instructions != null) {
                                 instructions.forEach {
                                     Log.d("INSTRUCTION", it.text)

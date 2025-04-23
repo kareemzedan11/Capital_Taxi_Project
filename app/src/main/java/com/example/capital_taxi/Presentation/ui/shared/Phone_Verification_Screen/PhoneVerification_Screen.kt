@@ -139,7 +139,7 @@ fun PhoneVerification(navController: NavController) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(Color.White.copy(alpha = .2f)),
-                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     CountryCodePickerView(onCountrySelected = { selectedCountry = it })
 

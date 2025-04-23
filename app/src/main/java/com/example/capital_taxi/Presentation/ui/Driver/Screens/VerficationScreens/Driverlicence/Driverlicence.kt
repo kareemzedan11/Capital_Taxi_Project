@@ -341,7 +341,7 @@ fun ExpirationDatePicker() {
                 .padding(horizontal = 16.dp),
             readOnly = true,
             trailingIcon = {
-                androidx.compose.material3.Icon(
+                Icon(
                     imageVector = androidx.compose.material.icons.Icons.Default.AddCircle,
                     contentDescription = "Select Date",
                     modifier = Modifier.clickable { datePickerDialog.show() }

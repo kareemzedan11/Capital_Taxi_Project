@@ -29,6 +29,8 @@ import com.example.capital_taxi.Presentation.Common.ForgetPassword
 import com.example.capital_taxi.Presentation.Common.LoginForm
 import com.example.capital_taxi.Presentation.Common.userMediaLoginOption
 import com.example.capital_taxi.R
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.tasks.await
 
 
 @Composable
@@ -63,23 +65,34 @@ fun userLoginContent(
             try {
                 val response = LoginApiClient.loginApiService.loginuser(request)
                 if (response.isSuccessful) {
-
-
-                     val token = response.body()?.token
+                    val token = response.body()?.token
                     val userID = response.body()?.account!!.userId
 
                     if (token != null) {
-
+                        // 1. حفظ التوكن وID في SharedPreferences
                         editor.putString("USER_TOKEN", token)
-                        editor.putString("USER_ID",userID)
+                        editor.putString("USER_ID", userID)
                         editor.apply()
 
-                        // الانتقال مع مسح back stack
+                        // 2. تحديث الـ userId في Firestore بناءً على البريد الإلكتروني
+                        val firestore = FirebaseFirestore.getInstance()
+                        val query = firestore.collection("users")
+                            .whereEqualTo("email", email)
+                            .limit(1)
+
+                        val querySnapshot = query.get().await()
+                        if (!querySnapshot.isEmpty) {
+                            val document = querySnapshot.documents[0]
+                            document.reference.update("id", userID).await()
+                            println("✅ Updated userId in Firestore for email: $email")
+                        }
+
+                        // 3. الانتقال إلى الشاشة الرئيسية
                         navController.navigate(Destination.UserHomeScreen.route) {
-                            popUpTo(navController.graph.startDestinationId) {  // امسح كل الشاشات حتى الشاشة الأولى
-                                inclusive = true  // امسح الشاشة الأولى أيضًا
+                            popUpTo(navController.graph.startDestinationId) {
+                                inclusive = true
                             }
-                            launchSingleTop = true  // لا تكرر الشاشة إذا كانت مفتوحة
+                            launchSingleTop = true
                         }
                     } else {
                         loginError = "No token received"
@@ -90,6 +103,7 @@ fun userLoginContent(
                 }
             } catch (e: Exception) {
                 loginError = "An error occurred: ${e.localizedMessage}"
+                println("❌ Firestore update error: ${e.localizedMessage}")
             } finally {
                 isLoading = false
             }

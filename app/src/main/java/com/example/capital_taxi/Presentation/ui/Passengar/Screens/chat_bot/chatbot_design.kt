@@ -17,7 +17,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -54,7 +53,7 @@ fun chatbot(navController: NavController) {
         topBar = {
             androidx.compose.material.TopAppBar(
                 title = {
-                    androidx.compose.material.Text(
+                    Text(
                         "Back",
                         fontWeight = FontWeight.Bold,
                         color = Color.Black

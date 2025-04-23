@@ -7,8 +7,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -32,7 +32,7 @@ fun MostVisitedPlaces(navController: NavController){
             Text(stringResource(R.string.Home))
             Spacer(modifier = Modifier.padding(start = 8.dp))
 
-            Icon(imageVector = Icons.Default.KeyboardArrowRight,
+            Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = "KeyboardArrowRight icon")
         }
         Spacer(modifier = Modifier.weight(1f))
@@ -47,7 +47,7 @@ fun MostVisitedPlaces(navController: NavController){
             Text(stringResource(R.string.Work))
 
             Spacer(modifier = Modifier.padding(start = 8.dp))
-            Icon(imageVector = Icons.Default.KeyboardArrowRight,
+            Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = "KeyboardArrowRight icon")
         }
         Spacer(modifier = Modifier.weight(1f))
@@ -60,7 +60,7 @@ fun MostVisitedPlaces(navController: NavController){
             Text(stringResource(R.string.Favorite))
 
             Spacer(modifier = Modifier.padding(start = 8.dp))
-            Icon(imageVector = Icons.Default.KeyboardArrowRight,
+            Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = "KeyboardArrowRight icon")
         }
     }

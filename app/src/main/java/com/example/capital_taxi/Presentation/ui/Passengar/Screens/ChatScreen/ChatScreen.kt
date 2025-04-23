@@ -7,10 +7,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
 
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -43,7 +43,7 @@ fun ChatScreen(navController: NavController) {
             title = { Text("Chat") },
             navigationIcon = {
                 IconButton(onClick = {navController.popBackStack()  }) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
@@ -101,7 +101,7 @@ fun ChatScreen(navController: NavController) {
                 },
                 modifier = Modifier.size(48.dp)
             ) {
-                Icon(Icons.Default.Send, contentDescription = "Send", tint = colorResource(R.color.primary_color),)
+                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send", tint = colorResource(R.color.primary_color),)
             }
         }
     }
@@ -112,7 +112,7 @@ fun ChatBubble(message: Message) {
     val alignment = if (message.isFromDriver) Alignment.CenterStart else Alignment.CenterEnd
     val color = if (message.isFromDriver) Color(0xFFE0E0E0) else colorResource(R.color.Icons_color)
     val textColor = if (message.isFromDriver) Color.Black else Color.White
-    val icon = if (message.isFromDriver) Icons.Default.Send else Icons.Default.Person
+    val icon = if (message.isFromDriver) Icons.AutoMirrored.Filled.Send else Icons.Default.Person
 
     Box(
         modifier = Modifier

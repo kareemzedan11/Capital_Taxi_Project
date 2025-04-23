@@ -13,7 +13,7 @@ fun CountryCodePickerView(onCountrySelected: (String) -> Unit) {
                 onCountrySelected(selectedCountryCodeWithPlus)
             }
 
-            setSearchAllowed(true)
+            isSearchAllowed = true
 
 
             setCountryForNameCode("EG")

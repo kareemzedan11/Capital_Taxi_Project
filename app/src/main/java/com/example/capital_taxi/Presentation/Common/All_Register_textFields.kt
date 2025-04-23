@@ -14,6 +14,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.capital_taxi.R
+
 @Composable
 fun All_Register_textFields(
     name: MutableState<String>,
@@ -22,9 +23,10 @@ fun All_Register_textFields(
     password: MutableState<String>,
     confirmPassword: MutableState<String>,
     phone: MutableState<String>,
-    carType: MutableState<String>?=null,
-    carNumber: MutableState<String>?=null
-
+    carType: MutableState<String>? = null,
+    carNumber: MutableState<String>? = null,
+    carColor: MutableState<String>? = null,
+    carModel: MutableState<String>? = null
 ) {
     RegisterTextField(
         value = name.value,
@@ -79,20 +81,45 @@ fun All_Register_textFields(
         label = stringResource(id = R.string.phone),
         keyboardType = KeyboardType.Phone
     )
-    Spacer(modifier = Modifier.height(16.dp))
 
-    RegisterTextField(
-        value = carType!!.value,
-        onValueChange = { carType.value = it },
-        label = "Car Type",
-        keyboardType = KeyboardType.Text
-    )
-    Spacer(modifier = Modifier.height(16.dp))
+    // عرض حقول السيارة فقط إذا كانت غير null
+    carType?.let { state->
+        Spacer(modifier = Modifier.height(16.dp))
+        RegisterTextField(
+            value = state.value,
+            onValueChange = { newValue -> state.value = newValue },
+            label = "Car Type",
+            keyboardType = KeyboardType.Text
+        )
+    }
 
-    RegisterTextField(
-        value = carNumber!!.value,
-        onValueChange = { carNumber.value = it },
-        label = "Car Number",
-        keyboardType = KeyboardType.Text
-    )
+    carNumber?.let { state->
+        Spacer(modifier = Modifier.height(16.dp))
+        RegisterTextField(
+            value = state.value,
+            onValueChange = { newValue -> state.value = newValue },
+            label = "Car Number",
+            keyboardType = KeyboardType.Text
+        )
+    }
+
+    carColor?.let {state->
+        Spacer(modifier = Modifier.height(16.dp))
+        RegisterTextField(
+            value = state.value,
+            onValueChange = { newValue -> state.value = newValue },
+            label = "Car Color",
+            keyboardType = KeyboardType.Text
+        )
+    }
+
+    carModel?.let {state->
+        Spacer(modifier = Modifier.height(16.dp))
+        RegisterTextField(
+            value = state.value,
+            onValueChange = { newValue -> state.value = newValue },
+            label = "Car Model",
+            keyboardType = KeyboardType.Text
+        )
+    }
 }

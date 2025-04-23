@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -271,7 +272,7 @@ fun driversettings(navController: NavController) {
                     modifier = Modifier.weight(1f) // Text takes up the remaining space
                 )
                 Icon(
-                    imageVector = Icons.Default.KeyboardArrowRight, // Neutral arrow icon
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, // Neutral arrow icon
                     contentDescription = "Navigate",
                     tint = Color.Gray,
                     modifier = Modifier.size(24.dp)

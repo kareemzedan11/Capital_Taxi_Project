@@ -3,7 +3,7 @@ package com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Text
@@ -55,7 +55,7 @@ fun navigationDrawerItem(onClick: () -> Unit, painter: Painter? = null, text: St
                     .padding(start = 5.dp, end = 3.dp) // Apply padding inside the background
                     .size(28.dp), // Set the size of the icon
                 contentDescription = "menu",
-                imageVector = Icons.Default.KeyboardArrowRight, tint = Color.Unspecified
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, tint = Color.Unspecified
 
             )
         },

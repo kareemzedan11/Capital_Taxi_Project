@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Looper
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -103,6 +104,10 @@ fun driverHomeScreen(navController: NavController) {
     val viewmodel: driverlocation = viewModel()
 
 
+    var passengerID  by remember { mutableStateOf<String?>(null) } // يجب أن يكون معرف السائق الحقيقي
+    var passengerName  by remember { mutableStateOf<String?>(null) } // يجب أن يكون معرف السائق الحقيقي
+
+
 
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
     val firestore = FirebaseFirestore.getInstance()
@@ -176,7 +181,7 @@ fun driverHomeScreen(navController: NavController) {
             fusedLocationClient.lastLocation.addOnSuccessListener { location: android.location.Location? ->
                 if (location != null) {
                     val database = FirebaseDatabase.getInstance().getReference("drivers").child(driverId)
-                    location?.let {
+                    location.let {
                         driverLocationState = GeoPoint(it.latitude, it.longitude) // تحديث الموقع
                     }
                     val locationMap = mapOf(
@@ -349,6 +354,26 @@ fun driverHomeScreen(navController: NavController) {
 
 
                         Destination =document.get("destination") as?String
+                        passengerID=document.get("userId") as?String
+                        if(passengerID!=null){
+                              try {
+                                val query = FirebaseFirestore.getInstance()
+                                    .collection("users")
+                                    .whereEqualTo("id", passengerID) // البحث في الحقل 'id' بدلاً من Document ID
+                                    .limit(1)
+                                    .get()
+                                    .await()
+
+                                if (!query.isEmpty) {
+                                passengerName=     query.documents.first().getString("name") ?: "مستخدم غير معروف"
+                                } else {
+                                    "مستخدم غير معروف"
+                                }
+                            } catch (e: Exception) {
+                                Log.e("Firestore", "Error fetching user name", e)
+                                "مستخدم غير معروف"
+                            }
+                        }
 
                           fare = document.get("fare") as? Double ?: 0.0 // تعيين قيمة افتراضية إذا كانت null
                           distance = document.get("distanceInKm") as? Double ?: 0.0 // تعيين قيمة افتراضية إذا كانت null
@@ -699,9 +724,18 @@ fun driverHomeScreen(navController: NavController) {
             }
             if (EndTrip) {
                 TripArrivedCard2(
-                    Destintaion = Destination?:"",
-                    fare = fare.toString()?:"",
-                    Distance = distance.toString()?:""
+                    destination = Destination ?: "",
+                    fare = fare.toString(),
+                    distance = distance.toString(),
+                    tripId =tripId!!,
+                    userId = passengerName,
+                    driverId = driver_id?:"1234",
+
+                    onProblemSubmitted =
+
+                    {
+                        Toast.makeText(context, "Problem reported successfully", Toast.LENGTH_SHORT).show()
+                    }
                 )
             }
 

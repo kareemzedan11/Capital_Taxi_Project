@@ -1,6 +1,7 @@
 package com.example.capital_taxi.Presentation.ui.Passengar.Screens.TripHistory.Components
 
 import android.content.Context
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,6 +20,8 @@ fun HistoryContent() {
     val context = LocalContext.current
     val sharedPreferences = context.getSharedPreferences("your_prefs", Context.MODE_PRIVATE)
     val token = sharedPreferences.getString("USER_TOKEN", null)
+    val UserId = sharedPreferences.getString("USER_ID", null)
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -27,7 +30,15 @@ fun HistoryContent() {
         contentAlignment = Alignment.Center
     ) {
         if (token != null) {
-            RideHistoryList(token = token)
+            RideHistoryList(
+                userId = UserId!!,
+
+
+                context = context,
+                onProblemSubmitted ={
+                    Log.d("HistoryContent", "Problem submitted successfully")
+                }
+            )
         }
     }
 }

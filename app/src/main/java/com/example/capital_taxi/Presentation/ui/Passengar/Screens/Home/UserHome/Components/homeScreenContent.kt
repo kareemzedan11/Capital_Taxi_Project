@@ -527,7 +527,7 @@ when{
         TripCompletedScreen(
             startLocation = originString ?: "undefined", // "غير محدد"
             endLocation = destinationString ?:"undefined", // "غير محدد"
-            fare = fare?.toString()?.plus(" EGP") ?: "undefined", // "غير متاح"
+            fare = fare.toString()?.plus(" EGP") ?: "undefined", // "غير متاح"
             duration = formattedTime ?: "{undefined}", // "غير متاح"
             distance = distance?.let { "$it km" } ?: "undefined", // "غير متاح"
             driverName = driverName?:"undefined", // "سائق غير معروف"
@@ -1034,7 +1034,7 @@ fun TrackDriverScreen(
         if (driverLocation != null && passengerLocation != null && !directionsFetched) {
             fetchOSRMDirections(
                 start = driverLocation!!,
-                end = passengerLocation!!,
+                end = passengerLocation,
                 onSuccess = { routePoints ->
                     directions = routePoints
                     driverLocation?.let { findNearestIndex(current = it, path =routePoints ) }

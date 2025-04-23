@@ -43,7 +43,7 @@ import com.example.app.ui.theme.responsiveTextSize
                 color = Color(0XFFf2edde),
                 RoundedCornerShape(10.dp)
             ),
-        colors = ButtonDefaults.buttonColors(if (color ?: true) Color(0XFFf2edde) else Color.White),
+        colors = ButtonDefaults.buttonColors(if (color != false) Color(0XFFf2edde) else Color.White),
         shape = RoundedCornerShape(10.dp)
     ) {
         Row(

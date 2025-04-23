@@ -19,7 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -104,7 +104,7 @@ fun drawerContent(navController: NavController) {
                         tint = Color.Unspecified,
                         contentDescription = null,
                         modifier = Modifier.size(40.dp),
-                        imageVector = Icons.Default.KeyboardArrowRight
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight
                     )
                 }
             }

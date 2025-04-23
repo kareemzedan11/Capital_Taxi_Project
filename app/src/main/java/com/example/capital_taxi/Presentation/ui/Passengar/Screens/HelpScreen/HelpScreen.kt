@@ -2,8 +2,6 @@ package com.example.capital_taxi.Presentation.ui.Passengar.Screens.HelpScreen
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowForward
 
 
 import androidx.compose.foundation.background
