@@ -47,24 +47,21 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-
 @Composable
-fun RideDetailsBottomSheetContent(navController:NavController,tripid:String) {
-
-
+fun RideDetailsBottomSheetContent(
+    onclick:()->Unit,
+    navController: NavController, tripid: String) {
     val carType = remember { mutableStateOf("") }
     val carNumber = remember { mutableStateOf("") }
     val driverusername = remember { mutableStateOf("") }
 
     LaunchedEffect(tripid) {
-        fetchDriverCarDetails(tripId = tripid, onResult = { type, number,username ->
+        fetchDriverCarDetails(tripId = tripid, onResult = { type, number, username ->
             carType.value = type
             carNumber.value = number
-            driverusername.value=username
-
+            driverusername.value = username
         })
     }
-
 
     Column(
         modifier = Modifier
@@ -86,131 +83,119 @@ fun RideDetailsBottomSheetContent(navController:NavController,tripid:String) {
             )
         }
 
-        Box(
+        // تم إزالة Box الخارجية واستخدام LazyColumn مباشرة
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .clip(RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
-                .background(Color.White)
-                .padding(2.dp),
+                .padding(horizontal = 8.dp),
+            verticalArrangement = Arrangement.Top,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            LazyColumn(
-                verticalArrangement = Arrangement.Top,
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxSize()
-            ) {
-                item {
-                    Spacer(modifier = Modifier.padding(top = 10.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            stringResource(R.string.meeting_location),
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.weight(1f))
-                        RoundedTimeDisplayWithFill()
-                    }
-                    Spacer(modifier = Modifier.padding(top = 10.dp))
-                    HorizontalDivider(Modifier.fillMaxWidth(), thickness = 2.dp)
-                    Spacer(modifier = Modifier.padding(top = 10.dp))
-
-                    RideDetailsCard()
-                    Spacer(modifier = Modifier.padding(top = 10.dp))
-
-                    HorizontalDivider(Modifier.fillMaxWidth(), thickness = 2.dp)
-                    Spacer(modifier = Modifier.padding(bottom = 10.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .padding(horizontal = 10.dp)
-                            .fillMaxWidth()
-                            .shadow(20.dp, shape = RoundedCornerShape(8.dp))
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color.White)
-                            .padding(16.dp)
-                            .padding(2.dp),
-                        contentAlignment = Alignment.TopStart
-                    ) {
-                        Row(
-                            horizontalArrangement = Arrangement.Start,
-                            verticalAlignment = Alignment.Top
-                        ) {
-                            Column {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Image(
-                                        painter = painterResource(R.drawable.uber),
-                                        contentDescription = "car image",
-                                        modifier = Modifier
-                                            .size(160.dp) // Set a fixed size
-                                            .clip(RoundedCornerShape(12.dp)) // Optional rounded corners
-                                    )
-                                    Spacer(modifier = Modifier.weight(1f))
-                                    Box(
-                                        modifier = Modifier.padding(16.dp),
-                                    ) {
-                                        Column {
-                                            // تحقق إذا كانت القيم فارغة
-                                            if (carNumber.value.isEmpty() || carType.value.isEmpty()) {
-                                                // عرض الدائرة عند تحميل البيانات
-                                                CircularProgressIndicator(
-                                                    color = Color.Blue, // يمكنك تعديل اللون
-                                                    strokeWidth = 4.dp // سمك الخط
-                                                )
-                                            } else {
-                                                // إذا كانت القيم موجودة، عرض النص
-                                                androidx.compose.material3.Text(
-                                                    carNumber.value,
-                                                    fontWeight = FontWeight.Bold,
-                                                    fontSize = 20.sp,
-                                                    color = Color.Black.copy(alpha = .3f)
-                                                )
-                                                Spacer(modifier = Modifier.padding(10.dp))
-
-                                                androidx.compose.material3.Text(
-                                                    carType.value,
-                                                    fontWeight = FontWeight.Bold,
-                                                    fontSize = 20.sp,
-                                                )
-                                            }
-                                        }}}
-
-                                    Spacer(modifier = Modifier.padding(top = 16.dp))
-                                driverDetails(driverusername= driverusername.value)
-                                Spacer(modifier = Modifier.padding(top = 16.dp))
-
-                                callAndChat(navController )
-                            }
-
-                            Spacer(modifier = Modifier.padding(top = 16.dp))
-
-
-                        }
-                    }
-                    Spacer(modifier = Modifier.padding(top = 16.dp))
-                    HorizontalDivider(Modifier.fillMaxWidth(), thickness = 2.dp)
-                    Spacer(modifier = Modifier.padding(top = 10.dp))
-
-                    Button(
-                        onClick = { },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 20.dp)
-                            .height(60.dp)
-                            .border(0.dp, Color.Transparent)
-                            .shadow(0.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0XFFF2F2F2))
-                    ) {
-                        Payment_trip_cost()
-                    }
-                    Spacer(modifier = Modifier.padding(top = 15.dp))
-
-                    HorizontalDivider(Modifier.fillMaxWidth(), thickness = 2.dp)
-                    Spacer(modifier = Modifier.padding(top = 15.dp))
-
-                    HorizontalImageScroll()
+            item {
+                Spacer(modifier = Modifier.padding(top = 10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        stringResource(R.string.meeting_location),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    RoundedTimeDisplayWithFill(tripid)
                 }
+                Spacer(modifier = Modifier.padding(top = 10.dp))
+                HorizontalDivider(Modifier.fillMaxWidth(), thickness = 2.dp)
+                Spacer(modifier = Modifier.padding(top = 10.dp))
+
+                RideDetailsCard(tripid,
+                    onclick=onclick,
+                    navController )
+                Spacer(modifier = Modifier.padding(top = 10.dp))
+
+                HorizontalDivider(Modifier.fillMaxWidth(), thickness = 2.dp)
+                Spacer(modifier = Modifier.padding(bottom = 10.dp))
+
+                // Card for car details
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(20.dp, shape = RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.White)
+                        .padding(16.dp)
+                ) {
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Image(
+                                painter = painterResource(R.drawable.uber),
+                                contentDescription = "car image",
+                                modifier = Modifier
+                                    .size(160.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                            )
+
+                            Spacer(modifier = Modifier.weight(1f))
+
+                            Column(
+                                modifier = Modifier.padding(start = 16.dp)
+                            ) {
+                                if (carNumber.value.isEmpty() || carType.value.isEmpty()) {
+                                    CircularProgressIndicator(
+                                        color = Color.Blue,
+                                        strokeWidth = 4.dp
+                                    )
+                                } else {
+                                    Text(
+                                        carNumber.value,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 20.sp,
+                                        color = Color.Black.copy(alpha = 0.3f)
+                                    )
+                                    Spacer(modifier = Modifier.padding(10.dp))
+                                    Text(
+                                        carType.value,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 20.sp,
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.padding(top = 16.dp))
+
+                        driverDetails(driverusername = driverusername.value)
+
+                        Spacer(modifier = Modifier.padding(top = 16.dp))
+
+                        callAndChat(navController)
+                    }
+                }
+
+                Spacer(modifier = Modifier.padding(top = 16.dp))
+                HorizontalDivider(Modifier.fillMaxWidth(), thickness = 2.dp)
+                Spacer(modifier = Modifier.padding(top = 10.dp))
+
+                Button(
+                    onClick = { },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(60.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF2F2F2))
+                ) {
+                    Payment_trip_cost()
+                }
+
+                Spacer(modifier = Modifier.padding(top = 15.dp))
+                HorizontalDivider(Modifier.fillMaxWidth(), thickness = 2.dp)
+                Spacer(modifier = Modifier.padding(top = 15.dp))
+
+                HorizontalImageScroll()
             }
         }
     }

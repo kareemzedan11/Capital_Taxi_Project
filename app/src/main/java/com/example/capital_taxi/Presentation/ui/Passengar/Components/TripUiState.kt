@@ -17,6 +17,7 @@ data class TripUiState(
 
     val isStart: Boolean = false,
     val isEnd: Boolean = false,
+    val isCancelled: Boolean = false, // 🆕 أضفنا حالة الإلغاء
 
 
  )
@@ -25,20 +26,18 @@ class StateTripViewModel : ViewModel() {
     private val _uiState = mutableStateOf(TripUiState())
     val uiState: State<TripUiState> = _uiState
 
-    // تحديث حالة الرحلة العامة
     fun updateTripStatus(status: String) {
         _uiState.value = _uiState.value.copy(tripStatus = status)
         when (status) {
             "accepted" -> setAccepted()
             "Started" -> setInProgress()
             "InProgress" -> beginTrip()
-            "Completed"-> TripEnd()
-            "Cancelled" -> resetAll()
+            "Completed" -> TripEnd()
+            "Cancelled" -> setCancelled() // 🆕 استخدم دالة الإلغاء الجديدة
             else -> resetAll()
         }
     }
 
-    // عند قبول الرحلة
     fun setAccepted() {
         _uiState.value = TripUiState(
             tripStatus = "accepted",
@@ -46,7 +45,6 @@ class StateTripViewModel : ViewModel() {
         )
     }
 
-    // تأكيد الالتقاط
     fun confirmPickup() {
         _uiState.value = TripUiState(
             tripStatus = _uiState.value.tripStatus,
@@ -54,7 +52,6 @@ class StateTripViewModel : ViewModel() {
         )
     }
 
-    // بدء البحث عن سائق
     fun searchDriver() {
         _uiState.value = TripUiState(
             tripStatus = _uiState.value.tripStatus,
@@ -62,7 +59,6 @@ class StateTripViewModel : ViewModel() {
         )
     }
 
-    // بدء الرحلة (عرض DriverArrivalCard)
     fun beginTrip() {
         _uiState.value = TripUiState(
             tripStatus = "InProgress",
@@ -70,33 +66,38 @@ class StateTripViewModel : ViewModel() {
         )
     }
 
-    // عرض RideInProgressScreen لما الرحلة فعليًا تبدأ
     fun setInProgress() {
         _uiState.value = TripUiState(
             tripStatus = "Started",
             inProgress = true
         )
     }
+
     fun TripEnd() {
         _uiState.value = _uiState.value.copy(
             tripStatus = "Completed",
             isEnd = true,
             isTripBegin = false,
             inProgress = false,
-            isInitialPickup=false,
-            isConfirmed=false
+            isInitialPickup = false,
+            isConfirmed = false
         )
     }
 
-
-    // تعيين isStart = true مؤقتًا (لو لسه الرحلة ما بدأتش)
     fun setStart(value: Boolean) {
         _uiState.value = _uiState.value.copy(
             isStart = value
         )
     }
 
-    // إعادة تعيين كل الحالات
+    // 🆕 دالة خاصة لما الرحلة تتلغي
+    fun setCancelled() {
+        _uiState.value = TripUiState(
+            tripStatus = "Cancelled",
+            isCancelled = true
+        )
+    }
+
     fun resetAll() {
         _uiState.value = TripUiState()
     }

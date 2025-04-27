@@ -48,8 +48,7 @@ import org.osmdroid.views.overlay.Polyline
 fun MapViewComposable(
     startPoint: GeoPoint? = null,
     endPoint: GeoPoint? = null,
-    routePoints : List<GeoPoint>? = null,
-    driverLocation: GeoPoint?=null
+
 ) {
     val context = LocalContext.current
     val mapView = remember { MapView(context) }
@@ -90,6 +89,7 @@ fun MapViewComposable(
                 polyline.setPoints(routePoints)
                 mapView.overlays.add(polyline)
             }
+            storedPoints = null
 
             // تحديث الخريطة عند تغيير النقاط
             startPoint?.let { mapView.controller.setCenter(it) }
@@ -97,6 +97,7 @@ fun MapViewComposable(
         }
     )
 }
+
 @Composable
 fun DriverMapView(
     currentLocation: GeoPoint?,

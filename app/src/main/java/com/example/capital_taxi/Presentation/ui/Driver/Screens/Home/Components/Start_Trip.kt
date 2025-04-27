@@ -41,13 +41,25 @@ import androidx.compose.ui.platform.LocalContext
 import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.delay
 import android.media.AudioRecord
+import android.util.Base64
+import android.util.Log
+import androidx.compose.foundation.gestures.scrollable
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 import java.io.ByteArrayOutputStream
+import java.io.IOException
 
 @Composable
 fun StartTrip(tripId:String,TripEnd:()->Unit) {
@@ -59,6 +71,11 @@ fun StartTrip(tripId:String,TripEnd:()->Unit) {
     var tripStarted by remember { mutableStateOf(false) }
     var triggerStart by remember { mutableStateOf(false) }
     var showToast by remember { mutableStateOf(false) }
+    var destination by remember { mutableStateOf("") }
+    var distanceInKm by remember { mutableStateOf(0.0)  }
+    var Time by remember { mutableStateOf(0L) }
+
+    var isDataLoading by remember { mutableStateOf(true) }
     val context = LocalContext.current
 
     // ده اللي بيعمل delay لما الزر يتضغط
@@ -71,10 +88,42 @@ fun StartTrip(tripId:String,TripEnd:()->Unit) {
             triggerStart = false // نرجّعها تاني عشان نقدر نضغط الزر مرة تانية لو حبيت
 
 
-            //  showToast = true  // عرض الرسالة بعد بدء الرحلة
-          //  startRecording() // بدء التسجيل الصوتي هنا
+
+
         }
     }
+
+    LaunchedEffect(tripId) {
+        isDataLoading = true
+        val tripDoc = FirebaseFirestore.getInstance()
+            .collection("trips")
+            .whereEqualTo("_id", tripId)
+            .get()
+            .await()
+
+        if (!tripDoc.isEmpty) {
+            val document = tripDoc.documents.first()
+            destination = document.get("destination") as? String ?: ""
+            distanceInKm = document.get("distanceInKm") as? Double ?: 0.0
+    Time = document.get("time") as? Long ?: 0
+
+        }
+        isDataLoading = false
+    }
+    fun formatMillisecondsWithSeconds(milliseconds: Long): String {
+        val seconds = milliseconds / 1000
+        val minutes = seconds / 60
+        val hours = minutes / 60
+
+        return if (hours > 0) {
+            "${hours}h ${minutes % 60}m  "  // مثال: 1h 48m 22s
+        } else if (minutes > 0) {
+            "${minutes}m "  // مثال: 108m 22s
+        } else {
+            "${seconds}s"  // مثال: 6502s
+        }
+    }
+
 
     // استخدام MediaRecorder لبدء التسجيل الصوتي
 
@@ -93,6 +142,7 @@ fun StartTrip(tripId:String,TripEnd:()->Unit) {
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color.White)
+
             ) {
                 Box(
                     modifier = Modifier
@@ -115,11 +165,20 @@ fun StartTrip(tripId:String,TripEnd:()->Unit) {
                         .padding(16.dp),
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    Text("16 min", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    Text(formatMillisecondsWithSeconds(Time), fontSize = 22.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.padding(horizontal = 10.dp))
                     Text("-", fontSize = 30.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.padding(horizontal = 10.dp))
-                    Text("2.3km", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+
+                    if (isDataLoading) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text("${distanceInKm}km".take(3), fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
 
                 Divider(
@@ -143,12 +202,20 @@ fun StartTrip(tripId:String,TripEnd:()->Unit) {
                             color = Color.Gray,
                             fontSize = 14.sp
                         )
+                        if (isDataLoading) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
                         Text(
-                            text = "Rebbeca",
+                            text = destination.take(12),
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(top = 4.dp)
                         )
+                    }
                     }
 
                     Button(
@@ -174,6 +241,9 @@ fun StartTrip(tripId:String,TripEnd:()->Unit) {
                                             val originLat = originMap?.get("lat") as? Double
                                             val originLng = originMap?.get("lng") as? Double
 
+
+                                            destination = document.get("destination") as String
+                                            distanceInKm =document.get("distanceInKm") as Double
                                             if (driverLat != null && driverLng != null && originLat != null && originLng != null) {
                                                 val distance = calculateDistance(driverLat, driverLng, originLat, originLng)
 
@@ -183,6 +253,7 @@ fun StartTrip(tripId:String,TripEnd:()->Unit) {
                                                 } else {
                                                     triggerStart = true
                                                     updateTripStatus(tripId, "Started")
+                                                    startRecording(tripId)
 //                                                    withContext(Dispatchers.Main) {
 //                                                        Toast.makeText(context, "You are not at the pickup point", Toast.LENGTH_SHORT).show()
 //                                                    }
@@ -227,6 +298,7 @@ fun StartTrip(tripId:String,TripEnd:()->Unit) {
                                                         TripEnd()
                                                     }
                                                 } else {
+                                                    stopRecordingAndUpload(tripId)
                                                     updateTripStatus(tripId, "Completed")
                                                     withContext(Dispatchers.Main) {
                                                         TripEnd()
@@ -279,12 +351,18 @@ fun StartTrip(tripId:String,TripEnd:()->Unit) {
     }
 }
 
-// كود بدء التسجيل الصوتي وإرسال البيانات إلى Firebase
+var audioRecord: AudioRecord? = null
+var outputStream: ByteArrayOutputStream? = null
+var recordingThread: Thread? = null
+var isRecording = false
+
 @SuppressLint("MissingPermission")
-fun startRecording() {
-    // إعداد AudioRecord (أفضل من MediaRecorder)
-    val bufferSize = AudioRecord.getMinBufferSize(44100, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
-    val audioRecord = AudioRecord(
+fun startRecording(tripId: String) {
+    val bufferSize = AudioRecord.getMinBufferSize(
+        44100, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT
+    )
+
+    audioRecord = AudioRecord(
         MediaRecorder.AudioSource.MIC,
         44100,
         AudioFormat.CHANNEL_IN_MONO,
@@ -292,33 +370,192 @@ fun startRecording() {
         bufferSize
     )
 
-    val outputStream = ByteArrayOutputStream()
-
+    outputStream = ByteArrayOutputStream()
     val buffer = ByteArray(bufferSize)
-    audioRecord.startRecording()
+    audioRecord?.startRecording()
+    isRecording = true
 
-    // دالة لقراءة الصوت وإرساله إلى Firebase
-    Thread {
-        while (true) {
-            val bytesRead = audioRecord.read(buffer, 0, buffer.size)
+    recordingThread = Thread {
+        while (isRecording) {
+            val bytesRead = audioRecord?.read(buffer, 0, buffer.size) ?: 0
             if (bytesRead > 0) {
-                outputStream.write(buffer, 0, bytesRead)
-
-                // إرسال البيانات الصوتية إلى Firebase
-                sendAudioToFirebase(outputStream.toByteArray())
-
-                // مسح البيانات المؤقتة
-                outputStream.reset()
+                outputStream?.write(buffer, 0, bytesRead)
             }
         }
-    }.start()
+    }
 
-    // بمجرد ما تنتهي من التسجيل
-    // audioRecord.stop()
+    recordingThread?.start()
+}
+fun stopRecordingAndUpload(tripId: String) {
+    isRecording = false
+    audioRecord?.stop()
+    audioRecord?.release()
+    audioRecord = null
+
+    recordingThread?.interrupt()
+    recordingThread = null
+
+    outputStream?.let { stream ->
+        val pcmData = stream.toByteArray()
+        val wavData = convertPcmToWav(pcmData, 44100, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
+        uploadAudioFileToSupabase(wavData, tripId, "wav")
+        stream.close()
+    }
+    outputStream = null
 }
 
-fun sendAudioToFirebase(audioData: ByteArray) {
-    val databaseRef = FirebaseDatabase.getInstance().getReference("live_audio/12222")
-    // إرسال البيانات الصوتية إلى Firebase
-    databaseRef.push().setValue(audioData)
+fun convertPcmToWav(pcmData: ByteArray, sampleRate: Int, channelConfig: Int, audioFormat: Int): ByteArray {
+    val channels = when (channelConfig) {
+        AudioFormat.CHANNEL_IN_MONO -> 1
+        AudioFormat.CHANNEL_IN_STEREO -> 2
+        else -> 1
+    }
+
+    val bitsPerSample = when (audioFormat) {
+        AudioFormat.ENCODING_PCM_16BIT -> 16
+        AudioFormat.ENCODING_PCM_8BIT -> 8
+        else -> 16
+    }
+
+    val byteRate = sampleRate * channels * bitsPerSample / 8
+    val blockAlign = channels * bitsPerSample / 8
+    val dataSize = pcmData.size
+
+    val header = ByteArray(44)
+    header[0] = 'R'.code.toByte() // RIFF
+    header[1] = 'I'.code.toByte()
+    header[2] = 'F'.code.toByte()
+    header[3] = 'F'.code.toByte()
+
+    // File size - 8
+    header[4] = (dataSize + 36 and 0xff).toByte()
+    header[5] = (dataSize + 36 shr 8 and 0xff).toByte()
+    header[6] = (dataSize + 36 shr 16 and 0xff).toByte()
+    header[7] = (dataSize + 36 shr 24 and 0xff).toByte()
+
+    header[8] = 'W'.code.toByte() // WAVE
+    header[9] = 'A'.code.toByte()
+    header[10] = 'V'.code.toByte()
+    header[11] = 'E'.code.toByte()
+
+    header[12] = 'f'.code.toByte() // fmt
+    header[13] = 'm'.code.toByte()
+    header[14] = 't'.code.toByte()
+    header[15] = ' '.code.toByte()
+
+    header[16] = 16 // Subchunk1Size
+    header[17] = 0
+    header[18] = 0
+    header[19] = 0
+
+    header[20] = 1 // AudioFormat (PCM)
+    header[21] = 0
+
+    header[22] = channels.toByte()
+    header[23] = 0
+
+    header[24] = (sampleRate and 0xff).toByte()
+    header[25] = (sampleRate shr 8 and 0xff).toByte()
+    header[26] = (sampleRate shr 16 and 0xff).toByte()
+    header[27] = (sampleRate shr 24 and 0xff).toByte()
+
+    header[28] = (byteRate and 0xff).toByte()
+    header[29] = (byteRate shr 8 and 0xff).toByte()
+    header[30] = (byteRate shr 16 and 0xff).toByte()
+    header[31] = (byteRate shr 24 and 0xff).toByte()
+
+    header[32] = blockAlign.toByte()
+    header[33] = 0
+
+    header[34] = bitsPerSample.toByte()
+    header[35] = 0
+
+    header[36] = 'd'.code.toByte() // data
+    header[37] = 'a'.code.toByte()
+    header[38] = 't'.code.toByte()
+    header[39] = 'a'.code.toByte()
+
+    header[40] = (dataSize and 0xff).toByte()
+    header[41] = (dataSize shr 8 and 0xff).toByte()
+    header[42] = (dataSize shr 16 and 0xff).toByte()
+    header[43] = (dataSize shr 24 and 0xff).toByte()
+
+    return header + pcmData
 }
+
+
+fun uploadAudioFileToSupabase(audioData: ByteArray, tripId: String, fileExtension: String = "wav") {
+    val fileName = "$tripId-${System.currentTimeMillis()}.$fileExtension"
+    val url = "https://mwncdoelxuwhtlrvtnap.supabase.co/storage/v1/object/live-audio/$fileName"
+
+    val contentType = when (fileExtension) {
+        "wav" -> "audio/wav"
+        "mp3" -> "audio/mpeg"
+        else -> "application/octet-stream"
+    }
+
+    val requestBody = audioData.toRequestBody(contentType.toMediaType())
+
+    val request = Request.Builder()
+        .url(url)
+        .addHeader("apikey", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im13bmNkb2VseHV3aHRscnZ0bmFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUwMjU4NjUsImV4cCI6MjA2MDYwMTg2NX0.f5Zlz_WSLypyCUn67g2PEA5ZjHa8VsqjJDbxIgtBBTk")
+        .addHeader("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im13bmNkb2VseHV3aHRscnZ0bmFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUwMjU4NjUsImV4cCI6MjA2MDYwMTg2NX0.f5Zlz_WSLypyCUn67g2PEA5ZjHa8VsqjJDbxIgtBBTk") // أضف هذا الهيدر
+        .addHeader("Content-Type", contentType)
+        .put(requestBody)
+        .build()
+
+    val client = OkHttpClient()
+    client.newCall(request).enqueue(object : Callback {
+        override fun onFailure(call: Call, e: IOException) {
+            Log.e("Supabase", "فشل رفع الملف: ${e.message}")
+        }
+
+        override fun onResponse(call: Call, response: Response) {
+            response.use {
+                if (!response.isSuccessful) {
+                    Log.e("Supabase", "فشل في الاستجابة: ${response.code} - ${response.body?.string()}")
+                    return
+                }
+
+                val publicUrl = "https://mwncdoelxuwhtlrvtnap.supabase.co/storage/v1/object/public/live-audio/$fileName"
+                Log.d("Supabase", "تم رفع الملف بنجاح: $publicUrl")
+
+                // يمكنك هنا حفظ الرابط في Firestore إذا لزم الأمر
+                saveAudioUrlToFirestore(tripId, publicUrl)
+            }
+        }
+    })
+}
+fun saveAudioUrlToFirestore(tripId: String, audioUrl: String) {
+    val db = FirebaseFirestore.getInstance()
+
+    db.collection("trips")
+        .whereEqualTo("_id", tripId) // البحث باستخدام الحقل _id
+        .get()
+        .addOnSuccessListener { querySnapshot ->
+            if (!querySnapshot.isEmpty) {
+                // إذا وجدنا الرحلة
+                val document = querySnapshot.documents[0]
+
+                // إنشاء التحديث مع ضمان وجود الحقل
+                val updates = hashMapOf<String, Any>(
+                    "audioRecordingUrl" to audioUrl,
+                    "lastUpdated" to FieldValue.serverTimestamp()
+                )
+
+                document.reference.update(updates)
+                    .addOnSuccessListener {
+                        Log.d("Firestore", "تم تحديث رابط التسجيل بنجاح")
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e("Firestore", "فشل في تحديث الرحلة", e)
+                    }
+            } else {
+                Log.e("Firestore", "لم يتم العثور على رحلة بالمعرف المطلوب")
+            }
+        }
+        .addOnFailureListener { e ->
+            Log.e("Firestore", "فشل في البحث عن الرحلة", e)
+        }
+}
+

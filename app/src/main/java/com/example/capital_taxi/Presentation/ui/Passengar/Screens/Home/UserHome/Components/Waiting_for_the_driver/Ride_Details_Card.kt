@@ -1,5 +1,6 @@
 package com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.Waiting_for_the_driver
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -29,17 +30,29 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import androidx.navigation.Navigation
+import com.example.capital_taxi.Navigation.Destination
+import com.example.capital_taxi.Presentation.ui.Passengar.Components.StateTripViewModel
 import com.example.capital_taxi.R
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RideDetailsCard() {
+fun RideDetailsCard(tripId:String,
+                    onclick:()->Unit,
+                    navController: NavController) {
+    val context = LocalContext.current
+    val stateTripViewModel: StateTripViewModel = viewModel()
+    val tripState by stateTripViewModel.uiState
+
     var showBottomSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = false,
@@ -50,13 +63,23 @@ fun RideDetailsCard() {
             modifier = Modifier
 
                 .fillMaxWidth()
-                .fillMaxHeight(.5f)
+                .fillMaxHeight(.8f)
             ,
             containerColor = Color.White,
             sheetState = sheetState,
             onDismissRequest = { showBottomSheet = false }
         ) {
-            TripDetailsBottomSheetContent()
+            // في مكان استدعاء الكومبوزابل
+            TripDetailsBottomSheetContent(
+                tripId = tripId,
+                onCancelSuccess = {
+                    // إخفاء البوتوم شيت أو الانتقال لشاشة أخرى
+                   onclick()
+                },
+                onCancelFailure = { error ->
+                    Toast.makeText(context, "Failed to cancel trip: $error", Toast.LENGTH_SHORT).show()
+                }
+            )
         }
     }
     Box(

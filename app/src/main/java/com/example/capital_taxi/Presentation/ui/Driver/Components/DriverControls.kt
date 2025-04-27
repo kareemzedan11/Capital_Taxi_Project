@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.location.Geocoder
 import android.os.Looper
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -88,6 +89,9 @@ import java.util.Locale
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
+
+
+
 @Composable
 fun DriverControls(
     driverId: String,
@@ -202,14 +206,43 @@ fun DriverControls(
                     if (isOnline) {
                         showConfirmationDialog = true
                     } else {
-                        onClick()
-                        viewModel.toggleStatus()
-                        tripLocation?.let {
-                            updateDriverLocation(driverId, it) // Call non-composable function
+                        scope.launch {
+                            val firestore = FirebaseFirestore.getInstance()
+                            try {
+                                val result = firestore.collection("drivers")
+                                    .whereEqualTo("id", driverId)
+                                    .get()
+                                    .await()
+
+                                if (!result.isEmpty) {
+                                    val doc = result.documents.first()
+                                    val status = doc.getString("status")
+
+                                    if (status != "active") {
+
+
+                                        // مش مؤهل
+                                         Toast.makeText(context, "You are currently not eligible to go online. Your status is $status", Toast.LENGTH_LONG).show()
+                                    } else {
+                                        // مؤهل، كمّل بقى
+                                        onClick()
+                                        viewModel.toggleStatus()
+                                        tripLocation?.let {
+                                            updateDriverLocation(driverId, it)
+                                        }
+                                    }
+                                } else {
+                                    showDialog(context, "Error", "Driver not found.")
+                                }
+                            } catch (e: Exception) {
+                                Log.e("Firestore", "Error checking status", e)
+                                showDialog(context, "Error", "Could not verify your status.")
+                            }
                         }
                     }
                 },
-                modifier = Modifier
+
+                        modifier = Modifier
                     .fillMaxWidth(0.4f)
                     .fillMaxHeight(0.8f)
             ) {
@@ -229,4 +262,10 @@ fun DriverControls(
             contentDescription = null
         )
     }
+}fun showDialog(context: Context, title: String, message: String) {
+    android.app.AlertDialog.Builder(context)
+        .setTitle(title)
+        .setMessage(message)
+        .setPositiveButton("OK", null)
+        .show()
 }

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.AlertDialog
 import androidx.compose.material.BottomSheetValue
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.rememberBottomSheetState
@@ -40,6 +41,8 @@ import androidx.compose.material.rememberBottomSheetScaffoldState
 
 import androidx.compose.material.BottomSheetScaffold
 import androidx.compose.material.CircularProgressIndicator
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.livedata.observeAsState
@@ -215,7 +218,19 @@ fun homeScreenContent(navController: NavController) {
     var driverName by remember { mutableStateOf<String?>(null) }
     var carType by remember { mutableStateOf<String?>(null) }
     val locationDataStore = LocationDataStore(context)
+    var showCancellationDialog by remember { mutableStateOf(false) }
 
+// Modify the state handling in LaunchedEffect
+    LaunchedEffect(stateTripViewModel) {
+        when {
+            state.isCancelled -> {
+                showCancellationDialog = true
+            }
+            state.isEnd -> {
+                // Trip completed logic
+            }
+        }
+    }
 // ✅ إنشاء ViewModel مرة واحدة داخل Composable
     val locationViewModel2: LocationViewModel5 = viewModel()
 
@@ -519,6 +534,8 @@ fun homeScreenContent(navController: NavController) {
     }
     var driverLocationState by remember { mutableStateOf<LatLng?>(null) }
     // Main Container
+
+
     Box(modifier = Modifier.fillMaxSize()) {
 
 
@@ -580,14 +597,14 @@ when{
                             .padding(padding)
                     ) {
 
-                        if (tripStatus != "accepted"&&tripStatus != "Completed") {
+                        if (state.isInitialPickup) {
 
                             MapViewComposable(
                                 startPoint = startPoint.value,
                                 endPoint = endPoint.value
                             )
                         }
-                        if (tripStatus == "accepted") {
+                        if (state.isAccepted) {
 
                             tripId?.let {
                                 Log.d("tripId", it)
@@ -602,7 +619,7 @@ when{
                         }
 
 
-                        if (tripStatus == "InProgress"||tripStatus == "Started") {
+                        if (state.inProgress||state.isStart) {
                             isTripBegin=true
                             isstart = true
                             InProgressMap(
@@ -611,6 +628,14 @@ when{
                                 Destination = driverLocation3
                             )
                         }
+                        if (state.isCancelled) {
+
+                            MapViewComposable(
+                                startPoint = startPoint.value,
+                                endPoint = endPoint.value
+                            )
+                        }
+
 
                         LaunchedEffect("67b0b246322cf017e42a9d3c") {
                             val database = FirebaseDatabase.getInstance()
@@ -752,7 +777,9 @@ when{
                                 }
 
 
-                                RideDetailsBottomSheetContent(navController, tripId!!)
+                                RideDetailsBottomSheetContent(
+                                    onclick = {  stateTripViewModel.setCancelled()},
+                                    navController, tripId!!)
                                 LaunchedEffect(tripStatus) {
                                     if (tripStatus == "InProgress") {
 
@@ -776,6 +803,40 @@ when{
                                     }
                                 }
                             }
+
+                            state.isCancelled ->{
+
+                                    AlertDialog(
+                                        onDismissRequest = {
+                                            showCancellationDialog = false
+                                            stateTripViewModel.resetAll()
+                                            navController.navigate(Destination.UserHomeScreen.route) {
+                                                popUpTo(Destination.UserHomeScreen.route) { inclusive = true }
+                                            }
+                                        },
+                                        title = {
+                                            Text(text = "Trip Cancelled")
+                                        },
+                                        text = {
+                                            Text(text = "Your trip has been cancelled. You'll be returned to the home screen.")
+                                        },
+                                        confirmButton = {
+                                            Button(
+                                                onClick = {
+                                                    showCancellationDialog = false
+                                                    stateTripViewModel.resetAll()
+                                                    navController.navigate(Destination.UserHomeScreen.route) {
+                                                        popUpTo(Destination.UserHomeScreen.route) { inclusive = true }
+                                                    }
+                                                },
+                                                colors = ButtonDefaults.buttonColors(containerColor = Color.Black)
+                                            ) {
+                                                Text("OK", color = Color.White)
+                                            }
+                                        }
+                                    )
+
+                            }
                             state.isInitialPickup -> {
 
 
@@ -786,6 +847,7 @@ when{
                                     locationName = locationName
                                 )
                             }
+
 
 
                         }

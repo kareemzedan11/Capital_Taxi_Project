@@ -1,6 +1,7 @@
 package com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,16 +28,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.capital_taxi.R
 
-
 @Composable
-fun fromLocationToDestination() {
+fun FromLocationToDestination(
+    origin: String,
+    destination: String,
+    onEditOrigin: () -> Unit = {},
+    onEditDestination: () -> Unit = {},
+    onAddStop: () -> Unit = {}
+) {
     Column(
         verticalArrangement = Arrangement.spacedBy(4.dp),
         modifier = Modifier.padding(vertical = 10.dp)
     ) {
         Spacer(modifier = Modifier.padding(top = 10.dp))
 
-        // Row for Cairo
+        // Row for Origin
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 modifier = Modifier.size(26.dp),
@@ -45,9 +51,9 @@ fun fromLocationToDestination() {
             )
             Spacer(modifier = Modifier.padding(10.dp))
 
-            Text("Cairo", fontSize = 20.sp, fontWeight = FontWeight.W600)
+            Text(origin, fontSize = 20.sp, fontWeight = FontWeight.W600)
 
-            Spacer(modifier = Modifier.weight(1f)) // Push the next icon to the end
+            Spacer(modifier = Modifier.weight(1f))
 
             Box(
                 modifier = Modifier
@@ -56,9 +62,10 @@ fun fromLocationToDestination() {
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    painter = painterResource(R.drawable.pen), // Replace with your pen icon resource
+                    painter = painterResource(R.drawable.pen),
                     contentDescription = null,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(20.dp),
+                    tint = Color.Black
                 )
             }
         }
@@ -72,7 +79,7 @@ fun fromLocationToDestination() {
             )
         }
 
-        // Row for Alex
+        // Row for Destination
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 modifier = Modifier.size(26.dp),
@@ -82,45 +89,48 @@ fun fromLocationToDestination() {
             )
             Spacer(modifier = Modifier.padding(10.dp))
 
-            Text("Alex", fontSize = 20.sp, fontWeight = FontWeight.W600)
+            Text(destination, fontSize = 20.sp, fontWeight = FontWeight.W600)
 
             Spacer(modifier = Modifier.weight(1f))
 
             Row {
+                // Edit Destination Button
                 Box(
                     modifier = Modifier
                         .size(35.dp)
-                        .background(Color.LightGray, shape = CircleShape),
+                        .background(Color.LightGray, shape = CircleShape)
+                        .clickable(onClick = onEditDestination),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.pen),
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
+                        contentDescription = "Edit Destination",
+                        modifier = Modifier.size(20.dp),
+                        tint = Color.Black
                     )
                 }
 
-                Spacer(modifier = Modifier.padding(4.dp)) // Add space between icons
+                Spacer(modifier = Modifier.padding(4.dp))
 
+                // Add Stop Button
                 Box(
                     modifier = Modifier
                         .size(35.dp)
-                        .background(Color.LightGray, shape = CircleShape),
+                        .background(Color.LightGray, shape = CircleShape)
+                        .clickable(onClick = onAddStop),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
+                        contentDescription = "Add Stop",
+                        modifier = Modifier.size(20.dp),
+                        tint = Color.Black
                     )
                 }
             }
-
         }
+
         Spacer(modifier = Modifier.padding(bottom = 10.dp))
-
         HorizontalDivider(Modifier.fillMaxWidth(), thickness = 2.dp)
-
     }
 }
-
