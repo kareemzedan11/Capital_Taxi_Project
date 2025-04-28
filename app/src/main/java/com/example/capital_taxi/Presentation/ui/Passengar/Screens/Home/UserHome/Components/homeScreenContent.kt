@@ -554,9 +554,9 @@ when{
                 navController.navigate("RateDriver/${tripId}")
             },
             onReturnHomeClick = {
-                // Return to home and clear back stack
+                stateTripViewModel.resetAll()
                 navController.navigate(Destination.UserHomeScreen.route) {
-                    popUpTo("TripScreen") { inclusive = true }
+                    popUpTo(Destination.UserHomeScreen.route) { inclusive = true }
                 }
             },
             onReceiptClick = {

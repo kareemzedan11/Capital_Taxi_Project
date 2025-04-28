@@ -686,6 +686,14 @@ fun driverHomeScreen(navController: NavController) {
                     driverId = driver_id ?: "1234",
                     onProblemSubmitted = {
                         Toast.makeText(context, "Problem reported successfully", Toast.LENGTH_SHORT).show()
+                    },
+                    onclick = {
+                        stateTripViewModel.resetAll()
+                        navController.navigate(Destination.DriverHomeScreen.route) {
+                            popUpTo(Destination.DriverHomeScreen.route) {
+                                inclusive = true
+                            }
+                        }
                     }
                 )
             }

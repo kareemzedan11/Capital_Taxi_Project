@@ -54,7 +54,8 @@ fun TripArrivedCard2(
     tripId: String = UUID.randomUUID().toString(), // قيمة افتراضية عشوائية
     driverId: String = UUID.randomUUID().toString(), // قيمة افتراضية عشوائية
     userId: String? = null, // يمكن أن تكون null
-    onProblemSubmitted: () -> Unit = {}
+    onProblemSubmitted: () -> Unit = {},
+    onclick: () -> Unit
 ) {
     var rating by remember { mutableStateOf(0f) }
     var comment by remember { mutableStateOf("") }
@@ -347,7 +348,7 @@ fun TripArrivedCard2(
 
                 // Go to Home Button
                 Button(
-                    onClick = { /* Handle Go to Home action */ },
+                    onClick = { onclick()},
                     colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.primary_color)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
