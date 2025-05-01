@@ -56,8 +56,12 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.capital_taxi.Navigation.Destination
+import com.example.capital_taxi.Presentation.ui.Passengar.Components.StateTripViewModel
 import com.example.capital_taxi.R
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -96,7 +100,7 @@ fun TripDetailsForDriver(navController: NavController,
             sheetState = sheetState,
             onDismissRequest = { showBottomSheet = false }
         ) {
-            CancellationReasons(navController)
+            CancellationReasons(navController,tripId)
         }
     }
 
@@ -488,16 +492,15 @@ fun RideRequestCard() {
 }
 
 @Composable
-fun CancellationReasons(navController: NavController) {
+fun CancellationReasons(navController: NavController,tripId:String) {
     var selectedReason by remember { mutableStateOf<String?>(null) }
     var showDialog by remember { mutableStateOf(false) }
-
+    var cancelConfirmed by remember { mutableStateOf(false) }
     if (showDialog) {
         CancelTripDialog(
             onConfirm = {
-                println("Trip canceled for reason: $selectedReason")
+                cancelConfirmed = true
                 showDialog = false
-                // Navigate back or handle the cancellation
             },
             onDismiss = {
                 showDialog = false
@@ -505,6 +508,48 @@ fun CancellationReasons(navController: NavController) {
             }
         )
     }
+    val stateTripViewModel: StateTripViewModel = viewModel()
+    val tripState by stateTripViewModel.uiState
+
+    if (cancelConfirmed) {
+        LaunchedEffect(Unit) {
+            println("Trip canceled for reason: $selectedReason")
+
+            // تحديث الحالة
+            updateTripStatus(tripId, "Cancelled")
+
+            // إرسال سبب الإلغاء إلى Firestore
+            val db = Firebase.firestore
+            db.collection("trips")
+                .whereEqualTo("_id", tripId)
+                .get()
+                .addOnSuccessListener { querySnapshot ->
+                    for (document in querySnapshot) {
+                        db.collection("trips").document(document.id)
+                            .update("cancellationReason", selectedReason ?: "No reason provided")
+                            .addOnSuccessListener {
+                                println("Cancellation reason updated successfully.")
+                            }
+                            .addOnFailureListener { e ->
+                                println("Error updating cancellation reason: ${e.message}")
+                            }
+                    }
+                }
+                .addOnFailureListener { e ->
+                    println("Error finding trip document: ${e.message}")
+                }
+
+            cancelConfirmed = false
+            stateTripViewModel.resetAll()
+            navController.navigate(Destination.DriverHomeScreen.route) {
+                popUpTo(Destination.DriverHomeScreen.route) {
+                    inclusive = true
+                }
+            }
+        }
+    }
+
+
 
     // Retrieve cancellation reasons from string resources
     val reasons = stringArrayResource(id = R.array.reasons)

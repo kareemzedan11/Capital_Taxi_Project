@@ -44,6 +44,7 @@ import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateListOf
@@ -116,6 +117,8 @@ import com.example.capital_taxi.data.repository.graphhopper_response.Instruction
 import com.example.capital_taxi.data.repository.graphhopper_response.Path
 import com.example.capital_taxi.data.repository.graphhopper_response.graphhopper_response
 import com.example.capital_taxi.domain.shared.TripInfoViewModel
+import com.example.capital_taxi.domain.storedPoints
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.SetOptions
 import com.google.maps.android.PolyUtil
 import findNearestIndex
@@ -155,7 +158,8 @@ fun homeScreenContent(navController: NavController) {
     val dropoffLatLng = locationViewModel.dropoffLocation
 
     val fareViewModel: FareViewModel = viewModel()
-    val fare by fareViewModel.fare.observeAsState(0.0)
+    val fare = fareViewModel.fare  // لا حاجة لـ observeAsState
+
     val permissionViewModel: PermissionViewModel = viewModel()
     val context = LocalContext.current
 
@@ -176,6 +180,7 @@ fun homeScreenContent(navController: NavController) {
     val bottomSheetState = rememberBottomSheetScaffoldState(
         bottomSheetState = rememberBottomSheetState(initialValue = BottomSheetValue.Collapsed)
     )
+
 
     // DrawerState
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -219,6 +224,8 @@ fun homeScreenContent(navController: NavController) {
     var carType by remember { mutableStateOf<String?>(null) }
     val locationDataStore = LocationDataStore(context)
     var showCancellationDialog by remember { mutableStateOf(false) }
+    var tripListener by remember { mutableStateOf<ListenerRegistration?>(null) }
+    val firestore = FirebaseFirestore.getInstance()
 
 // Modify the state handling in LaunchedEffect
     LaunchedEffect(stateTripViewModel) {
@@ -267,7 +274,52 @@ fun homeScreenContent(navController: NavController) {
             }
         }
     }
+    DisposableEffect(tripId) {
+        var documentListener: ListenerRegistration? = null
 
+        onDispose {
+            documentListener?.remove()
+            tripListener?.remove()
+        }
+
+        if (tripId != null) {
+            val query = firestore.collection("trips")
+                .whereEqualTo("_id", tripId)
+
+            val registration = query.addSnapshotListener { querySnapshot, error ->
+                if (error != null) {
+                    Log.e("TripStatus", "Error listening to trip", error)
+                    return@addSnapshotListener
+                }
+
+                if (querySnapshot != null && !querySnapshot.isEmpty) {
+                    val document = querySnapshot.documents.first()
+
+                    documentListener = document.reference.addSnapshotListener { snapshot, error2 ->
+                        if (error2 != null) {
+                            Log.e("TripStatus", "Error listening to trip status", error2)
+                            return@addSnapshotListener
+                        }
+
+                        snapshot?.let { doc ->
+                            val status = doc.getString("status") ?: "pending"
+                            if (status == "Cancelled" && !state.isCancelled) {
+                                stateTripViewModel.setCancelled()
+                                // Update the toast message to English
+                                Toast.makeText(context, "Trip cancelled by driver", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                }
+            }
+            tripListener = registration
+        }
+
+        onDispose {
+            tripListener?.remove()
+            documentListener?.remove()
+        }
+    }
     val viewmodel3: driverlocation = viewModel()
 
     val db = FirebaseFirestore.getInstance()
@@ -629,7 +681,7 @@ when{
                             )
                         }
                         if (state.isCancelled) {
-
+                            storedPoints = null
                             MapViewComposable(
                                 startPoint = startPoint.value,
                                 endPoint = endPoint.value
@@ -823,6 +875,7 @@ when{
                                         confirmButton = {
                                             Button(
                                                 onClick = {
+                                                    storedPoints = null
                                                     showCancellationDialog = false
                                                     stateTripViewModel.resetAll()
                                                     navController.navigate(Destination.UserHomeScreen.route) {
@@ -937,7 +990,7 @@ when{
                                 origin,
                                 destination,
                                 paymentMethod,
-                                fare,
+                                fare!!,
                                 distanceInKm,
                                 Savedtoken,
                                 coroutineScope = CoroutineScope(Dispatchers.Main),

@@ -5,6 +5,7 @@ import IntercityCard
 import android.content.Context
 import android.location.Geocoder
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Text
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -43,6 +45,7 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -300,102 +303,177 @@ fun PickupWithDropOffButtons(
             val destination = Location(endPoint.value!!.latitude, endPoint.value!!.longitude)
 
             // Log the origin and destination
-            Log.d("LocationData", "Origin: (${origin.lat}, ${origin.lng}), Destination: (${destination.lat}, ${destination.lng})")
+            Log.d(
+                "LocationData",
+                "Origin: (${origin.lat}, ${origin.lng}), Destination: (${destination.lat}, ${destination.lng})"
+            )
 
             // Build the full URL
-            val fullUrl = "${url}trips/calculate-fare?origin=${origin.lat},${origin.lng}&destination=${destination.lat},${destination.lng}&paymentMethod=cash"
+            val fullUrl =
+                "${url}trips/calculate-fare?origin=${origin.lat},${origin.lng}&destination=${destination.lat},${destination.lng}&paymentMethod=cash"
             Log.d("API_URL", "Request URL: $fullUrl")
 
-            // Call calculateFare
-            if (token != null) {
-                calculateFare(
-                    origin = origin,
-                    destination = destination,
-                    paymentMethod = "cash",
-                    token = token,
-                    coroutineScope = coroutineScope,
-                    fareViewModel = fareViewModel, // ✅ أضف هذا السطر
-                    onSuccess = { updatedOptions ->
-                        vehicleOptionsState.value = updatedOptions
-                    },
-                    onError = { errorMessage ->
-                        Log.e("FareCalculation", errorMessage)
-                    }
-                )
+            // الجزء 1: طلب حساب السعر
+            LaunchedEffect(origin, destination) {
+                if (origin.lat != 0.0 && destination.lat != 0.0) {
+                    calculateFare(
+                        origin = origin,
+                        destination = destination,
+                        paymentMethod = "cash",
+                        token = token!!,
+                        coroutineScope = coroutineScope,
+                        fareViewModel = fareViewModel,
+                        onSuccess = { options ->
+                            vehicleOptionsState.value = options // تحديث حالة المركبات
+                        },
+                        onError = { error ->
+                            fareViewModel.updateError(error)
+                            Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                }
             }
 
-            if (vehicleOptionsState.value.isNotEmpty()) {
-                val vehicle = vehicleOptionsState.value.first() // أول عربية في القائمة
-
-                Box(
-                    modifier = Modifier
-                        .width(170.dp)
-                        .height(150.dp)
-                        .padding(top = 10.dp)
-                        .shadow(
-                            elevation = 8.dp,
-                            shape = RoundedCornerShape(20.dp),
-                            clip = false
-                        )
-                        .background(color = colorResource(R.color.primary_color) , shape = RoundedCornerShape(20.dp))
-                ) {
-                    Column {
+// الجزء 2: عرض النتائج
+            Box(
+                modifier = Modifier
+                    .width(170.dp)
+                    .height(150.dp)
+                    .padding(top = 10.dp)
+            ) {
+                when {
+                    fareViewModel.isLoading -> {
+                        // حالة التحميل
                         Box(
                             modifier = Modifier
-                                .height(70.dp)
-
+                                .fillMaxSize()
                                 .background(
                                     color = colorResource(R.color.primary_color),
-                                    shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+                                    shape = RoundedCornerShape(20.dp)
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
-                            Image(
-                                painter = painterResource(vehicle.imageRes),
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
-                            )
+                            CircularProgressIndicator(color = Color.White)
                         }
+                    }
 
+                    fareViewModel.error != null -> {
+                        // حالة الخطأ
                         Box(
                             modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    color = Color.Red.copy(alpha = 0.2f),
+                                    shape = RoundedCornerShape(20.dp)
+                                )
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = fareViewModel.error!!,
+                                color = Color.Red,
+                                fontSize = 14.sp,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
 
-                                .fillMaxWidth()
-                                .wrapContentHeight()
+                    vehicleOptionsState.value.isNotEmpty() -> {
+                        // حالة النجاح
+                        val vehicle = vehicleOptionsState.value.first()
+                        Box(
+                            modifier = Modifier
+                                .shadow(
+                                    elevation = 8.dp,
+                                    shape = RoundedCornerShape(20.dp),
+                                    clip = false
+                                )
                                 .background(
                                     color = colorResource(R.color.primary_color),
-                                    shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)
+                                    shape = RoundedCornerShape(20.dp)
                                 )
                         ) {
-                            Column(
-                                modifier = Modifier.padding(start = 10.dp, top = 10.dp),
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Text(
-                                    text = vehicle.name,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 20.sp,
-                                    color = Color.White
-                                )
-                                Text(
-                                    text = "£${vehicle.price}",
-                                    fontSize = 18.sp,
-                                    color = Color.White
-                                )
+                            Column {
+                                Box(
+                                    modifier = Modifier
+                                        .height(70.dp)
+                                        .background(
+                                            color = colorResource(R.color.primary_color),
+                                            shape = RoundedCornerShape(
+                                                topStart = 20.dp,
+                                                topEnd = 20.dp
+                                            )
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Image(
+                                        painter = painterResource(vehicle.imageRes),
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .wrapContentHeight()
+                                        .background(
+                                            color = colorResource(R.color.primary_color),
+                                            shape = RoundedCornerShape(
+                                                bottomStart = 20.dp,
+                                                bottomEnd = 20.dp
+                                            )
+                                        )
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(start = 10.dp, top = 10.dp),
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        Text(
+                                            text = vehicle.name,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 20.sp,
+                                            color = Color.White
+                                        )
+                                        Text(
+                                            text = "£${vehicle.price}",
+                                            fontSize = 18.sp,
+                                            color = Color.White
+                                        )
+                                    }
+                                }
                             }
+                        }
+                    }
+
+                    else -> {
+                        // الحالة الافتراضية (لا توجد بيانات)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    color = Color.LightGray.copy(alpha = 0.2f),
+                                    shape = RoundedCornerShape(20.dp)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Select locations",
+                                color = Color.Gray,
+                                fontSize = 14.sp
+                            )
                         }
                     }
                 }
             }
-        }}
-    Spacer(modifier = Modifier.padding(top = 15.dp))
 
-    if (selectedVehicleIndex != -1) {
-        IntercityCard(text = selectedVehicleName) // Pass selected vehicle name
-    }
-}
-
+// الجزء 3: عرض العربة المختارة (إذا وجدت)
+            if (selectedVehicleIndex != -1) {
+                Spacer(modifier = Modifier.padding(top = 15.dp))
+                IntercityCard(text = selectedVehicleName)
+            }
+        }}}
 fun getLatLngFromAddress(
     context: Context,
     address: String,

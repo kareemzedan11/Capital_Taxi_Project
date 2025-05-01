@@ -1,6 +1,9 @@
 package com.example.capital_taxi.domain
 
 import android.util.Log
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -275,23 +278,22 @@ sealed class ApiResponse<out T> {
     data class Error(val message: String) : ApiResponse<Nothing>()
     object Loading : ApiResponse<Nothing>()
 }
-
 fun calculateFare(
     origin: Location,
     destination: Location,
     paymentMethod: String,
     token: String,
     coroutineScope: CoroutineScope,
-    fareViewModel: FareViewModel,  // ✅ تمرير ViewModel
+    fareViewModel: FareViewModel,
     onSuccess: (List<VehicleOption>) -> Unit,
     onError: (String) -> Unit
 ) {
+    fareViewModel.startLoading() // 🔄 بدء التحميل
 
     coroutineScope.launch {
         try {
             val originStr = "${origin.lat},${origin.lng}"
             val destinationStr = "${destination.lat},${destination.lng}"
-
 
             val response = RetrofitClient.apiService.calculateFare(
                 authorization = "Bearer $token",
@@ -302,27 +304,50 @@ fun calculateFare(
 
             if (response.isSuccessful) {
                 response.body()?.let { fareResponse ->
-                    val fareValue = fareResponse.fare
-                    fareViewModel.setFare(fareValue) // ✅ تحديث قيمة fare في ViewModel
+                    // ✅ تحديث ViewModel
+                    fareViewModel.setFare(fareResponse.fare)
 
-                    val updatedVehicleOptions = listOf(
-                        VehicleOption("Standard", fareValue, R.drawable.uber),
-                        VehicleOption("Comfort", fareValue * 1.2, R.drawable.uber),
-                        VehicleOption("Luxury", fareValue * 2, R.drawable.uber)
-                    )
+                    // إنشاء قائمة المركبات
+                    val updatedVehicleOptions = createVehicleOptions(fareResponse.fare)
                     onSuccess(updatedVehicleOptions)
-                } ?: onError("Empty response body")
+                } ?: run {
+                    onError("Empty response body")
+                }
             } else {
-                val errorBody = response.errorBody()?.string() ?: response.message()
-                Log.e("API_ERROR", "Failed to calculate fare: $errorBody")
-                onError("Failed to calculate fare: $errorBody")
+                handleApiError(response, onError)
             }
         } catch (e: IOException) {
             onError("Network error: ${e.localizedMessage}")
         } catch (e: Exception) {
-            onError("Error: ${e.localizedMessage ?: "Unknown error"}")
+            onError("Unexpected error: ${e.localizedMessage}")
+        } finally {
+            fareViewModel.stopLoading() // ⏹️ إيقاف التحميل
         }
     }
+}
+
+
+
+// دالة مساعدة لإنشاء خيارات المركبات
+private fun createVehicleOptions(baseFare: Double): List<VehicleOption> {
+    return listOf(
+        VehicleOption(
+            name = "Standard",
+            price = baseFare,
+            imageRes = R.drawable.uber
+        ),
+
+    )
+}
+
+// دالة مساعدة لمعالجة أخطاء API
+private fun handleApiError(response: Response<FareResponse>, onError: (String) -> Unit) {
+    val errorMsg = try {
+        response.errorBody()?.string() ?: "Unknown error"
+    } catch (e: Exception) {
+        "Failed to parse error: ${e.message}"
+    }
+    onError("API error (${response.code()}): $errorMsg")
 }
 class DriverViewModelFactory(private val apiService: TripApiService) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -392,15 +417,44 @@ class DriverViewModel(private val apiService: TripApiService) : ViewModel() {
         }
     }
 }
+
 class FareViewModel : ViewModel() {
-    private val _fare = MutableLiveData<Double>()
-    val fare: LiveData<Double> get() = _fare
+    // States
+    var isLoading by mutableStateOf(false)
+        private set
 
+    var fare by mutableStateOf<Double?>(null)
+        private set
+
+    var error by mutableStateOf<String?>(null)
+        private set
+
+    // Actions
     fun setFare(value: Double) {
-        _fare.value = value
+        fare = value
+        error = null // Clear any previous errors
     }
-}
 
+    fun startLoading() {
+        isLoading = true
+        error = null
+    }
+
+    fun stopLoading() {
+        isLoading = false
+    }
+    fun updateError(message: String) {
+        error = message
+        isLoading = false
+    }
+
+    fun reset() {
+        fare = null
+        isLoading = false
+        error = null
+    }
+
+}
 
 data class FareRequestWithToken(
     val origin: LocationData,

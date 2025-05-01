@@ -64,6 +64,7 @@ fun MapViewComposable(
         modifier = Modifier.fillMaxSize(),
         factory = { mapView },
         update = { mapView ->
+            mapView.overlays.clear()
 
             // إضافة نقطة البداية والنهاية
             startPoint?.let { start ->
@@ -89,7 +90,7 @@ fun MapViewComposable(
                 polyline.setPoints(routePoints)
                 mapView.overlays.add(polyline)
             }
-            storedPoints = null
+
 
             // تحديث الخريطة عند تغيير النقاط
             startPoint?.let { mapView.controller.setCenter(it) }

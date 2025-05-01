@@ -20,12 +20,13 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.capital_taxi.R
 import com.example.capital_taxi.domain.FareViewModel
-
+import androidx.compose.runtime.livedata.observeAsState
 @Composable
 fun IntercityCard(text: String) {
     val displayText by remember { mutableStateOf(text) }
   val  fareViewModel: FareViewModel = viewModel()
-    val fare by fareViewModel.fare.observeAsState(0.0)
+    val fare = fareViewModel.fare  // لا حاجة لـ observeAsState
+
     Card(
         modifier = Modifier
             .fillMaxWidth()

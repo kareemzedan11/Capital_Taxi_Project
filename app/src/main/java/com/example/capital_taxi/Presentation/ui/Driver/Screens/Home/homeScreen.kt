@@ -489,7 +489,8 @@ fun driverHomeScreen(navController: NavController) {
                 } else {
                     com.example.capital_taxi.utils.DriverMapView(
                         currentLocation = currentLocation2,
-                        previousLocation = previousLocation2
+                        previousLocation = previousLocation2,
+
                     )
                 }
 

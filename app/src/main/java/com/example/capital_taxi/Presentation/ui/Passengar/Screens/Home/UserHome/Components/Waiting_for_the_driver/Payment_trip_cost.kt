@@ -26,7 +26,8 @@ import com.example.capital_taxi.domain.FareViewModel
 fun Payment_trip_cost() {
 
     val  fareViewModel: FareViewModel = viewModel()
-    val fare by fareViewModel.fare.observeAsState(0.0)
+    val fare = fareViewModel.fare  // لا حاجة لـ observeAsState
+
     Row {
         Icon(
             modifier = Modifier.size(20.dp),
