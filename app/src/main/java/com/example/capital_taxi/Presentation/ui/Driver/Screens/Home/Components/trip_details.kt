@@ -60,6 +60,7 @@ import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.delay
 import org.osmdroid.util.GeoPoint
@@ -371,8 +372,17 @@ fun TripDetailsCard(
                 Button(
                     onClick = {
                         onTripCancelled()
-                        // Cancel the trip for this specific driver
-                        tripViewModel.cancelTripForDriver(trip._id) // Call the method in ViewModel
+                    cancelTripForDriver(
+                            tripId = trip._id,
+                            driverId = driver_id,
+                            onSuccess = {
+                                Log.d("TripCancelled", "Trip hidden for this driver")
+                            },
+                            onError = { error ->
+                                Log.e("TripCancelled", error)
+                            }
+                        )
+
                         Log.d("TripDetailsCard", "Trip canceled for driver.")
 
                         // Additional logic (like updating the UI or notifying other components) can go here
@@ -479,6 +489,34 @@ class TripViewModel : ViewModel() {
     fun updateTripLocation(location: com.example.capital_taxi.domain.Location) {
         tripLocation.value = location
     }
+}
+fun cancelTripForDriver(
+    tripId: String,
+    driverId: String,
+    onSuccess: () -> Unit,
+    onError: (String) -> Unit
+) {
+    val firestore = FirebaseFirestore.getInstance()  // <-- تعريف المتغير
+
+    firestore.collection("trips")
+        .whereEqualTo("_id", tripId)
+        .get()
+        .addOnSuccessListener { documents ->
+            if (documents.isEmpty) {
+                onError("Trip not found")
+                return@addOnSuccessListener
+            }
+
+            val document = documents.documents[0]
+            document.reference.update(
+                "cancelledByDrivers", FieldValue.arrayUnion(driverId)
+            )
+                .addOnSuccessListener { onSuccess() }
+                .addOnFailureListener { e -> onError(e.message ?: "Update failed") }
+        }
+        .addOnFailureListener { e ->
+            onError(e.message ?: "Search failed")
+        }
 }
 
 @Composable

@@ -270,43 +270,61 @@ fun driverHomeScreen(navController: NavController) {
         fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
     }
 
+    var previousLocation2 by remember { mutableStateOf<GeoPoint?>(null) }
+    var currentLocation2 by remember { mutableStateOf<GeoPoint?>(null) }
+    // يمكنك استخدام حالة أكثر تعقيدًا لإدارة الموقع إذا لزم الأمر
+    // var smoothedLocation by remember { mutableStateOf<GeoPoint?>(null) }
+    // var rawLocation by remember { mutableStateOf<GeoPoint?>(null) }
+
+    val fusedLocationClient2 = remember { LocationServices.getFusedLocationProviderClient(context) }
+
+    // طلب تحديثات الموقع
     LaunchedEffect(Unit) {
+        // تأكد من وجود إذن تحديد الموقع
         if (ContextCompat.checkSelfPermission(
                 context,
                 Manifest.permission.ACCESS_FINE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED
         ) {
             val locationRequest = LocationRequest.create().apply {
-                interval = 2000
-                fastestInterval = 5000
+                interval = 2000 // تحديث كل ثانيتين
+                fastestInterval = 1000 // أسرع تحديث كل ثانية
                 priority = Priority.PRIORITY_HIGH_ACCURACY
             }
 
             val locationCallback = object : LocationCallback() {
                 override fun onLocationResult(locationResult: LocationResult) {
                     locationResult.locations.lastOrNull()?.let { location ->
-                        previousLocation = smoothedLocation
-                        rawLocation = GeoPoint(location.latitude, location.longitude)
-                        smoothedLocation = if (smoothedLocation == null) {
-                            rawLocation
-                        } else {
-                            interpolateLocation(
-                                smoothedLocation!!,
-                                rawLocation!!,
-                                0.5f
-                            )
-                        }
+                        val newPoint = GeoPoint(location.latitude, location.longitude)
+                        // تحديث الموقع السابق والحالي
+                        previousLocation2 = currentLocation2
+                        currentLocation2 = newPoint
+
+                        // يمكنك إضافة منطق التنعيم هنا إذا أردت
+                        // val smoothed = if (smoothedLocation == null) newPoint else interpolateLocation(smoothedLocation!!, newPoint, 0.3f)
+                        // previousLocation = smoothedLocation
+                        // currentLocation = smoothed
+                        // smoothedLocation = smoothed
                     }
                 }
             }
 
-            fusedLocationClient.requestLocationUpdates(
+            // بدء طلب تحديثات الموقع
+            fusedLocationClient2.requestLocationUpdates(
                 locationRequest,
                 locationCallback,
                 Looper.getMainLooper()
             )
+
+            // يمكنك إضافة منطق لإيقاف التحديثات عند الخروج من الشاشة
+            // currentCoroutineContext().job.invokeOnCompletion { fusedLocationClient.removeLocationUpdates(locationCallback) }
+        } else {
+            // طلب الإذن إذا لم يكن ممنوحًا
+            // يجب التعامل مع حالة عدم منح الإذن
+            println("Location permission not granted")
         }
     }
+
 
     fun parseGeoPoint(destination: String): GeoPoint {
         val parts = destination.split(",")
@@ -469,9 +487,9 @@ fun driverHomeScreen(navController: NavController) {
                         )
                     }
                 } else {
-                    DriverMapView(
-                        currentLocation = smoothedLocation,
-                        previousLocation = previousLocation
+                    com.example.capital_taxi.utils.DriverMapView(
+                        currentLocation = currentLocation2,
+                        previousLocation = previousLocation2
                     )
                 }
 
@@ -485,7 +503,8 @@ fun driverHomeScreen(navController: NavController) {
                                         it.status == "pending" && it._id != tripId
                                     }
                                 },
-                                onError = { Log.e("driverHomeScreen", "❌ $it") }
+                                onError = { Log.e("driverHomeScreen", "❌ $it") },
+                                driverId = driver_id
                             )
                         }
                     }

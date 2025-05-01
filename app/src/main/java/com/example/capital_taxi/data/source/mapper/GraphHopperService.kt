@@ -129,7 +129,7 @@ fun DriverMapView(
             val distance = calculateDistance(previousLocation, currentLocation)
 
             // تحقق من المسافة وإذا كانت أكبر من 5 متر نبدأ التحديث
-            if (distance >3) {
+
                 val newBearing = calculateBearing(previousLocation, currentLocation).toFloat()
 
                 animationProgress.snapTo(0f)
@@ -149,9 +149,7 @@ fun DriverMapView(
                     )
                 }
             }
-        } else if (currentLocation != null) {
-            animatedPosition.value = currentLocation
-        }
+
     }
 
     LaunchedEffect(animationProgress.value) {

@@ -81,9 +81,6 @@ class TripViewModel : ViewModel() {
     }
 
 
-    fun cancelTripForDriver(tripId: String) {
-        _availableTrips.value = _availableTrips.value.filter { it._id != tripId }
-    }
     fun acceptTrip(tripId: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         db.collection("trips")
             .whereEqualTo("_id", tripId) // ✅ البحث عن الرحلة التي تخص المستخدم
@@ -115,18 +112,30 @@ class TripViewModel : ViewModel() {
 
 
 
-    fun fetchTripsFromFirestore(onSuccess: (List<Trip>) -> Unit, onError: (String) -> Unit) {
+    fun fetchTripsFromFirestore(
+        driverId: String,
+        onSuccess: (List<Trip>) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        val db = FirebaseFirestore.getInstance()
+
         db.collection("trips")
-            .whereEqualTo("status", "pending") // ✅ جلب الرحلات غير المقبولة فقط
+            .whereEqualTo("status", "pending")
             .get()
             .addOnSuccessListener { documents ->
-                val trips = documents.mapNotNull { it.toObject(Trip::class.java) }
+                val trips = documents.mapNotNull { doc ->
+                    val trip = doc.toObject(Trip::class.java)
+                    // افترض أن لديك حقل اسمه cancelledByDrivers في الموديل من نوع List<String>
+                    val cancelled = trip.cancelledByDrivers ?: emptyList()
+                    if (!cancelled.contains(driverId)) trip else null
+                }
                 onSuccess(trips)
             }
             .addOnFailureListener { e ->
                 onError(e.message ?: "خطأ غير معروف")
             }
     }
+
 
     var responseMessage = mutableStateOf("")
     private val _tripDetails = mutableStateOf<TripResponse?>(null)

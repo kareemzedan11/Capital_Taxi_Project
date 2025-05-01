@@ -177,7 +177,8 @@ data class Trip(
     val paymentMethod: String,
     val status: String,
     val createdAt: String,
-    val updatedAt: String
+    val updatedAt: String,
+    val cancelledByDrivers: List<String>? = null
 ) {
     // Empty constructor for Firebase
     constructor() : this(
