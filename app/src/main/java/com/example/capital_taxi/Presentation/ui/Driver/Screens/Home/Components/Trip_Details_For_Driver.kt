@@ -78,6 +78,7 @@ fun TripDetailsForDriver(navController: NavController,
                          tripId:String,
                          mapchangetoInPrograss:()->Unit,
                          onTripStarted:()->Unit,
+                         passengerName:String,
 
                          menu_close: suspend  () -> Unit) {
 
@@ -150,7 +151,7 @@ fun TripDetailsForDriver(navController: NavController,
 
                                 Column {
                                     Text(
-                                        text = "Ahmed",
+                                        text = passengerName,
                                         color = Color.Black,
                                         fontSize = 18.sp,
                                         fontWeight = FontWeight.Bold

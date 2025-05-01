@@ -177,7 +177,11 @@ fun StartTrip(tripId:String,TripEnd:()->Unit) {
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text("${distanceInKm}km".take(3), fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "${distanceInKm.toString().take(3)} km",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
 
