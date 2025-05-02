@@ -26,7 +26,9 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -41,20 +43,36 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.capital_taxi.Navigation.Destination
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.navigationDrawerItem
 import com.example.capital_taxi.R
+import com.example.capital_taxi.domain.DriverViewModel
+import com.example.capital_taxi.domain.DriverViewModelFactory
+import com.example.capital_taxi.domain.RetrofitClient
+import com.example.capital_taxi.domain.RetrofitClient.apiService
+import com.example.capital_taxi.domain.User
 
 @Composable
 fun drawerContent(navController: NavController) {
+     val apiService = RetrofitClient.apiService
+    val viewModel: DriverViewModel = viewModel(factory = DriverViewModelFactory(apiService))
+
     val context = LocalContext.current
-    val sharedPreferences: SharedPreferences =
-        context.getSharedPreferences("user_preferences", Context.MODE_PRIVATE)
+    val sharedPreferences = remember { context.getSharedPreferences("your_prefs", Context.MODE_PRIVATE) }
+    val driverId = sharedPreferences.getString("USER_ID", null)
 
-    val savedName = sharedPreferences.getString("user_name", "") ?: ""
-    var Name by remember { mutableStateOf(savedName) }
+    LaunchedEffect(Unit) {
+        driverId?.let { viewModel.fetchUserProfileById(it) }
+    }
 
+
+    val userProfile by viewModel.userProfile.observeAsState()
+
+
+
+    var userName by remember { mutableStateOf("") }
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -72,7 +90,7 @@ fun drawerContent(navController: NavController) {
                 Row(
                     modifier = Modifier
                         .padding(5.dp)
-                        .clickable { navController.navigate(Destination.Profile.route) },
+                        .clickable { navController.navigate(Destination.userProfile.route) },
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -86,7 +104,7 @@ fun drawerContent(navController: NavController) {
                     )
                     Spacer(Modifier.width(10.dp))
                     Column(modifier = Modifier.padding(vertical = 10.dp)) {
-                        Text(Name, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text(   text = userProfile?.name ?: "", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         Row {
                             repeat(5) {
                                 Icon(

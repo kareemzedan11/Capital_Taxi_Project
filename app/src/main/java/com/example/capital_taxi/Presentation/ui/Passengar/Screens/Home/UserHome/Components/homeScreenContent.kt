@@ -99,6 +99,8 @@ import java.io.IOException
 
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.capital_taxi.Helper.rating.RateDriverBottomSheet
+import com.example.capital_taxi.Helper.rating.submitRatingToFirebase
 import com.example.capital_taxi.Navigation.Destination
 import com.example.capital_taxi.Presentation.ui.Driver.Components.InProgressMap
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.Home_Components.TripViewModel2
@@ -181,7 +183,7 @@ fun homeScreenContent(navController: NavController) {
         bottomSheetState = rememberBottomSheetState(initialValue = BottomSheetValue.Collapsed)
     )
 
-
+    var showRatingSheet by remember { mutableStateOf(false) }
     // DrawerState
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val gesturesEnabled = drawerState.isOpen
@@ -226,6 +228,7 @@ fun homeScreenContent(navController: NavController) {
     var showCancellationDialog by remember { mutableStateOf(false) }
     var tripListener by remember { mutableStateOf<ListenerRegistration?>(null) }
     val firestore = FirebaseFirestore.getInstance()
+    var driverId2 by remember { mutableStateOf<String?>(null) }
 
 // Modify the state handling in LaunchedEffect
     LaunchedEffect(stateTripViewModel) {
@@ -306,7 +309,7 @@ fun homeScreenContent(navController: NavController) {
                             if (status == "Cancelled" && !state.isCancelled) {
                                 stateTripViewModel.setCancelled()
                                 // Update the toast message to English
-                                Toast.makeText(context, "Trip cancelled by driver", Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, "Trip cancelled, Create another trip", Toast.LENGTH_LONG).show()
                             }
                         }
                     }
@@ -366,6 +369,7 @@ fun homeScreenContent(navController: NavController) {
                 val originLng = originMap?.get("lng") as? Double
 
                 originString =  document.get("origin") as? String
+
                   destinationString =  document.get("destination") as? String
 
 // تحديد أقصى عدد للمحاولات
@@ -527,6 +531,7 @@ fun homeScreenContent(navController: NavController) {
                 val destinationLat = destinationMap?.get("lat") as? Double
                 val destinationLng = destinationMap?.get("lng") as? Double
 
+
                 if (originLat != null && originLng != null && destinationLat != null && destinationLng != null) {
                     passengerLocation2 = GeoPoint(originLat, originLng)
                     driverLocation3 = GeoPoint(destinationLat, destinationLng)
@@ -602,10 +607,12 @@ when{
             driverName = driverName?:"undefined", // "سائق غير معروف"
             carModel =carType?: "undefied", // "مركبة غير معروفة"
             onRateClick = {
-                // Open rating dialog or bottom sheet
-                navController.navigate("RateDriver/${tripId}")
+                showRatingSheet = true
+
+
             },
             onReturnHomeClick = {
+                storedPoints = null
                 stateTripViewModel.resetAll()
                 navController.navigate(Destination.UserHomeScreen.route) {
                     popUpTo(Destination.UserHomeScreen.route) { inclusive = true }
@@ -619,7 +626,24 @@ when{
                 .fillMaxSize()
                 .navigationBarsPadding()
         )
-
+        if (showRatingSheet) {
+            RateDriverBottomSheet(
+                onSubmit = { ratingValue ->
+                    showRatingSheet = false
+                    if (driverId2!!.isNotEmpty()) {
+                        submitRatingToFirebase(driverId2!!, ratingValue)
+                    } else {
+                        Log.e("Rating", "❌ driverId غير موجود")
+                    }
+                    storedPoints = null
+                    stateTripViewModel.resetAll()
+                    navController.navigate(Destination.UserHomeScreen.route) {
+                        popUpTo(Destination.UserHomeScreen.route) { inclusive = true }
+                    }
+                },
+                onDismiss = { showRatingSheet = false }
+            )
+        }
     }
     else->{
         // Drawer
@@ -628,7 +652,7 @@ when{
             gesturesEnabled = gesturesEnabled,
             drawerContent = {
                 ModalDrawerSheet(
-                    modifier = Modifier.fillMaxWidth(0.7f) // Set drawer width to 60% of screen
+                    modifier = Modifier.fillMaxWidth(0.8f) // Set drawer width to 60% of screen
                 ) {
                     drawerContent(navController)
                 }
@@ -820,7 +844,11 @@ when{
                                                     driverName = name
                                                     carType = car
                                                     Log.d("DriverData", "🚗 الاسم: $driverName - النوع: $carType")
-                                                },
+
+                                              driverId2= driverId
+                                                    Log.d("driverId2", "🚗 driverId2: $driverId2")
+
+                                                            },
                                                 maxRetries = 5 // عدد المحاولات لجلب driverId (تقدر تزوده لو حابب)
                                             )
                                         },

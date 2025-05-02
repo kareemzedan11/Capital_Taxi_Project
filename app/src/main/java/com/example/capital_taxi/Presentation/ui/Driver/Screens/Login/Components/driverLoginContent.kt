@@ -128,7 +128,9 @@ fun driverLoginContent(
                         val sharedPref = context.getSharedPreferences("DriverDocuments", Context.MODE_PRIVATE)
                         val updates = hashMapOf<String, Any>(
                             "id" to userId,
-                            "updatedAt" to FieldValue.serverTimestamp()
+                            "updatedAt" to FieldValue.serverTimestamp(),
+                            "rating.total" to 5.0,
+                            "rating.count" to 1
                         )
 
 

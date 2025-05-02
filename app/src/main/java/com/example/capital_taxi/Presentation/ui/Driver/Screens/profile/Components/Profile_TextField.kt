@@ -1,4 +1,4 @@
-package com.example.capital_taxi.Presentation.ui.Passengar.Screens.profile.Components
+package com.example.capital_taxi.Presentation.ui.Driver.Screens.profile.Components
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding

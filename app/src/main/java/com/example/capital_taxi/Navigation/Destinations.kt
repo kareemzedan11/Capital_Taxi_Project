@@ -21,7 +21,8 @@ sealed class Destination(val route: String) {
     object PaymentScreen : Destination("PaymentScreen")
     object TripsHistoryScreen : Destination("TripsHistoryScreen")
     object voucherScreen : Destination("voucherScreen")
-    object Profile : Destination("Profile")
+    object driverProfile : Destination("driverProfile")
+    object userProfile : Destination("userProfile")
 
     object settings : Destination("settings")
     object PickupWithPickoffPoints : Destination("PickupWithPickoffPoints")
