@@ -124,7 +124,7 @@ fun userLoginContent(
             fontFamily = CustomFontFamily,
             fontWeight = FontWeight.W900,
             color = Color.Black,
-            style = MaterialTheme.typography.headlineMedium
+
         )
 
         Spacer(modifier = Modifier.height(40.dp))

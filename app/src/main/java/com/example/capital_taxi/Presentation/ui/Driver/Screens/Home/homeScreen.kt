@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import captainToPassenger
 import com.example.app.ui.theme.CustomFontFamily
 import com.example.app.ui.theme.responsiveTextSize
 import com.example.capital_taxi.Navigation.Destination
@@ -41,7 +42,6 @@ import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.H
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.StartTrip
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.TripArrivedCard2
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.TripDetailsCard
-import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.captainToPassenger
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.dataTripViewModel
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.driverHomeScreenContent
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.driverlocation

@@ -38,8 +38,7 @@ import com.example.app.ui.theme.CustomFontFamily
 import com.example.app.ui.theme.responsiveTextSize
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.DriverNavigationDrawer
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.TripDetailsCard
-import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.captainToPassenger
-import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.dataTripViewModel
+ import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.dataTripViewModel
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.driverHomeScreenContent
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.driverlocation
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.LocationDataStore

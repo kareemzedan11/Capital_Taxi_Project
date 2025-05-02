@@ -618,10 +618,7 @@ when{
                     popUpTo(Destination.UserHomeScreen.route) { inclusive = true }
                 }
             },
-            onReceiptClick = {
-                // Show detailed receipt
-                navController.navigate("TripReceipt/${tripId}")
-            },
+
             modifier = Modifier
                 .fillMaxSize()
                 .navigationBarsPadding()

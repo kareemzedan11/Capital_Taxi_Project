@@ -67,7 +67,7 @@ fun TripCompletedScreen(
     carModel: String,
     onRateClick: () -> Unit,
     onReturnHomeClick: () -> Unit,
-    onReceiptClick: () -> Unit,
+
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
@@ -274,24 +274,6 @@ fun TripCompletedScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Receipt button
-            FilledTonalButton(
-                onClick = onReceiptClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(54.dp),
-                shape = MaterialTheme.shapes.large,
-                colors = ButtonDefaults.filledTonalButtonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = "Receipt",
-                    modifier = Modifier.padding(end = 8.dp)
-                )
-                Text("View Detailed Receipt")
-            }
 
             // Rate driver button
             Button(

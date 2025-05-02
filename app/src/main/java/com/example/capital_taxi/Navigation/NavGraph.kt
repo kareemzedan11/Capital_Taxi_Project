@@ -66,7 +66,7 @@ import com.example.capital_taxi.ui.screens.Driver.VerficationScreens.NationalIDV
 fun AppNavGraph(navController: NavHostController) {
 
     var context = LocalContext.current
-    NavHost(navController = navController, startDestination = Destination.DriverHomeScreen.route) {
+    NavHost(navController = navController, startDestination = Destination.UserHomeScreen.route) {
 
         composable(Destination.SplashScreen.route) {
             SplashScreen(navController)
