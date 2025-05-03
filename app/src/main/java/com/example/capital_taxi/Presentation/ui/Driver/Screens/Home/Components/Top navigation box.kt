@@ -48,7 +48,7 @@ fun Top_Navigation_Box(tripId: String) {
         fetchInstructionsWithRetry(tripId) { instructions ->
             if (instructions != null && instructions.isNotEmpty()) {
                 // نحدث الـ instruction بالقيمة الأولى من القائمة
-                instruction = instructions[3]
+                instruction = instructions[0]
                 Log.d("INSTRUCTION", "Fetched ${instructions.size} instructions")
             } else {
                 Log.e("INSTRUCTION", "Failed to fetch after retries")

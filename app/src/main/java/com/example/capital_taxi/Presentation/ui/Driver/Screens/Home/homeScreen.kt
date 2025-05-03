@@ -45,6 +45,7 @@ import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.c
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.dataTripViewModel
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.driverHomeScreenContent
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.driverlocation
+import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.updateTripStatus
 import com.example.capital_taxi.Presentation.ui.Passengar.Components.StateTripViewModel
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.DirectionsApi
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.LocationDataStore
@@ -529,7 +530,7 @@ fun driverHomeScreen(navController: NavController) {
                             context = context
                         )
                     }
-
+                    val coroutineScope = rememberCoroutineScope()
                     val tripViewModel2: dataTripViewModel = viewModel()
                     availableTrips.firstOrNull()?.let { trip ->
                         if (tripState.isStart && !tripState.isAccepted) {
@@ -550,7 +551,9 @@ fun driverHomeScreen(navController: NavController) {
                                     tripViewModel2.setTripDetails(trip.origin, trip.destination)
                                     Log.d("TripDetails", "${trip.origin} ${trip.destination}")
                                     stateTripViewModel.setStart(false)
-
+                                    coroutineScope.launch {
+                                        updateTripStatus(tripId!!, "accepted")
+                                    }
                                     availableTrips = availableTrips.filter { it._id != trip._id }
                                     CoroutineScope(Dispatchers.IO).launch {
                                         if (token != null) {
@@ -563,6 +566,7 @@ fun driverHomeScreen(navController: NavController) {
                                                 ),
                                                 directionsViewModel = directionsViewModel,
                                                 onSuccess = { directionsResponse ->
+
                                                     Log.d(
                                                         "TripDirections",
                                                         "Successfully fetched directions: $directionsResponse"

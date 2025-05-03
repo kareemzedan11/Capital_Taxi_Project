@@ -548,19 +548,31 @@ fun homeScreenContent(navController: NavController) {
                             val encodedPolyline =
                                 response.paths.firstOrNull()?.points
                             if (encodedPolyline != null) {
-                                // Decode the polyline string into a list of GeoPoints
-                                val decodedPoints =
-                                    PolyUtil.decode(encodedPolyline)
-                                        .map { latLng ->
-                                            GeoPoint(
-                                                latLng.latitude,
-                                                latLng.longitude
-                                            )
-                                        }
+                                // Decode polyline
+                                val decodedPoints = PolyUtil.decode(encodedPolyline)
+                                    .map { latLng -> GeoPoint(latLng.latitude, latLng.longitude) }
 
                                 directions2.clear()
                                 directions2.addAll(decodedPoints)
+
+                                // ✅ تحديث الوقت والمسافة في Firestore
+                                val timeInSeconds = response.paths.firstOrNull()?.time?.div(1000) // الوقت بالملي ثانية → ثواني
+                                val distanceInMeters = response.paths.firstOrNull()?.distance      // المسافة بالأمتار
+
+                                if (timeInSeconds != null && distanceInMeters != null) {
+                                    document.reference.update(
+                                        mapOf(
+                                            "time" to timeInSeconds,
+                                            "distance" to distanceInMeters
+                                        )
+                                    ).addOnSuccessListener {
+                                        Log.d("Firestore", "تم تحديث الوقت والمسافة بنجاح")
+                                    }.addOnFailureListener { e ->
+                                        Log.e("Firestore", "فشل التحديث: ${e.message}")
+                                    }
+                                }
                             }
+
                         }
 
                         is ResultWrapper.Failure -> {
@@ -835,15 +847,19 @@ when{
                                             fetchDriverInfoWithRetry(
                                                 driverId,
                                                 onSuccess = { name, car ->
-                                                    driverName = name
-                                                    carType = car
-                                                    driverId2= driverId
+                                                    driverName = name ?: "غير معروف"
+                                                    carType = car ?: "غير معروف"
+                                                    driverId2 = driverId
                                                     Log.d("DriverData", "🚗 الاسم: $driverName - النوع: $carType")
                                                 },
-                                                maxRetries = 5 // عدد المحاولات لجلب driverId (تقدر تزوده لو حابب)
+                                                onFailure = {
+                                                    driverName = "غير معروف"
+                                                    carType = "غير معروف"
+                                                },
+                                                maxRetries =20
                                             )
                                         },
-                                        maxRetries = 5 // عدد المحاولات لجلب driverId
+                                        maxRetries = 20 // عدد المحاولات لجلب driverId
                                     )
                                 }
 
@@ -1164,25 +1180,28 @@ fun TrackDriverScreen(
     }
 
     // Fetch directions when locations are available
-    LaunchedEffect(driverLocation, passengerLocation) {
-        if (driverLocation != null && passengerLocation != null && !directionsFetched) {
-            fetchOSRMDirections(
-                start = driverLocation!!,
-                end = passengerLocation,
-                onSuccess = { routePoints ->
-                    directions = routePoints
-                    driverLocation?.let { findNearestIndex(current = it, path =routePoints ) }
-                    directionsFetched = true  // ✅ ضروري يتكتب هنا أول ما النجاح يحصل
-                    Log.d("OSRM Directions", "✅ Directions fetched: ${routePoints} points")
-                },
-                onError = { error ->
-                    Log.e("OSRM Directions", "❌ Error: $error")
-                    Toast.makeText(context, "خطأ في جلب الاتجاهات: $error", Toast.LENGTH_SHORT)
-                        .show()
-                }
-            )
+    LaunchedEffect(Unit) {
+        while (true) {
+            if (driverLocation != null && passengerLocation != null) {
+                fetchOSRMDirections(
+                    start = driverLocation!!,
+                    end = passengerLocation,
+                    onSuccess = { routePoints ->
+                        directions = routePoints
+                        findNearestIndex(current = driverLocation!!, path = routePoints)
+                        Log.d("OSRM Directions", "✅ Directions fetched: ${routePoints.size} points")
+                    },
+                    onError = { error ->
+                        Log.e("OSRM Directions", "❌ Error: $error")
+                    }
+                )
+            }
+
+
         }
     }
+
+
 
     // UI
     Box(modifier = Modifier.fillMaxSize()) {
@@ -1361,7 +1380,7 @@ object DirectionsApi {
                                 val newTripInfo = hashMapOf(
                                     "distance" to path.distance,
                                     "points" to path.points,
-                                    "time" to pathObj.getInt("time"),
+                                    "timefromdrivertouser" to path.time,
                                     "instructions" to instructionList // ✅ تم إضافة التعليمات هنا
                                 )
 

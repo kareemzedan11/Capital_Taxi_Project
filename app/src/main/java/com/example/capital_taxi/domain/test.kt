@@ -166,6 +166,9 @@ data class TripRequest(
     val fare: Double,
     val distanceInKm: Double
 )
+
+
+
 data class Trip(
     val _id: String,
     val user: String,

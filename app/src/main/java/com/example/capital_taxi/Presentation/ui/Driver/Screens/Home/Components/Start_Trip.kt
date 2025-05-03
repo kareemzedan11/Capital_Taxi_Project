@@ -95,34 +95,41 @@ fun StartTrip(tripId:String,TripEnd:()->Unit) {
 
     LaunchedEffect(tripId) {
         isDataLoading = true
-        val tripDoc = FirebaseFirestore.getInstance()
-            .collection("trips")
+        val db = FirebaseFirestore.getInstance()
+
+        val listenerRegistration = db.collection("trips")
             .whereEqualTo("_id", tripId)
-            .get()
-            .await()
+            .addSnapshotListener { snapshots, error ->
+                if (error != null) {
+                    // يمكنك تسجيل الخطأ هنا إن أردت
+                    isDataLoading = false
+                    return@addSnapshotListener
+                }
 
-        if (!tripDoc.isEmpty) {
-            val document = tripDoc.documents.first()
-            destination = document.get("destination") as? String ?: ""
-            distanceInKm = document.get("distanceInKm") as? Double ?: 0.0
-    Time = document.get("time") as? Long ?: 0
+                if (snapshots != null && !snapshots.isEmpty) {
+                    val document = snapshots.documents.first()
+                    destination = document.get("destination") as? String ?: ""
+                    distanceInKm = document.get("distanceInKm") as? Double ?: 0.0
+                    Time = document.get("time") as? Long ?: 0
+                }
 
-        }
-        isDataLoading = false
+                isDataLoading = false
+            }
+
+        // اختياريًا، يمكنك تخزين listenerRegistration لحذفه لاحقًا عند عدم الحاجة
     }
-    fun formatMillisecondsWithSeconds(milliseconds: Long): String {
-        val seconds = milliseconds / 1000
-        val minutes = seconds / 60
-        val hours = minutes / 60
 
-        return if (hours > 0) {
-            "${hours}h ${minutes % 60}m  "  // مثال: 1h 48m 22s
-        } else if (minutes > 0) {
-            "${minutes}m "  // مثال: 108m 22s
+    // تحويل الوقت إلى ساعات ودقائق
+    val formattedDuration = Time?.let {
+        val hours = (it / 3600).toInt() // حساب الساعات
+        val minutes = ((it % 3600) / 60).toInt() // حساب الدقائق
+        if (hours > 0) {
+            "$hours hour${if (hours > 1) "s" else ""} ${minutes} min"
         } else {
-            "${seconds}s"  // مثال: 6502s
+            "${minutes} min"
         }
-    }
+    } ?: "Loading..." // عرض Loading إذا كانت المدة null }
+
 
 
     // استخدام MediaRecorder لبدء التسجيل الصوتي
@@ -165,7 +172,7 @@ fun StartTrip(tripId:String,TripEnd:()->Unit) {
                         .padding(16.dp),
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    Text(formatMillisecondsWithSeconds(Time), fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    Text(formattedDuration, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.padding(horizontal = 10.dp))
                     Text("-", fontSize = 30.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.padding(horizontal = 10.dp))
@@ -177,7 +184,8 @@ fun StartTrip(tripId:String,TripEnd:()->Unit) {
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text("${distanceInKm}km".take(3), fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        Text("${distanceInKm.toString().take(3)}km", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+
                     }
                 }
 

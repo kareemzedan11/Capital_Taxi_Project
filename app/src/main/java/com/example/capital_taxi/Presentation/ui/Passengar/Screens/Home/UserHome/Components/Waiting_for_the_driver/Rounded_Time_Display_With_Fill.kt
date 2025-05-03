@@ -64,7 +64,7 @@ var generalColor= colorResource(R.color.primary_color)
 
                     // التأكد من أن البيانات موجودة وتحديث المسافة والوقت
                     data?.let {
-                        val durationValue = it["time"] as? Long ?: 0L
+                        val durationValue = it["timefromdrivertouser"] as? Long ?: 0L
                         Time = (durationValue.toDouble() / 1000.0).toLong()  // تحويل من milliseconds إلى seconds
                         isDataLoading = false
                     }

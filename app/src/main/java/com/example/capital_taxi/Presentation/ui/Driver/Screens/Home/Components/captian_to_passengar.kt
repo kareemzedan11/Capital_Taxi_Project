@@ -85,7 +85,7 @@ fun captainToPassenger(navController: NavController,
                     // التأكد من أن البيانات موجودة وتحديث المسافة والوقت
                     data?.let {
                         distance = it["distance"] as? Double
-                        val durationValue = it["time"] as? Long ?: 0L
+                        val durationValue = it["timefromdrivertouser"] as? Long ?: 0L
                         duration = durationValue.toDouble() / 1000.0  // تحويل من milliseconds إلى seconds
 
                         Log.d("Firebase", "Data updated: Distance = $distance, Duration = $duration")
@@ -124,7 +124,7 @@ fun captainToPassenger(navController: NavController,
             DirectionsPrefs.clear(context)
 
         } else {
-            Top_Navigation_Box(tripId)
+         //   Top_Navigation_Box(tripId)
             ModalBottomSheetLayout(
                 sheetState = bottomSheetState,
                 sheetContent = {

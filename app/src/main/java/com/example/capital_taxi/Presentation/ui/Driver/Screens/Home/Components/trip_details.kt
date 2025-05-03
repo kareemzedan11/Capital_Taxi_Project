@@ -346,16 +346,11 @@ fun TripDetailsCard(
                                 Log.e("INSTRUCTION", "Failed to get instructions")
                             }
                         }
+                        onTripAccepted()
+                        startUpdatingDriverLocation(trip._id, driver_id, context)
 
                         // قبول الرحلة
-                        tripViewModel.acceptTrip(
-                            trip._id,
-                            onSuccess = {
-                                onTripAccepted()
-                                startUpdatingDriverLocation(trip._id, driver_id, context)
-                            },
-                            onError = { Log.e("TripDetailsCard", "❌ Error accepting trip: $it") }
-                        )
+
                     },
                     modifier = Modifier
                         .fillMaxWidth()

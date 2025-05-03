@@ -54,9 +54,11 @@ fun waitForDriverIdFromTrip(
         }
     }
 }
+
 fun fetchDriverInfoWithRetry(
     driverId: String,
     onSuccess: (name: String?, carType: String?) -> Unit,
+    onFailure: () -> Unit = {},
     maxRetries: Int = 5,
     delayMillis: Long = 1000
 ) {
@@ -74,28 +76,32 @@ fun fetchDriverInfoWithRetry(
                     .await()
 
                 val driverDoc = snapshot.documents.firstOrNull()
-                if (driverDoc != null) {
-                    val name = driverDoc.getString("name")
-                    val car = driverDoc.getString("carType")
+                if (driverDoc != null && driverDoc.exists()) {
+                    val name = driverDoc.getString("name")?.takeIf { it.isNotEmpty() }
+                    val car = driverDoc.getString("carType")?.takeIf { it.isNotEmpty() }
 
                     withContext(Dispatchers.Main) {
                         onSuccess(name, car)
                     }
-
                     success = true
                 } else {
-                    Log.w("DriverInfo", "🔁 السائق مش لاقينه، نحاول تاني...")
+                    Log.w("DriverInfo", "🔁 السائق غير موجود، نحاول مرة أخرى...")
                 }
             } catch (e: Exception) {
-                Log.e("DriverInfo", "❌ Error fetching driver: ${e.message}")
+                Log.e("DriverInfo", "❌ خطأ في جلب بيانات السائق: ${e.message}")
             }
 
-            retries++
-            delay(delayMillis)
+            if (!success) {
+                retries++
+                delay(delayMillis)
+            }
         }
 
         if (!success) {
             Log.e("DriverInfo", "❌ فشل بعد $maxRetries محاولات")
+            withContext(Dispatchers.Main) {
+                onFailure()
+            }
         }
     }
 }
