@@ -47,43 +47,42 @@ fun RoundedTimeDisplayWithFill(tripId:String) {
 
     val progress = remember { Animatable(0f) }
 var generalColor= colorResource(R.color.primary_color)
-
+    val db = FirebaseFirestore.getInstance()
+    val tripRef = db.collection("trips")
     LaunchedEffect(tripId) {
-        isDataLoading = true
-        try {
-            val tripDoc = FirebaseFirestore.getInstance()
-                .collection("trips")
-                .whereEqualTo("_id", tripId)
-                .get()
-                .await()
+        tripRef.whereEqualTo("_id", tripId)
+            .addSnapshotListener { snapshot, e ->
+                if (e != null) {
+                    Log.e("Firebase", "Error fetching trip data: ${e.message}")
+                    return@addSnapshotListener
+                }
 
-            if (!tripDoc.isEmpty) {
-                val document = tripDoc.documents.first()
-                Time = document.get("time") as? Long ?: 0
-                Log.d("Firestore", "تم جلب الوقت: $Time مللي ثانية")
-            } else {
-                Log.e("Firestore", "لم يتم العثور على الرحلة!")
+                // تحقق من وجود البيانات
+                if (snapshot != null && !snapshot.isEmpty) {
+                    val document = snapshot.documents[0]
+                    val data = document.data
+
+                    // التأكد من أن البيانات موجودة وتحديث المسافة والوقت
+                    data?.let {
+                        val durationValue = it["time"] as? Long ?: 0L
+                        Time = (durationValue.toDouble() / 1000.0).toLong()  // تحويل من milliseconds إلى seconds
+                        isDataLoading = false
+                    }
+                }
             }
-        } catch (e: Exception) {
-            Log.e("Firestore", "خطأ في جلب البيانات: ${e.message}")
-        }
-        isDataLoading = false
     }
 
 
-    fun formatMillisecondsWithSeconds(milliseconds: Long): String {
-        val seconds = milliseconds / 1000
-        val minutes = seconds / 60
-        val hours = minutes / 60
-
-        return if (hours > 0) {
-            "${hours}h ${minutes % 60}m  "  // مثال: 1h 48m 22s
-        } else if (minutes > 0) {
-            "${minutes}m "  // مثال: 108m 22s
+    // تحويل الوقت إلى ساعات ودقائق
+    val formattedDuration = Time?.let {
+        val hours = (it / 3600).toInt() // حساب الساعات
+        val minutes = ((it % 3600) / 60).toInt() // حساب الدقائق
+        if (hours > 0) {
+            "$hours hour${if (hours > 1) "s" else ""} ${minutes} min"
         } else {
-            "${seconds}s"  // مثال: 6502s
+            "${minutes} min"
         }
-    }
+    } ?: "Loading..." // عرض Loading إذا كانت المدة null
     Box(
         modifier = Modifier
             .size(width = 70.dp, height = 40.dp)
@@ -114,7 +113,7 @@ var generalColor= colorResource(R.color.primary_color)
         } else {
 
             Text(
-                text = formatMillisecondsWithSeconds(Time),
+                text =formattedDuration,
                 style = androidx.compose.ui.text.TextStyle(
                     fontSize = 12.sp,  // قلل الحجم إذا كان النص لا يظهر
                     color = Color.Black,  // غيِّر اللون إذا كان غير مرئي

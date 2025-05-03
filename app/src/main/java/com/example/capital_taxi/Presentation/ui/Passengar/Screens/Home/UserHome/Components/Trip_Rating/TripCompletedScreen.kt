@@ -6,7 +6,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
- import androidx.compose.foundation.background
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,7 +30,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
- import androidx.compose.material3.Button
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
@@ -67,7 +67,7 @@ fun TripCompletedScreen(
     carModel: String,
     onRateClick: () -> Unit,
     onReturnHomeClick: () -> Unit,
-    onReceiptClick: () -> Unit,
+
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
@@ -274,24 +274,6 @@ fun TripCompletedScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Receipt button
-            FilledTonalButton(
-                onClick = onReceiptClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(54.dp),
-                shape = MaterialTheme.shapes.large,
-                colors = ButtonDefaults.filledTonalButtonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = "Receipt",
-                    modifier = Modifier.padding(end = 8.dp)
-                )
-                Text("View Detailed Receipt")
-            }
 
             // Rate driver button
             Button(

@@ -99,6 +99,8 @@ import java.io.IOException
 
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.capital_taxi.Helper.rating.RateDriverBottomSheet
+import com.example.capital_taxi.Helper.rating.submitRatingToFirebase
 import com.example.capital_taxi.Navigation.Destination
 import com.example.capital_taxi.Presentation.ui.Driver.Components.InProgressMap
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.Home_Components.TripViewModel2
@@ -152,6 +154,7 @@ fun homeScreenContent(navController: NavController) {
     }
     val tripViewModel2: TripViewModel2 = viewModel()
     val selectedTripId by tripViewModel2.selectedTripId.observeAsState()
+    var driverId2 by remember { mutableStateOf<String?>(null) }
 
     val locationViewModel: LocationViewModel = viewModel()
     val pickupLatLng = locationViewModel.pickupLocation
@@ -491,7 +494,7 @@ fun homeScreenContent(navController: NavController) {
 
 
     val directions2 = remember { mutableStateListOf<GeoPoint>() }
-
+    var showRatingSheet by remember { mutableStateOf(false) }
     // متغير لتخزين الموقع
     // قيمة مبدئية
     var isDataLoading2 by remember { mutableStateOf(true) }  // حالة التحميل
@@ -602,8 +605,9 @@ when{
             driverName = driverName?:"undefined", // "سائق غير معروف"
             carModel =carType?: "undefied", // "مركبة غير معروفة"
             onRateClick = {
-                // Open rating dialog or bottom sheet
-                navController.navigate("RateDriver/${tripId}")
+                showRatingSheet = true
+
+
             },
             onReturnHomeClick = {
                 stateTripViewModel.resetAll()
@@ -611,15 +615,29 @@ when{
                     popUpTo(Destination.UserHomeScreen.route) { inclusive = true }
                 }
             },
-            onReceiptClick = {
-                // Show detailed receipt
-                navController.navigate("TripReceipt/${tripId}")
-            },
+
             modifier = Modifier
                 .fillMaxSize()
                 .navigationBarsPadding()
         )
-
+        if (showRatingSheet) {
+            RateDriverBottomSheet(
+                onSubmit = { ratingValue ->
+                    showRatingSheet = false
+                    if (driverId2!!.isNotEmpty()) {
+                        submitRatingToFirebase(driverId2!!, ratingValue)
+                    } else {
+                        Log.e("Rating", "❌ driverId غير موجود")
+                    }
+                    storedPoints = null
+                    stateTripViewModel.resetAll()
+                    navController.navigate(Destination.UserHomeScreen.route) {
+                        popUpTo(Destination.UserHomeScreen.route) { inclusive = true }
+                    }
+                },
+                onDismiss = { showRatingSheet = false }
+            )
+        }
     }
     else->{
         // Drawer
@@ -819,6 +837,7 @@ when{
                                                 onSuccess = { name, car ->
                                                     driverName = name
                                                     carType = car
+                                                    driverId2= driverId
                                                     Log.d("DriverData", "🚗 الاسم: $driverName - النوع: $carType")
                                                 },
                                                 maxRetries = 5 // عدد المحاولات لجلب driverId (تقدر تزوده لو حابب)
