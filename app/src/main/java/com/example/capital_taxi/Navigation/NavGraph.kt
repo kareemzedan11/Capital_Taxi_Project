@@ -12,7 +12,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.HelpScreen.DriverHelpScreen
-import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.TripDetailsForDriver
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.drawerTabs.Inbox.InboxPage
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.drawerTabs.income.IncomePage
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.drawerTabs.invite_friends.InviteFriendsPage
@@ -24,6 +23,8 @@ import com.example.capital_taxi.Presentation.ui.Driver.Screens.Register.DriverSi
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.VerficationScreens.DocumentReview.DocumentReviewScreen
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.VerficationScreens.Validation_Navigation.ValidationNavigation
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.VerficationScreens.faceValidation.FaceValidation
+import com.example.capital_taxi.Presentation.ui.Driver.Screens.profile.UserProfile
+import com.example.capital_taxi.Presentation.ui.Driver.Screens.profile.driverProfile
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.HelpScreen.HelpDetailScreen
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.HelpScreen.HelpScreen
 
@@ -45,7 +46,6 @@ import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Safety.SafetyS
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Support.Components.ContactSupportPage
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Support.SupportPage
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.notification.userNotification
-import com.example.capital_taxi.Presentation.ui.Passengar.Screens.profile.Profile
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.settings.Components.settings
 import com.example.capital_taxi.Presentation.ui.Passenger.Screens.ChatScreen.ChatScreen
 import com.example.capital_taxi.Presentation.ui.shared.Confirm_information.ConfirmInformation
@@ -66,7 +66,7 @@ import com.example.capital_taxi.ui.screens.Driver.VerficationScreens.NationalIDV
 fun AppNavGraph(navController: NavHostController) {
 
     var context = LocalContext.current
-    NavHost(navController = navController, startDestination = Destination.DriverHomeScreen.route) {
+    NavHost(navController = navController, startDestination = Destination.UserHomeScreen.route) {
 
         composable(Destination.SplashScreen.route) {
             SplashScreen(navController)
@@ -122,8 +122,11 @@ fun AppNavGraph(navController: NavHostController) {
         composable(Destination.voucherScreen.route) {
             voucherScreen(navController)
         }
-        composable(Destination.Profile.route) {
-            Profile(navController)
+        composable(Destination.driverProfile.route) {
+            driverProfile(navController)
+        }
+        composable(Destination.userProfile.route) {
+            UserProfile(navController)
         }
         composable(Destination.settings.route) {
             settings(navController)

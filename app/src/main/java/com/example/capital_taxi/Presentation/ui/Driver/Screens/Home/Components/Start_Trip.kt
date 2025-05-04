@@ -44,6 +44,7 @@ import android.media.AudioRecord
 import android.util.Base64
 import android.util.Log
 import androidx.compose.foundation.gestures.scrollable
+import androidx.compose.runtime.DisposableEffect
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CoroutineScope
@@ -92,23 +93,31 @@ fun StartTrip(tripId:String,TripEnd:()->Unit) {
 
         }
     }
-
-    LaunchedEffect(tripId) {
+    DisposableEffect(tripId) {
         isDataLoading = true
-        val tripDoc = FirebaseFirestore.getInstance()
-            .collection("trips")
-            .whereEqualTo("_id", tripId)
-            .get()
-            .await()
 
-        if (!tripDoc.isEmpty) {
-            val document = tripDoc.documents.first()
-            destination = document.get("destination") as? String ?: ""
-            distanceInKm = document.get("distanceInKm") as? Double ?: 0.0
-    Time = document.get("time") as? Long ?: 0
+        val firestore = FirebaseFirestore.getInstance()
+        val query = firestore.collection("trips").whereEqualTo("_id", tripId)
 
+        val listenerRegistration = query.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                isDataLoading = false
+                return@addSnapshotListener
+            }
+
+            if (snapshot != null && !snapshot.isEmpty) {
+                val document = snapshot.documents.first()
+                destination = document.get("destination") as? String ?: ""
+                distanceInKm = document.get("distanceInKm") as? Double ?: 0.0
+                Time = document.get("time") as? Long ?: 0
+            }
+
+            isDataLoading = false
         }
-        isDataLoading = false
+
+        onDispose {
+            listenerRegistration.remove()
+        }
     }
     fun formatMillisecondsWithSeconds(milliseconds: Long): String {
         val seconds = milliseconds / 1000
@@ -177,7 +186,11 @@ fun StartTrip(tripId:String,TripEnd:()->Unit) {
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text("${distanceInKm}km".take(3), fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            String.format("%.1f km", distanceInKm),
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
 
@@ -210,7 +223,7 @@ fun StartTrip(tripId:String,TripEnd:()->Unit) {
                         )
                     } else {
                         Text(
-                            text = destination.take(12),
+                            text = destination.take(20),
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(top = 4.dp)

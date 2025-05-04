@@ -64,7 +64,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.9.3") // لعرض الـ Logs
     implementation("io.ktor:ktor-serialization-kotlinx-json:2.0.0")
-    implementation ("com.google.android.gms:play-services-auth:")
+    implementation ("com.google.android.gms:play-services-auth:21.3.0")
     implementation ("com.airbnb.android:lottie-compose:6.6.0")
     implementation ("androidx.compose.animation:animation:")
     implementation ("androidx.camera:camera-core:1.3.1")

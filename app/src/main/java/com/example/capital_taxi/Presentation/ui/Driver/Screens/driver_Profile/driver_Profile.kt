@@ -28,7 +28,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.capital_taxi.Navigation.Destination
-import com.example.capital_taxi.Presentation.ui.Passengar.Screens.profile.Components.ProfileTextField
+ import com.example.capital_taxi.Presentation.ui.Passengar.Screens.profile.Components.ProfileTextField
 import com.example.capital_taxi.R
 import com.example.capital_taxi.domain.DriverViewModel
 import com.example.capital_taxi.domain.DriverViewModelFactory
@@ -56,21 +56,21 @@ private fun saveImageToInternalStorage(context: Context, uri: Uri): String? {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun UserProfile(navController: NavController, ) {
+fun driverProfile(navController: NavController, ) {
 
     val apiService = RetrofitClient.apiService
     val viewModel: DriverViewModel = viewModel(factory = DriverViewModelFactory(apiService))
 
     val context = LocalContext.current
     val sharedPreferences = remember { context.getSharedPreferences("your_prefs", Context.MODE_PRIVATE) }
-    val driverId = sharedPreferences.getString("USER_ID", null)
+    val driverId = sharedPreferences.getString("driver_id", null)
 
     LaunchedEffect(Unit) {
-        driverId?.let { viewModel.fetchUserProfileById(it) }
+        driverId?.let { viewModel.fetchDriverProfileById(it) }
     }
 
 
-    val userProfile by viewModel.userProfile.observeAsState()
+    val userProfile by viewModel.driverProfile.observeAsState()
 
 
 
@@ -209,7 +209,7 @@ fun UserProfile(navController: NavController, ) {
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Button(
-                    onClick = { navController.navigate(Destination.UserHomeScreen.route) },
+                    onClick = { navController.popBackStack() },
                     modifier = Modifier.fillMaxWidth(0.9f).height(60.dp),
                     colors = ButtonDefaults.buttonColors(colorResource(R.color.primary_color)),
                     shape = RoundedCornerShape(16.dp)

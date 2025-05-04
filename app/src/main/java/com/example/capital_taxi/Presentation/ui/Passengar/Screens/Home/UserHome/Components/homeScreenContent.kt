@@ -107,7 +107,7 @@ import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.H
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.Home_Components.getAddressFromLatLng
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.updateTripStatus
 import com.example.capital_taxi.Presentation.ui.Passengar.Components.StateTripViewModel
-import com.example.capital_taxi.Presentation.ui.Passengar.Components.fetchDriverInfoWithRetry
+import com.example.capital_taxi.Presentation.ui.Passengar.Components.fetchDriverInfo
 import com.example.capital_taxi.Presentation.ui.Passengar.Components.waitForDriverIdFromTrip
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.During_the_trip.DriverArrivalCard
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.During_the_trip.RideInProgressScreen
@@ -606,10 +606,12 @@ when{
             carModel =carType?: "undefied", // "مركبة غير معروفة"
             onRateClick = {
                 showRatingSheet = true
+                storedPoints=null
 
 
             },
             onReturnHomeClick = {
+                storedPoints=null
                 stateTripViewModel.resetAll()
                 navController.navigate(Destination.UserHomeScreen.route) {
                     popUpTo(Destination.UserHomeScreen.route) { inclusive = true }
@@ -832,18 +834,16 @@ when{
                                     waitForDriverIdFromTrip(
                                         tripId = tripId!!,
                                         onDriverIdReady = { driverId ->
-                                            fetchDriverInfoWithRetry(
+                                            fetchDriverInfo(
                                                 driverId,
                                                 onSuccess = { name, car ->
-                                                    driverName = name
-                                                    carType = car
-                                                    driverId2= driverId
+                                                    driverName = name ?: "غير معروف"
+                                                    carType = car ?: "غير معروف"
+                                                    driverId2 = driverId
                                                     Log.d("DriverData", "🚗 الاسم: $driverName - النوع: $carType")
                                                 },
-                                                maxRetries = 5 // عدد المحاولات لجلب driverId (تقدر تزوده لو حابب)
                                             )
                                         },
-                                        maxRetries = 5 // عدد المحاولات لجلب driverId
                                     )
                                 }
 

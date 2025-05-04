@@ -377,84 +377,104 @@ fun driverHomeScreen(navController: NavController) {
             var isDataLoading by remember { mutableStateOf(true) }
             var driverLocation2 by remember { mutableStateOf(GeoPoint(30.0444, 31.2357)) }
 
-            LaunchedEffect(tripId) {
-                isDataLoading = true
-                try {
-                    val querySnapshot = db.collection("trips")
-                        .whereEqualTo("_id", tripId)
-                        .get()
-                        .await()
+            LaunchedEffect(mapStateViewModel.isTripInProgress.value) {
+                if (mapStateViewModel.isTripInProgress.value) {
+                    isDataLoading = true
+                    try {
+                        val querySnapshot = db.collection("trips")
+                            .whereEqualTo("_id", tripId)
+                            .get()
+                            .await()
 
-                    if (!querySnapshot.isEmpty) {
-                        val document = querySnapshot.documents.first()
-                        destination = document.get("destination") as? String
-                        passengerID = document.get("userId") as? String
+                        if (!querySnapshot.isEmpty) {
+                            val document = querySnapshot.documents.first()
+                            destination = document.get("destination") as? String
+                            passengerID = document.get("userId") as? String
 
-                        if (passengerID != null) {
-                            try {
-                                val query = FirebaseFirestore.getInstance()
-                                    .collection("users")
-                                    .whereEqualTo("id", passengerID)
-                                    .limit(1)
-                                    .get()
-                                    .await()
+                            // Fetch passenger name
+                            passengerID?.let { id ->
+                                try {
+                                    val query = FirebaseFirestore.getInstance()
+                                        .collection("users")
+                                        .whereEqualTo("id", id)
+                                        .limit(1)
+                                        .get()
+                                        .await()
 
-                                if (!query.isEmpty) {
-                                    passengerName = query.documents.first().getString("name") ?: "مستخدم غير معروف"
-                                } else {
-                                    "مستخدم غير معروف"
+                                    passengerName = query.documents.firstOrNull()
+                                        ?.getString("name") ?: "مستخدم غير معروف"
+                                } catch (e: Exception) {
+                                    Log.e("Firestore", "Error fetching user name", e)
+                                    passengerName = "مستخدم غير معروف"
                                 }
-                            } catch (e: Exception) {
-                                Log.e("Firestore", "Error fetching user name", e)
-                                "مستخدم غير معروف"
                             }
-                        }
 
-                        fare = document.get("fare") as? Double ?: 0.0
-                        distance = document.get("distanceInKm") as? Double ?: 0.0
+                            fare = document.get("fare") as? Double ?: 0.0
+                            distance = document.get("distanceInKm") as? Double ?: 0.0
 
-                        val originMap = document.get("originMap") as? Map<String, Any>
-                        val originLat = originMap?.get("lat") as? Double
-                        val originLng = originMap?.get("lng") as? Double
+                            val originMap = document.get("originMap") as? Map<String, Any>
+                            val originLat = originMap?.get("lat") as? Double
+                            val originLng = originMap?.get("lng") as? Double
 
-                        val destinationMap = document.get("destinationMap") as? Map<String, Any>
-                        val destinationLat = destinationMap?.get("lat") as? Double
-                        val destinationLng = destinationMap?.get("lng") as? Double
+                            val destinationMap = document.get("destinationMap") as? Map<String, Any>
+                            val destinationLat = destinationMap?.get("lat") as? Double
+                            val destinationLng = destinationMap?.get("lng") as? Double
 
-                        if (originLat != null && originLng != null && destinationLat != null && destinationLng != null) {
-                            passengerLocation2 = GeoPoint(originLat, originLng)
-                            driverLocation2 = GeoPoint(destinationLat, destinationLng)
+                            if (originLat != null && originLng != null && destinationLat != null && destinationLng != null) {
+                                passengerLocation2 = GeoPoint(originLat, originLng)
+                                driverLocation2 = GeoPoint(destinationLat, destinationLng)
 
-                            val result = DirectionsApi.getDirections(
-                                start = passengerLocation2,
-                                end = driverLocation2,
-                                apiKey = "c69abe50-60d2-43bc-82b1-81cbdcebeddc",
-                                context = context,
-                                tripId = tripId!!
-                            )
+                                val result = DirectionsApi.getDirections(
+                                    start = passengerLocation2,
+                                    end = driverLocation2,
+                                    apiKey = "c69abe50-60d2-43bc-82b1-81cbdcebeddc",
+                                    context = context,
+                                    tripId = tripId!!
+                                )
 
-                            when (result) {
-                                is ResultWrapper.Success -> {
-                                    val response = result.value
-                                    val encodedPolyline = response.paths.firstOrNull()?.points
-                                    if (encodedPolyline != null) {
-                                        val decodedPoints = PolyUtil.decode(encodedPolyline).map { latLng ->
-                                            GeoPoint(latLng.latitude, latLng.longitude)
+                                when (result) {
+                                    is ResultWrapper.Success -> {
+                                        val response = result.value
+                                        val encodedPolyline = response.paths.firstOrNull()?.points
+
+                                        if (encodedPolyline != null) {
+                                            val decodedPoints = PolyUtil.decode(encodedPolyline).map {
+                                                GeoPoint(it.latitude, it.longitude)
+                                            }
+                                            directions.clear()
+                                            directions.addAll(decodedPoints)
+                                            Log.d("Polyline", "Encoded polyline: $encodedPolyline")
+                                            Log.d("time", "Encoded polyline: ${response.paths.firstOrNull()?.time}")
+                                            Log.d("instructions", "Encoded polyline: ${response.paths.firstOrNull()?.instructions}")
+
+                                            // Update trip with directions data
+                                            val updates = mapOf(
+                                                "points" to encodedPolyline,
+                                                "instructions" to (response.paths.firstOrNull()?.instructions ?: listOf()),
+                                                "time" to (response.paths.firstOrNull()?.time ?: 0)
+                                            )
+                                            document.reference.update(updates)
+                                                .addOnSuccessListener {
+                                                    Log.d("Firestore33", "تم تحديث بيانات الرحلة بنجاح")
+                                                }
+                                                .addOnFailureListener {
+                                                    Log.e("Firestore33", "فشل في تحديث البيانات: ${it.message}")
+                                                }
+
                                         }
-                                        directions.clear()
-                                        directions.addAll(decodedPoints)
+                                    }
+
+                                    is ResultWrapper.Failure -> {
+                                        Log.e("Directions", "فشل في جلب الاتجاهات: ${result.exception.message}")
                                     }
                                 }
-                                is ResultWrapper.Failure -> {
-                                    Log.e("Directions", "فشل في جلب الاتجاهات: ${result.exception.message}")
-                                }
                             }
                         }
+                    } catch (e: Exception) {
+                        Log.e("Firebase", "Error fetching trip data: ${e.message}")
+                    } finally {
+                        isDataLoading = false
                     }
-                } catch (e: Exception) {
-                    Log.e("Firebase", "Error fetching trip data: ${e.message}")
-                } finally {
-                    isDataLoading = false
                 }
             }
 

@@ -11,6 +11,8 @@ data class Instruction(
     val distance: Double = 0.0,
     val time: Long = 0L,
     val sign: Int = 0,
+    val latitude: Double? = null, // إضافة
+    val longitude: Double? = null, // إضافة
     val street_name: String = "",
     val street_destination: String = "",
     val exit_number: Int = 0,

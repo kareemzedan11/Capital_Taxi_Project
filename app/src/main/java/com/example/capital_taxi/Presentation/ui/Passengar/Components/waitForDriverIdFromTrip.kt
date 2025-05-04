@@ -2,100 +2,72 @@ package com.example.capital_taxi.Presentation.ui.Passengar.Components
 
 import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
-
 fun waitForDriverIdFromTrip(
     tripId: String,
     onDriverIdReady: (String) -> Unit,
-    maxRetries: Int = 5,
-    delayMillis: Long = 1000L
+    timeoutMillis: Long = 10000L
 ) {
     val db = FirebaseFirestore.getInstance()
+    var registration: ListenerRegistration? = null
+
+    registration = db.collection("trips")
+        .whereEqualTo("_id", tripId)
+        .addSnapshotListener { snapshot, error ->
+            error?.let {
+                Log.e("WaitDriverIdTrip", "❌ خطأ في الlistener: ${it.message}")
+                return@addSnapshotListener
+            }
+
+            snapshot?.documents?.firstOrNull()?.getString("driver")?.let { driverId ->
+                Log.d("WaitDriverIdTrip", "✅ جبنا driverId من الرحلة: $driverId")
+                onDriverIdReady(driverId)
+                registration?.remove()  // هنا بقت متاحة
+            }
+        }
 
     CoroutineScope(Dispatchers.IO).launch {
-        var retries = 0
-        var driverId: String? = null
-
-        while (retries < maxRetries && driverId == null) {
-            try {
-                val querySnapshot = db.collection("trips")
-                    .whereEqualTo("_id", tripId)
-                    .get()
-                    .await()
-
-                val tripDoc = querySnapshot.documents.firstOrNull()
-
-                driverId = tripDoc?.getString("driver")
-
-                if (driverId == null) {
-                    Log.w("WaitDriverIdTrip", "🔁 المحاولة ${retries + 1}: لسه مفيش driverId")
-                    delay(delayMillis)
-                    retries++
-                }
-            } catch (e: Exception) {
-                Log.e("WaitDriverIdTrip", "❌ خطأ أثناء جلب الرحلة: ${e.message}")
-                delay(delayMillis)
-                retries++
-            }
-        }
-
-        if (driverId != null) {
-            Log.d("WaitDriverIdTrip", "✅ جبنا driverId من الرحلة: $driverId")
-            withContext(Dispatchers.Main) {
-                onDriverIdReady(driverId)
-            }
-        } else {
-            Log.e("WaitDriverIdTrip", "❌ فشل في جلب driverId بعد $maxRetries محاولات")
-        }
+        delay(timeoutMillis)
+        registration?.remove()
+        Log.e("WaitDriverIdTrip", "❌ انتهى وقت الانتظار بدون الحصول على driverId")
     }
 }
-fun fetchDriverInfoWithRetry(
+
+fun fetchDriverInfo(
     driverId: String,
     onSuccess: (name: String?, carType: String?) -> Unit,
-    maxRetries: Int = 5,
-    delayMillis: Long = 1000
+    timeoutMillis: Long = 10000L
 ) {
-    CoroutineScope(Dispatchers.IO).launch {
-        var retries = 0
-        var success = false
+    var registration: ListenerRegistration? = null
 
-        while (retries < maxRetries && !success) {
-            try {
-                val snapshot = FirebaseFirestore.getInstance()
-                    .collection("drivers")
-                    .whereEqualTo("id", driverId)
-                    .limit(1)
-                    .get()
-                    .await()
-
-                val driverDoc = snapshot.documents.firstOrNull()
-                if (driverDoc != null) {
-                    val name = driverDoc.getString("name")
-                    val car = driverDoc.getString("carType")
-
-                    withContext(Dispatchers.Main) {
-                        onSuccess(name, car)
-                    }
-
-                    success = true
-                } else {
-                    Log.w("DriverInfo", "🔁 السائق مش لاقينه، نحاول تاني...")
-                }
-            } catch (e: Exception) {
-                Log.e("DriverInfo", "❌ Error fetching driver: ${e.message}")
+    registration = FirebaseFirestore.getInstance()
+        .collection("drivers")
+        .whereEqualTo("id", driverId)
+        .limit(1)
+        .addSnapshotListener { snapshot, error ->
+            error?.let {
+                Log.e("DriverInfo", "❌ خطأ في الlistener: ${it.message}")
+                return@addSnapshotListener
             }
 
-            retries++
-            delay(delayMillis)
+            snapshot?.documents?.firstOrNull()?.let { driverDoc ->
+                val name = driverDoc.getString("name")
+                val car = driverDoc.getString("carType")
+                Log.d("DriverInfo", "✅ تم جلب بيانات السائق")
+                onSuccess(name, car)
+                registration?.remove()
+            }
         }
 
-        if (!success) {
-            Log.e("DriverInfo", "❌ فشل بعد $maxRetries محاولات")
-        }
+    CoroutineScope(Dispatchers.IO).launch {
+        delay(timeoutMillis)
+        registration?.remove()
+        Log.e("DriverInfo", "❌ انتهى وقت الانتظار بدون الحصول على بيانات السائق")
     }
 }

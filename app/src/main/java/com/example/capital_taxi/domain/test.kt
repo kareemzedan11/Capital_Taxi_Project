@@ -14,6 +14,7 @@ import com.example.capital_taxi.R
 import com.example.capital_taxi.data.source.remote.DirectionsResponse
 import com.example.capital_taxi.domain.shared.LocationData
 import com.example.capital_taxi.utils.Constants.ApiConstants
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import com.google.type.LatLng
@@ -96,11 +97,11 @@ interface TripApiService {
         @Body request: UpdateLocationRequest // ✅ استخدام كائن البيانات
     ): Response<UpdateLocationResponse>
 
-        @GET("drivers/:driverId/location")
-        suspend fun getDriverLocation(
-            @Header("Authorization") token: String, // ✅ إرسال التوكن يدويًا
-            @Path("driverId") driverId: String
-        ): Response<DriverLocation>
+    @GET("drivers/:driverId/location")
+    suspend fun getDriverLocation(
+        @Header("Authorization") token: String, // ✅ إرسال التوكن يدويًا
+        @Path("driverId") driverId: String
+    ): Response<DriverLocation>
 
     @GET("users/profile")
     suspend fun getUserProfile(
@@ -199,7 +200,7 @@ data class Trip(
         createdAt = "",
         updatedAt = "",
 
-    )
+        )
 }
 
 
@@ -337,7 +338,7 @@ private fun createVehicleOptions(baseFare: Double): List<VehicleOption> {
             imageRes = R.drawable.uber
         ),
 
-    )
+        )
 }
 
 // دالة مساعدة لمعالجة أخطاء API
@@ -358,25 +359,79 @@ class DriverViewModelFactory(private val apiService: TripApiService) : ViewModel
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
+data class User(
+    val id: String = "",
+    val name: String = "",
+    val username: String = "",
+    val email: String = "",
+    val phone: String = "",
+    val role: String = ""
+)
 
 class DriverViewModel(private val apiService: TripApiService) : ViewModel() {
-    private val _driverProfile = MutableLiveData<DriverProfileResponse?>()
-    val driverProfile: LiveData<DriverProfileResponse?> = _driverProfile
+    private val _driverProfile = MutableLiveData<Driver?>()
+    val driverProfile: LiveData<Driver?> = _driverProfile
 
-    fun fetchUserProfile(token: String) {
-        viewModelScope.launch {
-            try {
-                val response = RetrofitClient.apiService.getUserProfile("Bearer $token")
-                if (response.isSuccessful) {
-                    _driverProfile.postValue(response.body())
-                    Log.d("API", "✅ User Profile: ${response.body()}")
-                } else {
-                    Log.e("API", "❌ Error: ${response.errorBody()?.string()}")
+    data class Driver(
+        val id: String = "",
+        val name: String = "",
+        val email: String = "",
+        val phone: String = "",
+        val averageRating: Double = 0.0 // تأكد من إضافة الـ default value
+    )
+
+    private val _userProfile = MutableLiveData<User?>()
+    val userProfile: LiveData<User?> = _userProfile
+
+
+    fun fetchUserProfileById(userId: String) {
+        val db = FirebaseFirestore.getInstance()
+        db.collection("users")
+            .whereEqualTo("id", userId)
+            .limit(1)
+            .get()
+            .addOnSuccessListener { result ->
+                if (!result.isEmpty) {
+                    val document = result.documents[0]
+                    val user = document.toObject(User::class.java)
+                    _userProfile.postValue(user)
                 }
-            } catch (e: Exception) {
-                Log.e("API", "❌ Exception: ${e.localizedMessage}")
             }
-        }
+            .addOnFailureListener {
+                // التعامل مع الخطأ
+                it.printStackTrace()
+            }
+    }
+
+    fun fetchDriverProfileById(driverId: String) {
+        val db = FirebaseFirestore.getInstance()
+        db.collection("drivers")
+            .whereEqualTo("id", driverId)
+            .limit(1)
+            .get()
+            .addOnSuccessListener { result ->
+                if (!result.isEmpty) {
+                    val document = result.documents[0]
+
+                    // حساب المتوسط (averageRating) للتقييم
+                    val ratingMap = document.get("rating") as? Map<String, Any>
+                    val ratingCount = (ratingMap?.get("count") as? Number)?.toInt() ?: 0
+                    val ratingTotal = (ratingMap?.get("total") as? Number)?.toDouble() ?: 0.0
+                    val averageRating = if (ratingCount > 0) ratingTotal / ratingCount else 0.0
+
+                    // تحويل البيانات إلى كائن Driver مع المتوسط
+                    val driver = document.toObject(Driver::class.java)?.copy(averageRating = averageRating)
+
+                    // تعيين driverProfile بـ driver الجديد الذي يحتوي على التقييم المتوسط
+                    _driverProfile.postValue(driver)
+                }
+            }
+            .addOnFailureListener {
+                // التعامل مع الأخطاء هنا
+                it.printStackTrace()
+            }
+
+
     }
     private val _updateLocationState = MutableStateFlow<ApiResponse<UpdateLocationResponse>>(ApiResponse.Loading)
     val updateLocationState: StateFlow<ApiResponse<UpdateLocationResponse>> = _updateLocationState
