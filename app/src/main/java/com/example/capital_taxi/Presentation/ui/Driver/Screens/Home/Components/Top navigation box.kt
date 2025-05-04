@@ -24,6 +24,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.capital_taxi.domain.driver.model.Instruction
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 
 @Composable
 fun Top_Navigation_Box(tripId: String) {
@@ -44,15 +46,19 @@ fun Top_Navigation_Box(tripId: String) {
     var instruction by remember { mutableStateOf<Instruction?>(null) }
 
     // جلب البيانات عند تحديث الـ tripId أو عند بداية تشغيل الـ Composable
-    LaunchedEffect(tripId) {
-        fetchInstructionsWithRetry(tripId) { instructions ->
+    DisposableEffect(tripId) {
+        val listener = listenToInstructionsByTripId(tripId) { instructions ->
             if (instructions != null && instructions.isNotEmpty()) {
-                // نحدث الـ instruction بالقيمة الأولى من القائمة
-                instruction = instructions[3]
-                Log.d("INSTRUCTION", "Fetched ${instructions.size} instructions")
+                instruction = instructions[0] // أو أي index مناسب
+                Log.d("INSTRUCTION", "Live updated: ${instructions.size} instructions")
             } else {
-                Log.e("INSTRUCTION", "Failed to fetch after retries")
+                Log.e("INSTRUCTION", "No valid instructions found")
             }
+        }
+
+        // تنظيف الليسنر عند إلغاء Composable أو تغيير tripId
+        onDispose {
+            listener.remove()
         }
     }
 
@@ -127,76 +133,60 @@ fun Top_Navigation_Box(tripId: String) {
     }
 }
 
-fun getInstructionsByTripId(tripId: String, onResult: (List<Instruction>?) -> Unit) {
-    val db = FirebaseFirestore.getInstance()
-    db.collection("trips") // ← غيّر دي لاسم الكولكشن بتاعك
-        .whereEqualTo("_id", tripId)
-        .get()
-        .addOnSuccessListener { querySnapshot ->
-            if (!querySnapshot.isEmpty) {
-                val doc = querySnapshot.documents[0]
-                val instructionsList = doc["instructions"] as? List<Map<String, Any>>
 
-                if (instructionsList != null) {
-                    val instructionObjects = instructionsList.mapNotNull {
+fun listenToInstructionsByTripId(
+    tripId: String,
+    onUpdate: (List<Instruction>?) -> Unit
+): ListenerRegistration {
+    val db = FirebaseFirestore.getInstance()
+    return db.collection("trips")
+        .whereEqualTo("_id", tripId)
+        .addSnapshotListener { querySnapshot, error ->
+            if (error != null) {
+                Log.e("INSTRUCTION", "Listen failed: ${error.message}")
+                onUpdate(null)
+                return@addSnapshotListener
+            }
+
+            val doc = querySnapshot?.documents?.firstOrNull()
+            val instructionsList = doc?.get("instructions") as? List<Map<String, Any>>
+
+            if (instructionsList != null) {
+                val instructionObjects = instructionsList.mapNotNull {
+                    try {
                         val distance = (it["distance"] as? Number)?.toDouble() ?: return@mapNotNull null
                         val text = it["text"] as? String ?: return@mapNotNull null
                         val streetName = it["street_name"] as? String ?: ""
+                        val exitNumber = (it["exit_number"] as? Number)?.toInt() ?: 0
+                        val exited = it["exited"] as? Boolean ?: false
+                        val lastHeading = (it["last_heading"] as? Number)?.toDouble() ?: 0.0
+                        val sign = (it["sign"] as? Number)?.toInt() ?: 0
+                        val streetDestination = it["street_destination"] as? String ?: ""
+                        val time = (it["time"] as? Number)?.toLong() ?: 0L
+                        val turnAngle = (it["turn_angle"] as? Number)?.toDouble() ?: 0.0
 
                         Instruction(
                             distance = distance,
                             text = text,
-                            street_name = streetName
+                            street_name = streetName,
+                            exit_number = exitNumber,
+                            exited = exited,
+                            last_heading = lastHeading,
+                            sign = sign,
+                            street_destination = streetDestination,
+                            time = time,
+                            turn_angle = turnAngle
                         )
+                    } catch (e: Exception) {
+                        Log.e("INSTRUCTION", "Parsing error: ${e.message}")
+                        null
                     }
-
-                    // إذا كانت الـ instructionObjects فارغة، هذا معناه إن فيه بيانات ناقصة أو مش كاملة
-                    if (instructionObjects.isEmpty()) {
-                        Log.e("INSTRUCTION", "Data is incomplete or invalid!")
-                    }
-
-                    onResult(instructionObjects.takeIf { it.isNotEmpty() })
-                } else {
-                    onResult(null)
                 }
+
+                onUpdate(instructionObjects.takeIf { it.isNotEmpty() })
             } else {
-                onResult(null)
+                onUpdate(null)
             }
-        }
-        .addOnFailureListener {
-            Log.e("INSTRUCTION", "Failed to get instructions: ${it.message}")
-            onResult(null)
         }
 }
 
-fun fetchInstructionsWithRetry(
-    tripId: String,
-    maxAttempts: Int = 5,
-    delayMillis: Long = 1000,
-    onResult: (List<Instruction>?) -> Unit
-) {
-    var attempt = 0
-
-    fun tryFetch() {
-        Log.d("INSTRUCTION", "Attempt ${attempt + 1}")
-        getInstructionsByTripId(tripId) { instructions ->
-            if (instructions != null) {
-                Log.d("INSTRUCTION", "Success on attempt ${attempt + 1}")
-                onResult(instructions)
-            } else {
-                Log.e("INSTRUCTION", "Failed to get instructions on attempt ${attempt + 1}")
-                attempt++
-                if (attempt < maxAttempts) {
-                    Handler(Looper.getMainLooper()).postDelayed({
-                        tryFetch()
-                    }, delayMillis)
-                } else {
-                    Log.e("INSTRUCTION", "Giving up after $maxAttempts attempts")
-                    onResult(null)
-                }
-            }
-        }
-    }
-
-    tryFetch()
-}
