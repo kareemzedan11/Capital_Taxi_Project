@@ -859,13 +859,7 @@ when{
                                 }
 
                             }
-                            state.isConfirmed -> {
-                                isSearch=true
-                                confirmPickup(onclick = {
-                                    isConfirmed=false
-                                    stateTripViewModel.searchDriver()  })
 
-                            }
                             state.isSearch -> {
                                 searchAboutADriver()
                                 LaunchedEffect(tripStatus) {
@@ -964,7 +958,8 @@ when{
                     }
 
                     Log.d("TripScreen", "FindDriverCard clicked")
-                    stateTripViewModel.confirmPickup()
+                    isSearch=true
+                    stateTripViewModel.searchDriver()
                     val sharedPreferences =
                         context.getSharedPreferences("your_prefs", Context.MODE_PRIVATE)
                     val userId = sharedPreferences.getString("USER_ID", null)
@@ -1028,7 +1023,7 @@ when{
                     // Set the endpoint when the button is clicked
                     endPoint.value = GeoPoint(destinationLat, destinationLng)
 
-                    isConfirmed = true
+
                 })
             }
         }
