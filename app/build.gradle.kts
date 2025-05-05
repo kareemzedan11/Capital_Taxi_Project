@@ -84,7 +84,7 @@ dependencies {
     implementation ("androidx.navigation:navigation-compose:")
     implementation ("androidx.media3:media3-exoplayer:1.2.1")
     implementation ("androidx.media3:media3-ui:1.2.1")
-
+    implementation("io.github.jan-tennert.supabase:postgrest-kt:1.2.0")
 
     implementation("io.github.jan-tennert.supabase:storage-kt:1.4.0") // لـ Storage
 

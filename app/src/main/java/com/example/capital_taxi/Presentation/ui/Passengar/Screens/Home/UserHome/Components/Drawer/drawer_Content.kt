@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.example.capital_taxi.Navigation.Destination
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.navigationDrawerItem
 import com.example.capital_taxi.R
@@ -94,14 +95,16 @@ fun drawerContent(navController: NavController) {
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
+                    AsyncImage(
+                        model = userProfile?.imageUrl,
+                        contentDescription = "Profile Image",
                         modifier = Modifier
-                            .clip(CircleShape)
-                            .size(60.dp),
-                        tint = Color.Unspecified,
-                        contentDescription = null,
-                        painter = painterResource(R.drawable.person)
+                            .size(60.dp)
+                            .clip(CircleShape),
+                        placeholder = painterResource(R.drawable.person),
+                        error = painterResource(R.drawable.person)
                     )
+
                     Spacer(Modifier.width(10.dp))
                     Column(modifier = Modifier.padding(vertical = 10.dp)) {
                         Text(   text = userProfile?.name ?: "", fontSize = 18.sp, fontWeight = FontWeight.Bold)

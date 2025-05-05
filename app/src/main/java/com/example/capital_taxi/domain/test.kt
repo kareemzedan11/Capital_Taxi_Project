@@ -365,8 +365,11 @@ data class User(
     val username: String = "",
     val email: String = "",
     val phone: String = "",
-    val role: String = ""
+    val role: String = "",
+    val imageUrl: String = "" // ← أضف هذا السطر
+
 )
+
 
 class DriverViewModel(private val apiService: TripApiService) : ViewModel() {
     private val _driverProfile = MutableLiveData<Driver?>()

@@ -33,6 +33,14 @@ import com.example.capital_taxi.R
 import com.example.capital_taxi.domain.DriverViewModel
 import com.example.capital_taxi.domain.DriverViewModelFactory
 import com.example.capital_taxi.domain.RetrofitClient
+import com.google.firebase.firestore.FirebaseFirestore
+import io.github.jan.supabase.createSupabaseClient
+import io.github.jan.supabase.postgrest.Postgrest
+import io.github.jan.supabase.storage.Storage
+import io.github.jan.supabase.storage.storage
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
@@ -97,21 +105,31 @@ fun UserProfile(navController: NavController, ) {
     var imageFile by remember { mutableStateOf<File?>(if (initialImageFile?.exists() == true) initialImageFile else null) }
 
     // 4. Define the ActivityResultLauncher
-    val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
-        // 5. When a new image is selected (uri is not null)
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
-            // Save the image to internal storage
             val filePath = saveImageToInternalStorage(context, it)
             filePath?.let {
-                // Update the state to display the new image from the internal file
-                imageFile = File(it)
-                // Save the new file path to SharedPreferences
+                val file = File(it)
+                imageFile = file
+
+                // Save locally
                 val editor = sharedPreferences.edit()
                 editor.putString("PROFILE_IMAGE_PATH", it)
                 editor.apply()
+
+                // 🔁 رفع الصورة لـ Supabase وتحديث Firestore
+                driverId?.let { id ->
+                    CoroutineScope(Dispatchers.IO).launch {
+                        val imageUrl = uploadProfileImage(id, file)
+                        imageUrl?.let { url ->
+                            updateUserImageUrlInFirestore(id, url)
+                        }
+                    }
+                }
             }
         }
     }
+
     // --- End of Image Persistence Logic ---
 
     Scaffold(
@@ -220,3 +238,45 @@ fun UserProfile(navController: NavController, ) {
         }
     )
 }
+val supabase = createSupabaseClient(
+    supabaseUrl = "https://mwncdoelxuwhtlrvtnap.supabase.co",
+    supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im13bmNkb2VseHV3aHRscnZ0bmFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUwMjU4NjUsImV4cCI6MjA2MDYwMTg2NX0.f5Zlz_WSLypyCUn67g2PEA5ZjHa8VsqjJDbxIgtBBTk"
+
+) {
+    install(Storage)
+    install(Postgrest)
+}
+
+suspend fun uploadProfileImage(userId: String, file: File): String? {
+    return try {
+        val bucket = supabase.storage.from("users-profile")
+
+        // اسم فريد لكل صورة
+        val fileName = "$userId-${System.currentTimeMillis()}.jpg"
+
+        // رفع الصورة
+        bucket.upload(fileName, file.readBytes())
+
+        // جلب رابط الصورة الجديد (اللي اترفع فعليًا)
+        val publicUrl = bucket.publicUrl(fileName)
+
+        publicUrl
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
+    }
+}
+
+suspend fun updateUserImageUrlInFirestore(userId: String, imageUrl: String) {
+    val cacheBustedUrl = "$imageUrl?t=${System.currentTimeMillis()}"
+    val db = FirebaseFirestore.getInstance()
+    db.collection("users")
+        .whereEqualTo("id", userId)
+        .get()
+        .addOnSuccessListener { documents ->
+            for (document in documents) {
+                document.reference.update("imageUrl", cacheBustedUrl)
+            }
+        }
+}
+
