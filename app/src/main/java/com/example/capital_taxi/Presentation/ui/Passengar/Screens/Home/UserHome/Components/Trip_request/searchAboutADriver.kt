@@ -84,15 +84,6 @@ fun searchAboutADriver() {
 
 
     Column {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.06f)
-                .background(Color(0XFFF2F2F2)),
-            contentAlignment = Alignment.Center
-        ) {
-            driverViewing()
-        }
 
         Box(
             modifier = Modifier

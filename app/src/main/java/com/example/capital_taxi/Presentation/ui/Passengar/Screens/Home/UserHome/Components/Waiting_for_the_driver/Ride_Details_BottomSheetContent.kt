@@ -53,15 +53,26 @@ fun RideDetailsBottomSheetContent(
     navController: NavController, tripid: String) {
     val carType = remember { mutableStateOf("") }
     val carNumber = remember { mutableStateOf("") }
-    val driverusername = remember { mutableStateOf("") }
+    val driverUsername = remember { mutableStateOf("") }
+    val driverRating = remember { mutableStateOf<Double?>(null) }
+    val carColor = remember { mutableStateOf("") }
+    val tripsCount = remember { mutableStateOf(0) }
 
     LaunchedEffect(tripid) {
-        fetchDriverCarDetails(tripId = tripid, onResult = { type, number, username ->
-            carType.value = type
-            carNumber.value = number
-            driverusername.value = username
-        })
+        fetchDriverCarDetails(
+            tripId = tripid,
+            onResult = { type: String, number: String, username: String, rating: Double?, color: String, trips: Int ->
+                carType.value = type
+                carNumber.value = number
+                driverUsername.value = username
+                driverRating.value = rating
+                carColor.value = color
+                tripsCount.value = trips
+            }
+        )
     }
+
+
 
     Column(
         modifier = Modifier
@@ -169,7 +180,11 @@ fun RideDetailsBottomSheetContent(
 
                         Spacer(modifier = Modifier.padding(top = 16.dp))
 
-                        driverDetails(driverusername = driverusername.value)
+                        driverDetails(
+                            driverusername = driverUsername.value,
+                            rating = driverRating.value.toString(),
+                            trips = tripsCount.value.toString()
+                        )
 
                         Spacer(modifier = Modifier.padding(top = 16.dp))
 

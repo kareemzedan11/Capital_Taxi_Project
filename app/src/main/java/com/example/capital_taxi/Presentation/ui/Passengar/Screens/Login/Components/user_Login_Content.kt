@@ -69,12 +69,12 @@ fun userLoginContent(
                     val userID = response.body()?.account!!.userId
 
                     if (token != null) {
-                        // 1. حفظ التوكن وID في SharedPreferences
+                        // 1. حفظ التوكن وID
                         editor.putString("USER_TOKEN", token)
                         editor.putString("USER_ID", userID)
                         editor.apply()
 
-                        // 2. تحديث الـ userId في Firestore بناءً على البريد الإلكتروني
+                        // 2. تحديث بيانات Firestore
                         val firestore = FirebaseFirestore.getInstance()
                         val query = firestore.collection("users")
                             .whereEqualTo("email", email)
@@ -83,11 +83,32 @@ fun userLoginContent(
                         val querySnapshot = query.get().await()
                         if (!querySnapshot.isEmpty) {
                             val document = querySnapshot.documents[0]
-                            document.reference.update("id", userID).await()
-                            println("✅ Updated userId in Firestore for email: $email")
+                            val docRef = document.reference
+
+                            val updates = mutableMapOf<String, Any>(
+                                "id" to userID,
+                            )
+
+                            // أضف قيمة ابتدائية للتقييم إذا لم تكن موجودة
+                            if (!document.contains("rating")) {
+                                updates["rating"] = 5.0
+                            }
+
+                            // أضف عداد الرحلات إذا لم يكن موجود
+                            if (!document.contains("trips")) {
+                                updates["trips"] = 0
+                            }
+
+                            // أضف عداد الشكاوى إذا لم يكن موجود
+                            if (!document.contains("complaints")) {
+                                updates["complaints"] = 0
+                            }
+
+                            docRef.update(updates).await()
+                            println("✅ Updated user Firestore document for: $email")
                         }
 
-                        // 3. الانتقال إلى الشاشة الرئيسية
+                        // 3. الانتقال للشاشة الرئيسية
                         navController.navigate(Destination.UserHomeScreen.route) {
                             popUpTo(navController.graph.startDestinationId) {
                                 inclusive = true
@@ -109,6 +130,7 @@ fun userLoginContent(
             }
         }
     }
+
 
     Column(
         modifier = Modifier

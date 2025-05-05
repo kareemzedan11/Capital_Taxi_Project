@@ -63,7 +63,7 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 
 @Composable
-fun StartTrip(tripId:String,TripEnd:()->Unit) {
+fun StartTrip(tripId:String,TripEnd:()->Unit,driverId:String) {
     val backgroundColor = colorResource(id = R.color.secondary_color)
     val primaryColor = colorResource(id = R.color.primary_color)
     val Icons_color = colorResource(id = R.color.Icons_color)
@@ -307,15 +307,18 @@ fun StartTrip(tripId:String,TripEnd:()->Unit) {
 
                                                 if (distance <= 5) {
                                                     updateTripStatus(tripId, "Completed")
+                                                    driverId?.let { incrementDriverTrips(it) }
                                                     withContext(Dispatchers.Main) {
                                                         TripEnd()
                                                     }
                                                 } else {
                                                     stopRecordingAndUpload(tripId)
                                                     updateTripStatus(tripId, "Completed")
+                                                    driverId?.let { incrementDriverTrips(it) }
                                                     withContext(Dispatchers.Main) {
                                                         TripEnd()
                                                     }
+
 //                                                    withContext(Dispatchers.Main) {
 //                                                        Toast.makeText(
 //                                                            context,
@@ -416,7 +419,32 @@ fun stopRecordingAndUpload(tripId: String) {
     }
     outputStream = null
 }
+fun incrementDriverTrips(driverId: String) {
+    val db = FirebaseFirestore.getInstance()
 
+    db.collection("drivers")
+        .whereEqualTo("id", driverId) // البحث باستخدام حقل _id
+        .get()
+        .addOnSuccessListener { querySnapshot ->
+            if (!querySnapshot.isEmpty) {
+                val document = querySnapshot.documents[0]
+
+                // زيادة عدد الرحلات بمقدار 1
+                document.reference.update("trips", FieldValue.increment(1))
+                    .addOnSuccessListener {
+                        Log.d("Firestore", "تم زيادة عدد الرحلات للسائق بنجاح")
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e("Firestore", "فشل في زيادة عدد الرحلات", e)
+                    }
+            } else {
+                Log.e("Firestore", "لم يتم العثور على سائق بالمعرف المطلوب")
+            }
+        }
+        .addOnFailureListener { e ->
+            Log.e("Firestore", "فشل في البحث عن السائق", e)
+        }
+}
 fun convertPcmToWav(pcmData: ByteArray, sampleRate: Int, channelConfig: Int, audioFormat: Int): ByteArray {
     val channels = when (channelConfig) {
         AudioFormat.CHANNEL_IN_MONO -> 1

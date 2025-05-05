@@ -850,7 +850,7 @@ when{
 
                                 RideDetailsBottomSheetContent(
                                     onclick = {  stateTripViewModel.setCancelled()},
-                                    navController, tripId!!)
+                                    navController, tripId!! )
                                 LaunchedEffect(tripStatus) {
                                     if (tripStatus == "InProgress") {
 

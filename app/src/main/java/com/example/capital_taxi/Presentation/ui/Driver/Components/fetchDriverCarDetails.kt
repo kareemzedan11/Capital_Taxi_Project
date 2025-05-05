@@ -7,11 +7,19 @@ import com.example.capital_taxi.domain.shared.db
 import com.google.firebase.firestore.FirebaseFirestore
 fun fetchDriverCarDetails(
     tripId: String,
-    onResult: (String, String, String) -> Unit,  // تعديل توقيع الدالة لإضافة username
+    onResult: (
+        carType: String,
+        carNumber: String,
+        username: String,
+        rating: Double?,
+        carColor: String,
+        trips: Int
+    ) -> Unit,
     maxRetries: Int = 5,
-    delayMillis: Long = 1000L, // 1 ثانية بين كل محاولة
+    delayMillis: Long = 1000L,
     attempt: Int = 1
-) {
+)
+ {
     Log.d("FirestoreDebug", "🔍 [Attempt $attempt] Fetching trip with _id = $tripId")
 
     db.collection("trips")
@@ -33,20 +41,28 @@ fun fetchDriverCarDetails(
                         .addOnSuccessListener { snapshot ->
                             if (!snapshot.isEmpty) {
                                 val driverDoc = snapshot.documents[0]
+
                                 val carType = driverDoc.getString("carType") ?: "N/A"
                                 val carNumber = driverDoc.getString("carNumber") ?: "N/A"
                                 val username = driverDoc.getString("username") ?: "Unknown"
+                                val carColor = driverDoc.getString("carColor") ?: "Unknown"
+                                val trips = (driverDoc.get("trips") as? Number)?.toInt() ?: 0
 
-                                Log.d("Driver", "🚗 Driver data -> carType: $carType, carNumber: $carNumber, username: $username")
-                                onResult(carType, carNumber, username)
+                                val ratingMap = driverDoc.get("rating") as? Map<*, *>
+                                val count = (ratingMap?.get("count") as? Number)?.toInt() ?: 0
+                                val total = (ratingMap?.get("total") as? Number)?.toInt() ?: 0
+                                val averageRating = if (count > 0) total.toDouble() / count else null
+
+                                Log.d("Driver", "🚗 Driver data -> carType: $carType, carNumber: $carNumber, username: $username, color: $carColor, trips: $trips, rating: $averageRating")
+                                onResult(carType, carNumber, username, averageRating, carColor, trips)
                             } else {
                                 Log.e("Driver", "❌ No driver found with id = $driverId")
-                                onResult("N/A", "N/A", "Unknown")
+                                onResult("N/A", "N/A", "Unknown", null, "Unknown", 0)
                             }
                         }
                         .addOnFailureListener {
                             Log.e("Driver", "❌ Failed to fetch driver data: ${it.message}")
-                            onResult("N/A", "N/A", "Unknown")
+                            onResult("N/A", "N/A", "Unknown", null, "Unknown", 0)
                         }
                 } else if (attempt < maxRetries) {
                     Log.w("FirestoreDebug", "⏳ Driver ID is null. Retrying after delay... [$attempt/$maxRetries]")
@@ -55,15 +71,15 @@ fun fetchDriverCarDetails(
                     }, delayMillis)
                 } else {
                     Log.e("FirestoreDebug", "❌ Driver ID is still null after $maxRetries attempts.")
-                    onResult("N/A", "N/A", "Unknown")
+                    onResult("N/A", "N/A", "Unknown", null, "Unknown", 0)
                 }
             } else {
                 Log.e("FirestoreDebug", "❌ No trip found with _id = $tripId")
-                onResult("N/A", "N/A", "Unknown")
+                onResult("N/A", "N/A", "Unknown", null, "Unknown", 0)
             }
         }
         .addOnFailureListener {
             Log.e("FirestoreDebug", "❌ Failed to fetch trip: ${it.message}")
-            onResult("N/A", "N/A", "Unknown")
+            onResult("N/A", "N/A", "Unknown", null, "Unknown", 0)
         }
 }

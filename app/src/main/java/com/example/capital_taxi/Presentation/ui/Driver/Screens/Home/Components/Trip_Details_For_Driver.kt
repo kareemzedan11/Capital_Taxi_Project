@@ -78,6 +78,7 @@ fun TripDetailsForDriver(navController: NavController,
                          tripId:String,
                          mapchangetoInPrograss:()->Unit,
                          onTripStarted:()->Unit,
+                         passengerName:String,
 
                          menu_close: suspend  () -> Unit) {
 
@@ -150,7 +151,7 @@ fun TripDetailsForDriver(navController: NavController,
 
                                 Column {
                                     Text(
-                                        text = "Ahmed",
+                                        text = passengerName,
                                         color = Color.Black,
                                         fontSize = 18.sp,
                                         fontWeight = FontWeight.Bold
@@ -316,7 +317,7 @@ fun TripDetailsForDriver(navController: NavController,
                                         menu_close()
                                         updateTripStatus(tripId, "InProgress")
                                         onTripStarted()
-                                       // Toast.makeText(context, "You are not at the pickup point", Toast.LENGTH_SHORT).show()
+                                        // Toast.makeText(context, "You are not at the pickup point", Toast.LENGTH_SHORT).show()
                                     }
                                 } else {
                                     Toast.makeText(context, "Location data is missing", Toast.LENGTH_SHORT).show()
@@ -325,7 +326,7 @@ fun TripDetailsForDriver(navController: NavController,
                         }
                     },
 
-                            modifier = Modifier
+                    modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                         .height(60.dp),
@@ -618,4 +619,3 @@ fun CancelTripDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
         }
     )
 }
-

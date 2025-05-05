@@ -165,11 +165,6 @@ fun driverHomeScreen(navController: NavController) {
     DisposableEffect(tripId) {
         var documentListener: ListenerRegistration? = null
 
-        onDispose {
-            documentListener?.remove()
-            tripListener?.remove()
-        }
-
         if (tripId != null) {
             val query = firestore.collection("trips")
                 .whereEqualTo("_id", tripId)
@@ -182,6 +177,23 @@ fun driverHomeScreen(navController: NavController) {
 
                 if (querySnapshot != null && !querySnapshot.isEmpty) {
                     val document = querySnapshot.documents.first()
+                    passengerID = document.get("userId") as? String
+
+                    // ✅ Get passenger name using callback, not await
+                    passengerID?.let { id ->
+                        firestore.collection("users")
+                            .whereEqualTo("id", id)
+                            .limit(1)
+                            .get()
+                            .addOnSuccessListener { query ->
+                                passengerName = query.documents.firstOrNull()
+                                    ?.getString("name") ?: "مستخدم غير معروف"
+                            }
+                            .addOnFailureListener { e ->
+                                Log.e("Firestore", "Error fetching user name", e)
+                                passengerName = "مستخدم غير معروف"
+                            }
+                    }
 
                     documentListener = document.reference.addSnapshotListener { snapshot, error2 ->
                         if (error2 != null) {
@@ -193,13 +205,13 @@ fun driverHomeScreen(navController: NavController) {
                             val status = doc.getString("status") ?: "pending"
                             if (status == "Cancelled" && !tripState.isCancelled) {
                                 stateTripViewModel.setCancelled()
-                                // Update the toast message to English
                                 Toast.makeText(context, "Trip cancelled by passenger", Toast.LENGTH_LONG).show()
                             }
                         }
                     }
                 }
             }
+
             tripListener = registration
         }
 
@@ -208,6 +220,7 @@ fun driverHomeScreen(navController: NavController) {
             documentListener?.remove()
         }
     }
+
     fun updateLocationAndStatus(driverId: String, location: GeoPoint) {
         if (ContextCompat.checkSelfPermission(
                 context,
@@ -709,11 +722,12 @@ fun driverHomeScreen(navController: NavController) {
                     tripId = tripId!!,
                     mapchangetoInPrograss = { mapStateViewModel.startTrip() },
                     onTripStarted = { accepttrip.startTrip() },
+                    passengerName = passengerName?:"Loading"
                 )
             }
 
             if (tripState.isTripBegin) {
-                StartTrip(tripId!!, TripEnd = { accepttrip.EndTrip() })
+                StartTrip(tripId!!, TripEnd = { accepttrip.EndTrip() },driverId)
             }
 
             if (tripState.isEnd) {

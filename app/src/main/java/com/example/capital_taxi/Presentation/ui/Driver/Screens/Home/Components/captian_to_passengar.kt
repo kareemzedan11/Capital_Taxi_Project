@@ -58,7 +58,7 @@ fun captainToPassenger(navController: NavController,
                        onTripStarted:()->Unit,
 
                        mapchangetoInPrograss:()->Unit,
-                       context: Context, tripId: String) {
+                       context: Context, tripId: String,passengerName:String) {
 
     var distance by rememberSaveable { mutableStateOf<Double?>(null) }
     var duration by rememberSaveable { mutableStateOf<Double?>(null) }
@@ -130,14 +130,17 @@ fun captainToPassenger(navController: NavController,
                 sheetContent = {
 
 
-                        TripDetailsForDriver(navController,
+                        TripDetailsForDriver(
+                            navController,
 
-                       onTripStarted = onTripStarted,
+                            onTripStarted = onTripStarted,
                             tripId = tripId,
 
-                            mapchangetoInPrograss =mapchangetoInPrograss ,
+                            mapchangetoInPrograss = mapchangetoInPrograss,
 
-                            menu_close = {bottomSheetState.hide()})
+                            menu_close = { bottomSheetState.hide() },
+                            passengerName = passengerName
+                        )
 
 
                 },
