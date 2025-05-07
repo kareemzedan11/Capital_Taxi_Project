@@ -229,7 +229,7 @@ fun homeScreenContent(navController: NavController) {
     var showCancellationDialog by remember { mutableStateOf(false) }
     var tripListener by remember { mutableStateOf<ListenerRegistration?>(null) }
     val firestore = FirebaseFirestore.getInstance()
-
+    var previousDriverLocation2 by remember { mutableStateOf<GeoPoint?>(null) }
 // Modify the state handling in LaunchedEffect
     LaunchedEffect(stateTripViewModel) {
         when {
@@ -427,7 +427,6 @@ fun homeScreenContent(navController: NavController) {
 
                 if (originLat != null && originLng != null && destinationLat != null && destinationLng != null) {
                     passengerLocation2 = GeoPoint(originLat, originLng)
-                    driverLocation2 = GeoPoint(destinationLat, destinationLng)
 
                     val result = DirectionsApi.getDirections(
                         start = passengerLocation2,
@@ -498,7 +497,7 @@ fun homeScreenContent(navController: NavController) {
     // متغير لتخزين الموقع
     // قيمة مبدئية
     var isDataLoading2 by remember { mutableStateOf(true) }  // حالة التحميل
-    var driverLocation3 by remember {
+    var destination by remember {
         mutableStateOf(
             GeoPoint(
                 30.0444,
@@ -506,78 +505,80 @@ fun homeScreenContent(navController: NavController) {
             )
         )
     } // قيمة مبدئية
-
     LaunchedEffect(tripId) {
         isDataLoading2 = true
 
         try {
-            val querySnapshot = db.collection("trips")
+            val tripDocRef = db.collection("trips")
                 .whereEqualTo("_id", tripId)
                 .get()
                 .await()
+                .documents
+                .firstOrNull()
 
-            if (!querySnapshot.isEmpty) {
-                val document = querySnapshot.documents.first()
+            if (tripDocRef != null) {
+                val documentRef = db.collection("trips").document(tripDocRef.id)
 
-                // جلب بيانات originMap
-                val originMap = document.get("originMap") as? Map<String, Any>
+                // --------- قراءة origin و destination لمرة واحدة ------------
+                val originMap = tripDocRef.get("originMap") as? Map<String, Any>
+                val destinationMap = tripDocRef.get("destinationMap") as? Map<String, Any>
+
                 val originLat = originMap?.get("lat") as? Double
                 val originLng = originMap?.get("lng") as? Double
-
-                // جلب بيانات destinationMap
-                val destinationMap =
-                    document.get("destinationMap") as? Map<String, Any>
                 val destinationLat = destinationMap?.get("lat") as? Double
                 val destinationLng = destinationMap?.get("lng") as? Double
 
                 if (originLat != null && originLng != null && destinationLat != null && destinationLng != null) {
                     passengerLocation2 = GeoPoint(originLat, originLng)
-                    driverLocation3 = GeoPoint(destinationLat, destinationLng)
+                    destination = GeoPoint(destinationLat, destinationLng)
 
+                    // جلب الاتجاهات
                     val result = DirectionsApi.getDirections(
                         start = passengerLocation2,
-                        end = driverLocation3,
+                        end = destination,
                         apiKey = "c69abe50-60d2-43bc-82b1-81cbdcebeddc",
                         context = context,
                         tripId = tripId!!
                     )
 
-                    when (result) {
-                        is ResultWrapper.Success -> {
-                            val response = result.value
-                            val encodedPolyline =
-                                response.paths.firstOrNull()?.points
-                            if (encodedPolyline != null) {
-                                // Decode the polyline string into a list of GeoPoints
-                                val decodedPoints =
-                                    PolyUtil.decode(encodedPolyline)
-                                        .map { latLng ->
-                                            GeoPoint(
-                                                latLng.latitude,
-                                                latLng.longitude
-                                            )
-                                        }
-
-                                directions2.clear()
-                                directions2.addAll(decodedPoints)
+                    if (result is ResultWrapper.Success) {
+                        val points = result.value.paths.firstOrNull()?.points
+                        if (points != null) {
+                            val decodedPoints = PolyUtil.decode(points).map {
+                                GeoPoint(it.latitude, it.longitude)
                             }
+                            directions2.clear()
+                            directions2.addAll(decodedPoints)
                         }
+                    }
+                }
 
-                        is ResultWrapper.Failure -> {
-                            Log.e(
-                                "Directions",
-                                "فشل في جلب الاتجاهات: ${result.exception.message}"
-                            )
-                        }
+                // --------- الاستماع لتحديث موقع السائق (map) ------------
+                documentRef.addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        Log.e("Firebase", "Error listening to driver location: ${error.message}")
+                        return@addSnapshotListener
+                    }
+
+                    val mapData = snapshot?.get("driverLocation") as? Map<String, Any>
+                    val lat = mapData?.get("latitude") as? Double
+                    val lng = mapData?.get("longitude") as? Double
+
+                    if (lat != null && lng != null) {
+                        val updatedLocation = GeoPoint(lat, lng)
+
+                        previousDriverLocation2 = driverLocation2 // احتفظ بالموقع السابق
+                        driverLocation2 = updatedLocation         // حدث بالموقع الجديد
                     }
                 }
             }
         } catch (e: Exception) {
             Log.e("Firebase", "Error fetching trip data: ${e.message}")
         } finally {
-            isDataLoading = false
+            isDataLoading2 = false
         }
     }
+
 // إعادة تحميل الخريطة باستخدام `key`
 
     var showBottomSheet by remember { mutableStateOf(false) }
@@ -695,10 +696,12 @@ when{
                             isTripBegin=true
                             isstart = true
                             InProgressMap(
-                                directions = directions2,
-                                driverLocation = passengerLocation2,
-                                Destination = driverLocation3
+                                currentLocation = driverLocation2,
+                                previousLocation = previousDriverLocation2,
+                                destination = destination,
+                                directions = directions2
                             )
+
                         }
                         if (state.isCancelled) {
                             storedPoints = null

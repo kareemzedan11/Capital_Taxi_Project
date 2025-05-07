@@ -44,7 +44,9 @@ import android.media.AudioRecord
 import android.util.Base64
 import android.util.Log
 import androidx.compose.foundation.gestures.scrollable
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.DisposableEffect
+import com.example.capital_taxi.data.utils.DirectionsPrefs
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CoroutineScope
@@ -140,6 +142,8 @@ fun StartTrip(tripId:String,TripEnd:()->Unit,driverId:String) {
 
 
     Box(modifier = Modifier.fillMaxSize()) {
+
+        Top_Navigation_Box(tripId)
         Card(
             elevation = CardDefaults.cardElevation(8.dp),
             modifier = Modifier

@@ -58,6 +58,7 @@ import com.example.capital_taxi.domain.driver.model.acceptTripViewModel
 import com.example.capital_taxi.domain.fetchTripDirections
 import com.example.capital_taxi.domain.shared.TripViewModel
 import com.example.capital_taxi.domain.shared.saveDriverLocationToRealtimeDatabase
+import com.example.capital_taxi.domain.storedPoints
 import com.example.myapplication.DriverMapView
 import com.example.myapplication.interpolateLocation
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -122,6 +123,7 @@ fun driverHomeScreen(navController: NavController) {
     var rawLocation by remember { mutableStateOf<GeoPoint?>(null) }
     var smoothedLocation by remember { mutableStateOf<GeoPoint?>(null) }
     var currentLocation by remember { mutableStateOf<GeoPoint?>(null) }
+    var passengerLocation2 by remember { mutableStateOf(GeoPoint(30.0444, 31.2357)) }
 
     // Handle trip state changes
     LaunchedEffect(tripState) {
@@ -177,9 +179,20 @@ fun driverHomeScreen(navController: NavController) {
 
                 if (querySnapshot != null && !querySnapshot.isEmpty) {
                     val document = querySnapshot.documents.first()
-                    passengerID = document.get("userId") as? String
 
-                    // ✅ Get passenger name using callback, not await
+                    val originMap = document.get("originMap") as? Map<String, Any>
+                    val originLat = originMap?.get("lat") as? Double
+                    val originLng = originMap?.get("lng") as? Double
+
+                    val destinationMap = document.get("destinationMap") as? Map<String, Any>
+                    val destinationLat = destinationMap?.get("lat") as? Double
+                    val destinationLng = destinationMap?.get("lng") as? Double
+
+                    passengerID = document.get("userId") as? String
+                    if (originLat != null && originLng != null) {
+                        passengerLocation2 = GeoPoint(originLat, originLng)
+                    }
+
                     passengerID?.let { id ->
                         firestore.collection("users")
                             .whereEqualTo("id", id)
@@ -220,6 +233,7 @@ fun driverHomeScreen(navController: NavController) {
             documentListener?.remove()
         }
     }
+
 
     fun updateLocationAndStatus(driverId: String, location: GeoPoint) {
         if (ContextCompat.checkSelfPermission(
@@ -386,8 +400,7 @@ fun driverHomeScreen(navController: NavController) {
             val shouldShowTracking by mapStateViewModel.shouldShowTracking
             val db = FirebaseFirestore.getInstance()
             val directions = remember { mutableStateListOf<GeoPoint>() }
-            var passengerLocation2 by remember { mutableStateOf(GeoPoint(30.0444, 31.2357)) }
-            var isDataLoading by remember { mutableStateOf(true) }
+             var isDataLoading by remember { mutableStateOf(true) }
             var driverLocation2 by remember { mutableStateOf(GeoPoint(30.0444, 31.2357)) }
 
             LaunchedEffect(mapStateViewModel.isTripInProgress.value) {
@@ -495,8 +508,8 @@ fun driverHomeScreen(navController: NavController) {
                 if (mapStateViewModel.isTripInProgress.value) {
                     InProgressMap(
                         directions = directions,
-                        driverLocation = passengerLocation2,
-                        Destination = driverLocation2
+                        currentLocation = currentLocation2,
+                        previousLocation = previousLocation2,
                     )
 
                     if (isDataLoading) {
@@ -695,7 +708,6 @@ fun driverHomeScreen(navController: NavController) {
                     stateTripViewModel.TripEnd()
                 }
             }
-
             if (!tripState.isAccepted) {
                 Card(
                     modifier = Modifier
@@ -706,14 +718,20 @@ fun driverHomeScreen(navController: NavController) {
                         .padding(16.dp),
                     elevation = CardDefaults.cardElevation(defaultElevation = 20.dp)
                 ) {
+                    // تمرير الحالة الحالية للزر
                     DriverControls(
-                        onClick = { stateTripViewModel.setStart(true) },
+                        onClick = {
+                            if (!tripState.isStart) {
+                                stateTripViewModel.setStart(true)
+                            }
+                        },
                         driverId = driverId,
                         tripLocation = tripLocation,
                         modifier = Modifier.wrapContentWidth()
                     )
                 }
             }
+
 
             if (tripState.inProgress) {
                 captainToPassenger(
@@ -742,7 +760,9 @@ fun driverHomeScreen(navController: NavController) {
                         Toast.makeText(context, "Problem reported successfully", Toast.LENGTH_SHORT).show()
                     },
                     onclick = {
+                        storedPoints = null
                         stateTripViewModel.resetAll()
+                        // لا تقم بإعادة تعيين حالة Online/Offline هنا
                         navController.navigate(Destination.DriverHomeScreen.route) {
                             popUpTo(Destination.DriverHomeScreen.route) {
                                 inclusive = true
@@ -754,8 +774,10 @@ fun driverHomeScreen(navController: NavController) {
             if (showCancellationDialog) {
                 AlertDialog(
                     onDismissRequest = {
+                        storedPoints = null
                         showCancellationDialog = false
                         stateTripViewModel.resetAll()
+                        // لا تقم بإعادة تعيين حالة Online/Offline هنا
                         navController.navigate(Destination.DriverHomeScreen.route) {
                             popUpTo(Destination.DriverHomeScreen.route) {
                                 inclusive = true
@@ -771,6 +793,8 @@ fun driverHomeScreen(navController: NavController) {
                     confirmButton = {
                         Button(
                             onClick = {
+                                storedPoints=null
+
                                 showCancellationDialog = false
                                 stateTripViewModel.resetAll()
                                 navController.navigate(Destination.DriverHomeScreen.route) {

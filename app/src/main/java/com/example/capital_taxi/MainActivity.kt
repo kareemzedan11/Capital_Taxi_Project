@@ -31,6 +31,7 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import androidx.core.content.ContextCompat.startActivity
+import com.example.capital_taxi.utils.NetworkMonitor
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.createSupabaseClient
 
@@ -59,6 +60,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
 
+        NetworkMonitor.registerNetworkCallback(applicationContext)
 
         super.onCreate(savedInstanceState)
         if (BuildConfig.DEBUG) {
@@ -75,21 +77,30 @@ class MainActivity : ComponentActivity() {
         // Set the layout direction based on the saved language
         window.decorView.layoutDirection = if (languageCode == "ar") View.LAYOUT_DIRECTION_RTL else View.LAYOUT_DIRECTION_LTR
 
-        val isRtl = languageCode == "ar"
+
         Configuration.getInstance().load(applicationContext, androidx.preference.PreferenceManager.getDefaultSharedPreferences(applicationContext))
-
         setContent {
-
             val currentLanguage = remember { mutableStateOf(languageCode) }
+            val isConnected by NetworkMonitor.isConnected.collectAsState()
+
             CompositionLocalProvider(
                 LocalLayoutDirection provides if (currentLanguage.value == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr
             ) {
                 AppTheme(darkTheme = false) {
                     val navController = rememberNavController()
+
+                    // Show banner/snackbar if disconnected
+                    if (!isConnected) {
+                        LaunchedEffect(Unit) {
+                            Toast.makeText(this@MainActivity, "⚠️ لا يوجد اتصال بالإنترنت", Toast.LENGTH_LONG).show()
+                        }
+                    }
+
                     AppNavGraph(navController = navController)
                 }
             }
         }
+
     }
     private fun checkDrawOverAppsPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {

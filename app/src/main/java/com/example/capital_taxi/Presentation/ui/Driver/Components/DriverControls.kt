@@ -78,6 +78,7 @@ import kotlinx.coroutines.delay
 
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -91,12 +92,11 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 
-
 @Composable
 fun DriverControls(
     driverId: String,
     tripLocation: GeoPoint?,
-    onClick:()->Unit ,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val viewModel: DriverStatusViewModel = viewModel()
@@ -106,39 +106,86 @@ fun DriverControls(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // Confirmation Dialog
-    if (showConfirmationDialog) {
-        AlertDialog(
-            onDismissRequest = { showConfirmationDialog = false },
-            title = { Text("Confirm Going Offline") },
-            text = {
-                Text("Are you sure you want to go offline? " +
-                        "Note that if you haven't completed your agreed working hours, " +
-                        "there may be penalties. Your status will be reviewed by supervisors.")
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showConfirmationDialog = false
-                        viewModel.toggleStatus()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
-                ) {
-                    Text("Confirm Offline")
-                }
-            },
-            dismissButton = {
-                Button(
-                    onClick = { showConfirmationDialog = false }
-                ) {
-                    Text("Cancel")
-                }
+    // قراءة الحالة الأولية من Firebase
+    LaunchedEffect(Unit) {
+        scope.launch(Dispatchers.IO) {
+            try {
+                val firestore = FirebaseFirestore.getInstance()
+                val snapshot = firestore.collection("drivers")
+                    .whereEqualTo("id", driverId)
+                    .get()
+                    .await()
+
+                val driverData = snapshot.documents.firstOrNull()
+                val initialStatus = driverData?.getBoolean("isOnline") ?: false
+
+                // تحديث الحالة المحلية بناءً على القيمة من Firebase
+                viewModel.setInitialStatus(initialStatus)
+            } catch (e: Exception) {
+                Log.e("Firestore", "Error reading initial status", e)
             }
-        )
+        }
     }
 
-    // Non-composable function for location updates
+    // Function to update driver status in Firestore
+    fun updateDriverStatusInFirestore(isOnline: Boolean) {
+        scope.launch(Dispatchers.IO) {
+            try {
+                val firestore = FirebaseFirestore.getInstance()
+                val updateMap = mapOf(
+                    "isOnline" to isOnline,
+                    "lastStatusUpdate" to FieldValue.serverTimestamp()
+                )
+
+                // ابحث عن مستند السائق
+                val snapshot = firestore.collection("drivers")
+                    .whereEqualTo("id", driverId)
+                    .get()
+                    .await()
+
+                val docRef = snapshot.documents.firstOrNull()?.reference
+
+                if (docRef != null) {
+                    docRef.set(updateMap, SetOptions.merge()).await()
+                    Log.d("Firestore", "Driver status updated to ${if (isOnline) "Online" else "Offline"}")
+
+                    // إذا تحول إلى Offline، احذف موقعه
+                    if (!isOnline) {
+                        FirebaseDatabase.getInstance()
+                            .getReference("drivers")
+                            .child(driverId)
+                            .child("location")
+                            .removeValue()
+                            .await()
+                        Log.d("RealtimeDB", "Location removed for offline driver")
+                    }
+                } else {
+                    Log.e("Firestore", "❌ لم يتم العثور على مستند السائق لتحديث حالته")
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "تعذر العثور على السائق", Toast.LENGTH_LONG).show()
+                    }
+                }
+
+            } catch (e: Exception) {
+                Log.e("Firestore", "Error updating driver status", e)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        context,
+                        "فشل في تحديث الحالة: ${e.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }
+    }
+
+    // Function for location updates (only when online)
     fun updateDriverLocation(driverId: String, location: GeoPoint) {
+        if (!isOnline) {
+            Log.d("LocationUpdate", "Skipping location update - driver is offline")
+            return
+        }
+
         val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
 
         if (ContextCompat.checkSelfPermission(
@@ -148,21 +195,20 @@ fun DriverControls(
         ) {
             scope.launch(Dispatchers.IO) {
                 try {
-                    val lastLocation = fusedLocationClient.lastLocation.await()
-                    lastLocation?.let { loc ->
-                        val database = FirebaseDatabase.getInstance()
-                            .getReference("drivers")
-                            .child(driverId)
+                    // Update in Realtime Database
+                    val database = FirebaseDatabase.getInstance()
+                        .getReference("drivers")
+                        .child(driverId)
 
-                        val locationMap = mapOf(
-                            "latitude" to loc.latitude,
-                            "longitude" to loc.longitude
-                        )
+                    val locationMap = mapOf(
+                        "latitude" to location.latitude,
+                        "longitude" to location.longitude,
+                        "lastUpdate" to System.currentTimeMillis()
+                    )
 
-                        database.child("location").setValue(locationMap)
-                            .await()
-                        Log.d("RealtimeDB", "Location stored successfully")
-                    }
+                    database.child("location").setValue(locationMap).await()
+
+                    Log.d("RealtimeDB", "Location stored successfully")
                 } catch (e: Exception) {
                     Log.e("RealtimeDB", "Failed to store location", e)
                 }
@@ -193,7 +239,6 @@ fun DriverControls(
                 modifier = Modifier.size(40.dp),
                 color = colorResource(R.color.primary_color),
                 strokeWidth = 3.dp)
-
         } else {
             Button(
                 colors = ButtonDefaults.buttonColors(
@@ -219,14 +264,16 @@ fun DriverControls(
                                     val status = doc.getString("status")
 
                                     if (status != "active") {
-
-
-                                        // مش مؤهل
-                                         Toast.makeText(context, "You are currently not eligible to go online. Your status is $status", Toast.LENGTH_LONG).show()
+                                        Toast.makeText(
+                                            context,
+                                            "You are currently not eligible to go online. Your status is $status",
+                                            Toast.LENGTH_LONG
+                                        ).show()
                                     } else {
-                                        // مؤهل، كمّل بقى
+                                        // Eligible to go online
                                         onClick()
                                         viewModel.toggleStatus()
+                                        updateDriverStatusInFirestore(true) // Update to Online
                                         tripLocation?.let {
                                             updateDriverLocation(driverId, it)
                                         }
@@ -241,8 +288,7 @@ fun DriverControls(
                         }
                     }
                 },
-
-                        modifier = Modifier
+                modifier = Modifier
                     .fillMaxWidth(0.4f)
                     .fillMaxHeight(0.8f)
             ) {
@@ -262,7 +308,9 @@ fun DriverControls(
             contentDescription = null
         )
     }
-}fun showDialog(context: Context, title: String, message: String) {
+}
+
+fun showDialog(context: Context, title: String, message: String) {
     android.app.AlertDialog.Builder(context)
         .setTitle(title)
         .setMessage(message)
