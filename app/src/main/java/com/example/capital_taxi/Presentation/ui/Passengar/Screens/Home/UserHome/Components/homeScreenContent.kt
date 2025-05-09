@@ -850,16 +850,22 @@ when{
                                     )
                                 }
 
+                                val sharedPref = context.getSharedPreferences("your_prefs", Context.MODE_PRIVATE)
+                                val userId = sharedPref.getString("USER_ID", null)
+
 
                                 RideDetailsBottomSheetContent(
+
                                     onclick = {  stateTripViewModel.setCancelled()},
-                                    navController, tripId!! )
+                                    navController, tripId!! ,
+                                    UserId =userId!! ,)
                                 LaunchedEffect(tripStatus) {
                                     if (tripStatus == "InProgress") {
 
                                         stateTripViewModel.updateTripStatus("InProgress")
                                     }
                                 }
+
 
                             }
 

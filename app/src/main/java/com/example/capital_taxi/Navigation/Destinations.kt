@@ -51,7 +51,12 @@ sealed class Destination(val route: String) {
     object LanguageDScreen : Destination("LanguageDScreen")
     object InviteForMyApp : Destination("InviteForMyApp")
     object DriverHelpScreen : Destination("DriverHelpScreen")
-    object ChatScreen : Destination("ChatScreen")
+    object ChatScreen : Destination("chat/{chatId}/{isDriver}/{userId}") {
+        fun createRoute(chatId: String, isDriver: Boolean, userId: String): String {
+            return "chat/$chatId/$isDriver/$userId"
+        }
+    }
+
     object SupportPage : Destination("SupportPage")
     object ContactSupportPage : Destination("ContactSupportPage")
 

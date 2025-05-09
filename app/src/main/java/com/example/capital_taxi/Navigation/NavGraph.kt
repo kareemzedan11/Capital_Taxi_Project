@@ -1,5 +1,6 @@
 package com.example.capital_taxi.Navigation
 
+import ChatScreen
 import DriverHelpDetailScreen
 import LanguageDScreen
 import PhoneVerification
@@ -47,8 +48,7 @@ import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Support.Compon
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Support.SupportPage
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.notification.userNotification
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.settings.Components.settings
-import com.example.capital_taxi.Presentation.ui.Passenger.Screens.ChatScreen.ChatScreen
-import com.example.capital_taxi.Presentation.ui.shared.Confirm_information.ConfirmInformation
+ import com.example.capital_taxi.Presentation.ui.shared.Confirm_information.ConfirmInformation
 import com.example.capital_taxi.Presentation.ui.shared.Language.components.updateLocale
 import com.example.capital_taxi.Presentation.ui.shared.OTP.OtpScreen
  import com.example.capital_taxi.Presentation.ui.shared.Onboarding.OnboardingPager
@@ -203,12 +203,12 @@ fun AppNavGraph(navController: NavHostController) {
         composable(Destination.DocumentReviewScreen.route) {
             DocumentReviewScreen(navController)
         }
-
-
-
         composable(Destination.ChatScreen.route) {
-            ChatScreen(navController )
+            ChatScreen(navController)
         }
+
+
+
         composable(Destination.SupportPage.route) {
             SupportPage(navController )
         }

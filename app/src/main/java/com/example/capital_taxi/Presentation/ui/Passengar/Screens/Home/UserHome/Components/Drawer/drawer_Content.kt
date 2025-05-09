@@ -54,6 +54,9 @@ import com.example.capital_taxi.domain.DriverViewModelFactory
 import com.example.capital_taxi.domain.RetrofitClient
 import com.example.capital_taxi.domain.RetrofitClient.apiService
 import com.example.capital_taxi.domain.User
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
+import kotlinx.coroutines.tasks.await
 
 @Composable
 fun drawerContent(navController: NavController) {
@@ -71,6 +74,23 @@ fun drawerContent(navController: NavController) {
 
     val userProfile by viewModel.userProfile.observeAsState()
 
+    lateinit var ratingListener: ListenerRegistration
+    var ratingSummary by remember { mutableStateOf(RatingSummary(0, 0, 0f)) }
+
+
+    LaunchedEffect(driverId) {
+        driverId?.let { id ->
+            listenToUserRating(
+                userId = id,
+                onRatingUpdate = { summary ->
+                    ratingSummary = summary // تحديث التقييم
+                },
+                onError = { e ->
+                    println("فشل في الاستماع للتقييم: ${e.localizedMessage}")
+                }
+            )
+        }
+    }
 
 
     var userName by remember { mutableStateOf("") }
@@ -108,17 +128,8 @@ fun drawerContent(navController: NavController) {
                     Spacer(Modifier.width(10.dp))
                     Column(modifier = Modifier.padding(vertical = 10.dp)) {
                         Text(   text = userProfile?.name ?: "", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Row {
-                            repeat(5) {
-                                Icon(
-                                    tint = Color.Unspecified,
-                                    contentDescription = null,
-                                    painter = painterResource(R.drawable.baseline_star_rate_24)
-                                )
-                            }
-                            Spacer(Modifier.width(5.dp))
-                            Text("5", fontSize = 16.sp)
-                        }
+                        RatingStars(rating = ratingSummary.average)
+
                     }
                     Spacer(modifier = Modifier.weight(1f))
                     Icon(
@@ -226,5 +237,88 @@ fun drawerContent(navController: NavController) {
                 fontSize = 18.sp
             )
         }
+    }
+}
+
+
+data class RatingSummary(
+    val count: Int,
+    val total: Int,
+    val average: Float
+)
+fun listenToUserRating(
+    userId: String,
+    onRatingUpdate: (RatingSummary) -> Unit,
+    onError: (Exception) -> Unit = {}
+): ListenerRegistration {
+    val firestore = FirebaseFirestore.getInstance()
+
+    return firestore.collection("users")
+        .whereEqualTo("id", userId)
+        .limit(1)
+        .addSnapshotListener { querySnapshot, error ->
+            if (error != null) {
+                println("❌ Error listening to rating: ${error.localizedMessage}")
+                onError(error)
+                return@addSnapshotListener
+            }
+
+            if (querySnapshot != null && !querySnapshot.isEmpty) {
+                val document = querySnapshot.documents[0]
+                val ratingMap = document.get("rating") as? Map<String, Any>
+
+                val count = (ratingMap?.get("count") as? Number)?.toInt() ?: 0
+                val total = (ratingMap?.get("total") as? Number)?.toInt() ?: 0
+                val average = if (count > 0) total.toFloat() / count else 0f
+
+                onRatingUpdate(RatingSummary(count, total, average))
+            } else {
+                onRatingUpdate(RatingSummary(0, 0, 0f))
+            }
+        }
+}
+@Composable
+fun RatingStars(
+    rating: Float,
+    modifier: Modifier = Modifier
+) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        val fullStars = rating.toInt()
+        val hasHalfStar = rating - fullStars >= 0.5
+
+        repeat(fullStars) {
+            Icon(
+                painter = painterResource(id = R.drawable.baseline_star_rate_24),
+                contentDescription = "Full Star",
+                 tint = Color.Unspecified,// لون ذهبي
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
+        if (hasHalfStar) {
+            Icon(
+                painter = painterResource(id = R.drawable.baseline_star_half_24),
+                contentDescription = "Half Star",
+                tint = Color.Unspecified,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
+        val emptyStars = 5 - fullStars - if (hasHalfStar) 1 else 0
+        repeat(emptyStars) {
+            Icon(
+                painter = painterResource(id = R.drawable.baseline_star_border_24),
+                contentDescription = "Empty Star",
+                tint = Color.Unspecified,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(5.dp))
+        Text(
+            text = String.format("%.1f", rating),
+            fontSize = 14.sp,
+            color = Color.Black
+        )
     }
 }

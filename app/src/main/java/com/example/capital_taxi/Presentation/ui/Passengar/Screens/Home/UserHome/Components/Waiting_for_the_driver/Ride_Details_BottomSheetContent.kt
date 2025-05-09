@@ -50,7 +50,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun RideDetailsBottomSheetContent(
     onclick:()->Unit,
-    navController: NavController, tripid: String) {
+    navController: NavController, tripid: String,
+
+    UserId:String) {
     val carType = remember { mutableStateOf("") }
     val carNumber = remember { mutableStateOf("") }
     val driverUsername = remember { mutableStateOf("") }
@@ -188,7 +190,11 @@ fun RideDetailsBottomSheetContent(
 
                         Spacer(modifier = Modifier.padding(top = 16.dp))
 
-                        callAndChat(navController)
+                        CallAndChat(
+                            navController,
+                            chatId = tripid,
+                            userId = UserId,
+                        )
                     }
                 }
 

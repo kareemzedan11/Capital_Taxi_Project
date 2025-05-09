@@ -90,9 +90,14 @@ fun userLoginContent(
                             )
 
                             // أضف قيمة ابتدائية للتقييم إذا لم تكن موجودة
+                            // أضف قيمة ابتدائية للتقييم إذا لم تكن موجودة
                             if (!document.contains("rating")) {
-                                updates["rating"] = 5.0
+                                updates["rating"] = mapOf(
+                                    "count" to 0,
+                                    "total" to 5
+                                )
                             }
+
 
                             // أضف عداد الرحلات إذا لم يكن موجود
                             if (!document.contains("trips")) {
@@ -130,7 +135,6 @@ fun userLoginContent(
             }
         }
     }
-
 
     Column(
         modifier = Modifier

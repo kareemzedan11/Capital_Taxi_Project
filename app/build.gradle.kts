@@ -87,7 +87,8 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:postgrest-kt:1.2.0")
 
     implementation("io.github.jan-tennert.supabase:storage-kt:1.4.0") // لـ Storage
-
+    implementation ("androidx.hilt:hilt-navigation-compose:1.1.0")
+    implementation ("com.google.dagger:hilt-android:2.48")
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))

@@ -42,6 +42,7 @@ import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.c
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.dataTripViewModel
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.driverHomeScreenContent
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.driverlocation
+import com.example.capital_taxi.Presentation.ui.Passengar.Components.StateTripViewModel
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.LocationDataStore
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.LocationViewModel5
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.TrackDriverScreen
@@ -97,6 +98,8 @@ fun DriverControls(
     driverId: String,
     tripLocation: GeoPoint?,
     onClick: () -> Unit,
+    onClick2: () -> Unit,
+
     modifier: Modifier = Modifier
 ) {
     val viewModel: DriverStatusViewModel = viewModel()
@@ -105,27 +108,6 @@ fun DriverControls(
     var showConfirmationDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-
-    // قراءة الحالة الأولية من Firebase
-    LaunchedEffect(Unit) {
-        scope.launch(Dispatchers.IO) {
-            try {
-                val firestore = FirebaseFirestore.getInstance()
-                val snapshot = firestore.collection("drivers")
-                    .whereEqualTo("id", driverId)
-                    .get()
-                    .await()
-
-                val driverData = snapshot.documents.firstOrNull()
-                val initialStatus = driverData?.getBoolean("isOnline") ?: false
-
-                // تحديث الحالة المحلية بناءً على القيمة من Firebase
-                viewModel.setInitialStatus(initialStatus)
-            } catch (e: Exception) {
-                Log.e("Firestore", "Error reading initial status", e)
-            }
-        }
-    }
 
     // Function to update driver status in Firestore
     fun updateDriverStatusInFirestore(isOnline: Boolean) {
@@ -218,6 +200,7 @@ fun DriverControls(
         }
     }
 
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -272,12 +255,21 @@ fun DriverControls(
                                     } else {
                                         // Eligible to go online
                                         onClick()
-                                        viewModel.toggleStatus()
-                                        updateDriverStatusInFirestore(true) // Update to Online
+                                        viewModel.setLoading(true) // شغّل اللودينج الأول
+
+                                        updateDriverStatusInFirestore(true) // حدّث في الفايرستور
+
+                                        viewModel.setOnlineStatus(true) // وبعد ما تتأكد إنه Online، حدّث قيمة online
+
                                         tripLocation?.let {
                                             updateDriverLocation(driverId, it)
                                         }
+
+                                        viewModel.setLoading(false) // وقفل اللودينج
+
+
                                     }
+
                                 } else {
                                     showDialog(context, "Error", "Driver not found.")
                                 }
@@ -308,8 +300,38 @@ fun DriverControls(
             contentDescription = null
         )
     }
-}
+    if (showConfirmationDialog) {
+        AlertDialog(
+            onDismissRequest = { showConfirmationDialog = false },
+            title = { Text("Confirmation") },
+            text = { Text("Do you want to switch to Offline?") },
 
+            confirmButton = {
+                TextButton(onClick = {
+                    showConfirmationDialog = false
+                    scope.launch {
+                        viewModel.setLoading(true)
+                        updateDriverStatusInFirestore(false)
+                     onClick2()
+                        viewModel.setOnlineStatus(false)
+                        viewModel.setLoading(false)
+                    }
+                }) {
+                    Text("Yes")
+                }
+            }
+,
+                    dismissButton = {
+                TextButton(onClick = {
+                    showConfirmationDialog = false
+                }) {
+                    Text("No")
+                }
+            }
+        )
+    }
+
+}
 fun showDialog(context: Context, title: String, message: String) {
     android.app.AlertDialog.Builder(context)
         .setTitle(title)

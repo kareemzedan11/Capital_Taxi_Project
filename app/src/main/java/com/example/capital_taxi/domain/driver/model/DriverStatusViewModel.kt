@@ -13,6 +13,14 @@ class DriverStatusViewModel : ViewModel() {
     private val _isLoading = mutableStateOf(false)
     val isLoading: State<Boolean> = _isLoading
 
+    fun setOnlineStatus(status: Boolean) {
+        _isOnline.value = status
+    }
+
+    fun setLoading(loading: Boolean) {
+        _isLoading.value = loading
+
+    }
     fun setInitialStatus(status: Boolean) {
         _isOnline.value = status
     }

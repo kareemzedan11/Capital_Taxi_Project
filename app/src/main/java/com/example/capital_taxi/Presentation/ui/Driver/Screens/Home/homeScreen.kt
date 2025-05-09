@@ -400,7 +400,7 @@ fun driverHomeScreen(navController: NavController) {
             val shouldShowTracking by mapStateViewModel.shouldShowTracking
             val db = FirebaseFirestore.getInstance()
             val directions = remember { mutableStateListOf<GeoPoint>() }
-             var isDataLoading by remember { mutableStateOf(true) }
+            var isDataLoading by remember { mutableStateOf(true) }
             var driverLocation2 by remember { mutableStateOf(GeoPoint(30.0444, 31.2357)) }
 
             LaunchedEffect(mapStateViewModel.isTripInProgress.value) {
@@ -537,7 +537,7 @@ fun driverHomeScreen(navController: NavController) {
                         currentLocation = currentLocation2,
                         previousLocation = previousLocation2,
 
-                    )
+                        )
                 }
 
                 LaunchedEffect(tripState.isStart) {
@@ -708,6 +708,7 @@ fun driverHomeScreen(navController: NavController) {
                     stateTripViewModel.TripEnd()
                 }
             }
+
             if (!tripState.isAccepted) {
                 Card(
                     modifier = Modifier
@@ -718,20 +719,15 @@ fun driverHomeScreen(navController: NavController) {
                         .padding(16.dp),
                     elevation = CardDefaults.cardElevation(defaultElevation = 20.dp)
                 ) {
-                    // تمرير الحالة الحالية للزر
                     DriverControls(
-                        onClick = {
-                            if (!tripState.isStart) {
-                                stateTripViewModel.setStart(true)
-                            }
-                        },
+                        onClick = {stateTripViewModel.setStart(true) },
+                        onClick2 = {stateTripViewModel.setStart(false) },
                         driverId = driverId,
                         tripLocation = tripLocation,
                         modifier = Modifier.wrapContentWidth()
                     )
                 }
             }
-
 
             if (tripState.inProgress) {
                 captainToPassenger(
@@ -757,27 +753,28 @@ fun driverHomeScreen(navController: NavController) {
                     userId = passengerName,
                     driverId = driver_id ?: "1234",
                     onProblemSubmitted = {
-                        Toast.makeText(context, "Problem reported successfully", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Problem reported successfully", Toast.LENGTH_SHORT)
+                            .show()
                     },
                     onclick = {
                         storedPoints = null
                         stateTripViewModel.resetAll()
-                        // لا تقم بإعادة تعيين حالة Online/Offline هنا
                         navController.navigate(Destination.DriverHomeScreen.route) {
                             popUpTo(Destination.DriverHomeScreen.route) {
                                 inclusive = true
                             }
                         }
-                    }
+                    },
+                    userIdToRate = passengerID!!
                 )
             }
             if (showCancellationDialog) {
                 AlertDialog(
                     onDismissRequest = {
-                        storedPoints = null
+                        storedPoints=null
+
                         showCancellationDialog = false
                         stateTripViewModel.resetAll()
-                        // لا تقم بإعادة تعيين حالة Online/Offline هنا
                         navController.navigate(Destination.DriverHomeScreen.route) {
                             popUpTo(Destination.DriverHomeScreen.route) {
                                 inclusive = true

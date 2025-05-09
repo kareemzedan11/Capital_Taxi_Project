@@ -1,6 +1,8 @@
 package com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components
 
 
+import ChatScreen
+import android.net.Uri
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -21,6 +23,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.AlertDialog
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Divider
@@ -79,6 +82,9 @@ fun TripDetailsForDriver(navController: NavController,
                          mapchangetoInPrograss:()->Unit,
                          onTripStarted:()->Unit,
                          passengerName:String,
+                         chatId: String?=null,
+
+                         userId: String?=null,
 
                          menu_close: suspend  () -> Unit) {
 
@@ -86,8 +92,26 @@ fun TripDetailsForDriver(navController: NavController,
     var showBottomSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true,
+
     )
+
+    var showchatmodelsheet by remember { mutableStateOf(false) }
+
     val context = LocalContext.current
+    if (showchatmodelsheet) {
+        ModalBottomSheet(
+            modifier = Modifier.fillMaxHeight(),
+            sheetState = sheetState,
+            onDismissRequest = { showchatmodelsheet = false }
+        ) {
+            // عرض شاشة الدردشة هنا داخل الـ ModalBottomSheet
+            ChatScreen(
+                navController = navController,
+                rideId = chatId!!,
+                currentUserType = "driver"
+            )
+        }
+    }
 
     val tripViewModel: dataTripViewModel = viewModel()
     val origin by tripViewModel.origin.collectAsState()
@@ -207,7 +231,9 @@ fun TripDetailsForDriver(navController: NavController,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Button(
-                                    onClick = { /* Handle chat */ },
+                                    onClick = {
+                                        showchatmodelsheet = true // إظهار الـ ModalBottomSheet عند الضغط
+                                    },
                                     modifier = Modifier
                                         .weight(1f)
                                         .padding(end = 8.dp)
@@ -229,6 +255,7 @@ fun TripDetailsForDriver(navController: NavController,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
+
 
                                 Button(
                                     onClick = { /* Handle call */ },
@@ -597,7 +624,7 @@ fun CancellationReasons(navController: NavController,tripId:String) {
 
 @Composable
 fun CancelTripDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    androidx.compose.material.AlertDialog(
+    AlertDialog(
         onDismissRequest = { onDismiss() },
         title = {
             Text(text = stringResource(id = R.string.cancel_trip_dialog_title))

@@ -1,5 +1,6 @@
 package com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.capital_taxi.R
 import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import java.util.UUID
@@ -55,7 +57,8 @@ fun TripArrivedCard2(
     driverId: String = UUID.randomUUID().toString(), // قيمة افتراضية عشوائية
     userId: String? = null, // يمكن أن تكون null
     onProblemSubmitted: () -> Unit = {},
-    onclick: () -> Unit
+    onclick: () -> Unit,
+    userIdToRate:String
 ) {
     var rating by remember { mutableStateOf(0f) }
     var comment by remember { mutableStateOf("") }
@@ -326,9 +329,68 @@ fun TripArrivedCard2(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Submit Button (Gray until rating and/or comment provided)
+                // أضف هذه المتغيرات في بداية Composable
+                val firestore = FirebaseFirestore.getInstance()
+                val currentUser = FirebaseAuth.getInstance().currentUser // المستخدم الحالي الذي يقوم بالتقييم
+
                 Button(
                     onClick = {
                         showDialog = true
+                  // استبدل هذا بمعرف المستخدم المراد تقييمه
+
+                        // البحث عن المستند الذي يحتوي على id = userIdToRate
+                        firestore.collection("users")
+                            .whereEqualTo("id", userIdToRate)
+                            .get()
+                            .addOnSuccessListener { querySnapshot ->
+                                if (!querySnapshot.isEmpty) {
+                                    // نحصل على أول مستند (من المفترض أن يكون واحدًا فقط)
+                                    val document = querySnapshot.documents[0]
+
+                                    // الحصول على البيانات الحالية
+                                    val currentRatings = document.get("rating") as? Map<String, Any> ?: mapOf(
+                                        "count" to 0,
+                                        "total" to 0
+                                    )
+
+                                    val currentCount = (currentRatings["count"] as? Number)?.toInt() ?: 0
+                                    val currentTotal = (currentRatings["total"] as? Number)?.toInt() ?: 0
+
+                                    // تحديث القيم
+                                    val newCount = currentCount + 1
+                                    val newTotal = currentTotal + rating.toInt()
+
+                                    // إنشاء Map جديد مع البيانات المحدثة
+                                    val updatedRatings = mapOf(
+                                        "count" to newCount,
+                                        "total" to newTotal
+                                    )
+
+                                    // تحديث المستند في Firestore
+                                    document.reference.update("rating", updatedRatings)
+
+                                        .addOnSuccessListener {
+                                            // إذا كان هناك تعليق، نضيفه إلى مجموعة منفصلة
+                                            if (comment.isNotEmpty()) {
+                                                val reviewData = hashMapOf(
+                                                    "userId" to currentUser?.uid,
+                                                    "rating" to rating,
+                                                    "comment" to comment,
+                                                    "timestamp" to FieldValue.serverTimestamp()
+                                                )
+
+                                                document.reference.collection("reviews")
+                                                    .add(reviewData)
+                                            }
+                                        }
+                                } else {
+                                    // لا يوجد مستخدم بهذا المعرف
+                                    Log.e("Rating", "No user found with id: $userIdToRate")
+                                }
+                            }
+                            .addOnFailureListener { e ->
+                                Log.e("Rating", "Error finding user", e)
+                            }
                     },
                     enabled = rating > 0f || comment.isNotEmpty(),
                     colors = ButtonDefaults.buttonColors(
@@ -371,7 +433,8 @@ fun TripArrivedCard2(
                     Text(stringResource(R.string.rating_submitted_message))
                 },
                 confirmButton = {
-                    TextButton(onClick = { showDialog = false }) {
+                    TextButton(onClick = { showDialog = false
+                        onclick()}) {
                         Text("OK")
                     }
                 }
