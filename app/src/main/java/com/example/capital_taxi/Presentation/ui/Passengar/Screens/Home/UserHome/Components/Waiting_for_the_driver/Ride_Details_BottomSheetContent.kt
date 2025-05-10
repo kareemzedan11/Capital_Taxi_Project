@@ -52,7 +52,7 @@ fun RideDetailsBottomSheetContent(
     onclick:()->Unit,
     navController: NavController, tripid: String,
 
-    UserId:String) {
+    UserId:String,driverid:String) {
     val carType = remember { mutableStateOf("") }
     val carNumber = remember { mutableStateOf("") }
     val driverUsername = remember { mutableStateOf("") }
@@ -185,7 +185,8 @@ fun RideDetailsBottomSheetContent(
                         driverDetails(
                             driverusername = driverUsername.value,
                             rating = driverRating.value.toString(),
-                            trips = tripsCount.value.toString()
+                            trips = tripsCount.value.toString(),
+                            driverId = driverid
                         )
 
                         Spacer(modifier = Modifier.padding(top = 16.dp))

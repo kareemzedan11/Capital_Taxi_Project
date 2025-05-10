@@ -154,8 +154,7 @@ fun homeScreenContent(navController: NavController) {
     }
     val tripViewModel2: TripViewModel2 = viewModel()
     val selectedTripId by tripViewModel2.selectedTripId.observeAsState()
-    var driverId2 by remember { mutableStateOf<String?>(null) }
-
+    val driverId2State = remember { mutableStateOf<String?>(null) }
     val locationViewModel: LocationViewModel = viewModel()
     val pickupLatLng = locationViewModel.pickupLocation
     val dropoffLatLng = locationViewModel.dropoffLocation
@@ -178,6 +177,7 @@ fun homeScreenContent(navController: NavController) {
     val scope = rememberCoroutineScope()
 
     var tripStatus by remember { mutableStateOf("pending") } // الحالة الابتدائية
+    var driverId by remember { mutableStateOf("") } // الحالة الابتدائية
 
     // BottomSheetScaffoldState
     val bottomSheetState = rememberBottomSheetScaffoldState(
@@ -367,7 +367,7 @@ fun homeScreenContent(navController: NavController) {
                 val originMap = document.get("originMap") as? Map<String, Any>
                 val originLat = originMap?.get("lat") as? Double
                 val originLng = originMap?.get("lng") as? Double
-
+                driverId =  document.get("driver") as String
                 originString =  document.get("origin") as? String
                   destinationString =  document.get("destination") as? String
 
@@ -522,7 +522,7 @@ fun homeScreenContent(navController: NavController) {
                 // --------- قراءة origin و destination لمرة واحدة ------------
                 val originMap = tripDocRef.get("originMap") as? Map<String, Any>
                 val destinationMap = tripDocRef.get("destinationMap") as? Map<String, Any>
-
+                driverId =  tripDocRef.get("driver") as String
                 val originLat = originMap?.get("lat") as? Double
                 val originLng = originMap?.get("lng") as? Double
                 val destinationLat = destinationMap?.get("lat") as? Double
@@ -627,8 +627,8 @@ when{
             RateDriverBottomSheet(
                 onSubmit = { ratingValue ->
                     showRatingSheet = false
-                    if (driverId2!!.isNotEmpty()) {
-                        submitRatingToFirebase(driverId2!!, ratingValue)
+                    if (driverId2State.value!!.isNotEmpty()) {
+                        submitRatingToFirebase(driverId2State.value!!, ratingValue)
                     } else {
                         Log.e("Rating", "❌ driverId غير موجود")
                     }
@@ -842,30 +842,32 @@ when{
                                                 onSuccess = { name, car ->
                                                     driverName = name ?: "غير معروف"
                                                     carType = car ?: "غير معروف"
-                                                    driverId2 = driverId
+                                                    driverId2State.value = driverId // خزنه هنا
                                                     Log.d("DriverData", "🚗 الاسم: $driverName - النوع: $carType")
                                                 },
                                             )
                                         },
                                     )
                                 }
-
                                 val sharedPref = context.getSharedPreferences("your_prefs", Context.MODE_PRIVATE)
                                 val userId = sharedPref.getString("USER_ID", null)
 
 
-                                RideDetailsBottomSheetContent(
+                                if (driverId2State.value != null) {
+                                    RideDetailsBottomSheetContent(
+                                        onclick = { stateTripViewModel.setCancelled() },
+                                        navController = navController,
+                                        tripid = tripId!!,
+                                        UserId = userId!!,
+                                        driverid = driverId2State.value!! // استخدم القيمة هنا
+                                    )
+                                }
 
-                                    onclick = {  stateTripViewModel.setCancelled()},
-                                    navController, tripId!! ,
-                                    UserId =userId!! ,)
                                 LaunchedEffect(tripStatus) {
                                     if (tripStatus == "InProgress") {
-
                                         stateTripViewModel.updateTripStatus("InProgress")
                                     }
                                 }
-
 
                             }
 

@@ -380,7 +380,9 @@ class DriverViewModel(private val apiService: TripApiService) : ViewModel() {
         val name: String = "",
         val email: String = "",
         val phone: String = "",
-        val averageRating: Double = 0.0 // تأكد من إضافة الـ default value
+        val averageRating: Double = 0.0  ,
+        val imageUrl: String = "" // ← أضف هذا السطر
+
     )
 
     private val _userProfile = MutableLiveData<User?>()
