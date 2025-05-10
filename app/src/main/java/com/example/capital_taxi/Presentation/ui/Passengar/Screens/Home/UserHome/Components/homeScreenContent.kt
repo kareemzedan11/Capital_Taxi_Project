@@ -367,7 +367,6 @@ fun homeScreenContent(navController: NavController) {
                 val originMap = document.get("originMap") as? Map<String, Any>
                 val originLat = originMap?.get("lat") as? Double
                 val originLng = originMap?.get("lng") as? Double
-                driverId =  document.get("driver") as String
                 originString =  document.get("origin") as? String
                   destinationString =  document.get("destination") as? String
 
@@ -522,7 +521,6 @@ fun homeScreenContent(navController: NavController) {
                 // --------- قراءة origin و destination لمرة واحدة ------------
                 val originMap = tripDocRef.get("originMap") as? Map<String, Any>
                 val destinationMap = tripDocRef.get("destinationMap") as? Map<String, Any>
-                driverId =  tripDocRef.get("driver") as String
                 val originLat = originMap?.get("lat") as? Double
                 val originLng = originMap?.get("lng") as? Double
                 val destinationLat = destinationMap?.get("lat") as? Double
