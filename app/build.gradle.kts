@@ -112,6 +112,7 @@ dependencies {
     implementation(libs.firebase.database.ktx)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.firebase.appdistribution.gradle)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

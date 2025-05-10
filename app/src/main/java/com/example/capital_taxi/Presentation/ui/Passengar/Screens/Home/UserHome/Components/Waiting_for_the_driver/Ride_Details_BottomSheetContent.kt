@@ -185,7 +185,8 @@ fun RideDetailsBottomSheetContent(
                         driverDetails(
                             driverusername = driverUsername.value,
                             rating = driverRating.value.toString(),
-                            trips = tripsCount.value.toString()
+                            trips = tripsCount.value.toString(),
+                            driverId = UserId
                         )
 
                         Spacer(modifier = Modifier.padding(top = 16.dp))

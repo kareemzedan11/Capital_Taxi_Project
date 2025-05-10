@@ -33,6 +33,14 @@ import com.example.capital_taxi.R
 import com.example.capital_taxi.domain.DriverViewModel
 import com.example.capital_taxi.domain.DriverViewModelFactory
 import com.example.capital_taxi.domain.RetrofitClient
+import com.google.firebase.firestore.FirebaseFirestore
+import io.github.jan.supabase.createSupabaseClient
+import io.github.jan.supabase.postgrest.Postgrest
+import io.github.jan.supabase.storage.Storage
+import io.github.jan.supabase.storage.storage
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
@@ -62,7 +70,8 @@ fun driverProfile(navController: NavController, ) {
     val viewModel: DriverViewModel = viewModel(factory = DriverViewModelFactory(apiService))
 
     val context = LocalContext.current
-    val sharedPreferences = remember { context.getSharedPreferences("your_prefs", Context.MODE_PRIVATE) }
+    val sharedPreferences =
+        remember { context.getSharedPreferences("your_prefs", Context.MODE_PRIVATE) }
     val driverId = sharedPreferences.getString("driver_id", null)
 
     LaunchedEffect(Unit) {
@@ -71,7 +80,6 @@ fun driverProfile(navController: NavController, ) {
 
 
     val userProfile by viewModel.driverProfile.observeAsState()
-
 
 
     var userName by remember { mutableStateOf("") }
@@ -97,21 +105,31 @@ fun driverProfile(navController: NavController, ) {
     var imageFile by remember { mutableStateOf<File?>(if (initialImageFile?.exists() == true) initialImageFile else null) }
 
     // 4. Define the ActivityResultLauncher
-    val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
-        // 5. When a new image is selected (uri is not null)
-        uri?.let {
-            // Save the image to internal storage
-            val filePath = saveImageToInternalStorage(context, it)
-            filePath?.let {
-                // Update the state to display the new image from the internal file
-                imageFile = File(it)
-                // Save the new file path to SharedPreferences
-                val editor = sharedPreferences.edit()
-                editor.putString("PROFILE_IMAGE_PATH", it)
-                editor.apply()
+    val launcher =
+        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+            uri?.let {
+                val filePath = saveImageToInternalStorage(context, it)
+                filePath?.let {
+                    val file = File(it)
+                    imageFile = file
+
+                    // Save locally
+                    val editor = sharedPreferences.edit()
+                    editor.putString("PROFILE_IMAGE_PATH", it)
+                    editor.apply()
+
+                    // 🔁 رفع الصورة لـ Supabase وتحديث Firestore
+                    driverId?.let { id ->
+                        CoroutineScope(Dispatchers.IO).launch {
+                            val imageUrl = uploadDriverProfileImage(id, file)
+                            imageUrl?.let { url ->
+                                updateDriverImageUrlInFirestore(id, url)
+                            }
+                        }
+                    }
+                }
             }
         }
-    }
     // --- End of Image Persistence Logic ---
 
     Scaffold(
@@ -126,7 +144,13 @@ fun driverProfile(navController: NavController, ) {
                         )
                     }
                 },
-                title = { Text("Account Settings", color = Color.Black, fontWeight = FontWeight.Bold) },
+                title = {
+                    Text(
+                        "Account Settings",
+                        color = Color.Black,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 colors = TopAppBarDefaults.smallTopAppBarColors(containerColor = Color.Transparent)
             )
         },
@@ -143,7 +167,8 @@ fun driverProfile(navController: NavController, ) {
                 ) {
                     // 6. Image composable now loads from the internal File object
                     Image(
-                        painter = imageFile?.let { rememberAsyncImagePainter(it) } ?: painterResource(R.drawable.person),
+                        painter = imageFile?.let { rememberAsyncImagePainter(it) }
+                            ?: painterResource(R.drawable.person),
                         contentDescription = "Profile Picture",
                         contentScale = ContentScale.Crop, // يملأ الدائرة بالصورة
                         modifier = Modifier
@@ -155,7 +180,8 @@ fun driverProfile(navController: NavController, ) {
 
                     IconButton(
                         onClick = { launcher.launch("image/*") }, // Launch image picker on click
-                        modifier = Modifier.align(Alignment.BottomEnd).size(26.dp).background(Color.White, CircleShape)
+                        modifier = Modifier.align(Alignment.BottomEnd).size(26.dp)
+                            .background(Color.White, CircleShape)
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.baseline_add_circle_outline_24),
@@ -220,3 +246,37 @@ fun driverProfile(navController: NavController, ) {
         }
     )
 }
+
+
+    suspend fun uploadDriverProfileImage(userId: String, file: File): String? {
+        return try {
+            val bucket = supabase.storage.from("driver-profile")
+
+            // اسم فريد لكل صورة
+            val fileName = "$userId-${System.currentTimeMillis()}.jpg"
+
+            // رفع الصورة
+            bucket.upload(fileName, file.readBytes())
+
+            // جلب رابط الصورة الجديد (اللي اترفع فعليًا)
+            val publicUrl = bucket.publicUrl(fileName)
+
+            publicUrl
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    suspend fun updateDriverImageUrlInFirestore(userId: String, imageUrl: String) {
+        val cacheBustedUrl = "$imageUrl?t=${System.currentTimeMillis()}"
+        val db = FirebaseFirestore.getInstance()
+        db.collection("drivers")
+            .whereEqualTo("id", userId)
+            .get()
+            .addOnSuccessListener { documents ->
+                for (document in documents) {
+                    document.reference.update("imageUrl", cacheBustedUrl)
+                }
+
+}}

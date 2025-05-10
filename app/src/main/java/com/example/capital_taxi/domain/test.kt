@@ -14,6 +14,7 @@ import com.example.capital_taxi.R
 import com.example.capital_taxi.data.source.remote.DirectionsResponse
 import com.example.capital_taxi.domain.shared.LocationData
 import com.example.capital_taxi.utils.Constants.ApiConstants
+import com.google.firebase.appdistribution.gradle.ApiService
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
@@ -380,11 +381,13 @@ class DriverViewModel(private val apiService: TripApiService) : ViewModel() {
         val name: String = "",
         val email: String = "",
         val phone: String = "",
-        val averageRating: Double = 0.0 // تأكد من إضافة الـ default value
+        val averageRating: Double = 0.0 ,
+        val imageUrl: String = "" // ← أضف هذا السطر
     )
 
     private val _userProfile = MutableLiveData<User?>()
     val userProfile: LiveData<User?> = _userProfile
+
 
 
     fun fetchUserProfileById(userId: String) {

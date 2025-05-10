@@ -51,6 +51,7 @@ import com.example.capital_taxi.domain.DriverViewModel
 import com.example.capital_taxi.domain.DriverViewModelFactory
 import com.example.capital_taxi.domain.RetrofitClient
 import androidx.lifecycle.viewModelScope
+import coil.compose.AsyncImage
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -90,15 +91,16 @@ fun DriverNavigationDrawer(navController: NavController) {
                     .clickable { navController.navigate(Destination.driverProfile.route) },
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
+                AsyncImage(
+                    model = userProfile?.imageUrl,
+                    contentDescription = "Profile Image",
                     modifier = Modifier
-                        .clip(CircleShape)
-                        .size(60.dp),
-                    tint = Color.Unspecified,
-                    contentDescription = null,
-                    painter = painterResource(R.drawable.person)
-
+                        .size(60.dp)
+                        .clip(CircleShape),
+                    placeholder = painterResource(R.drawable.person),
+                    error = painterResource(R.drawable.person)
                 )
+
                 Spacer(Modifier.width(16.dp))
 
                 Column {

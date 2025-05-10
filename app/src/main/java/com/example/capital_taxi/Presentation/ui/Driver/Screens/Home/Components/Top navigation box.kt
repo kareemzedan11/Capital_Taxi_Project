@@ -42,6 +42,8 @@ import com.example.capital_taxi.domain.shared.decodePolyline
 import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+
+
 @Composable
 fun Top_Navigation_Box(tripId: String) {
     var allInstructions by remember { mutableStateOf<List<Instruction>>(emptyList()) }

@@ -30,6 +30,7 @@ roomRuntime = "2.5.2"
 runtimeLivedata = "1.7.8"
 firebaseDatabaseKtx = "21.0.0"
 media3Exoplayer = "1.6.0"
+firebaseAppdistributionGradle = "5.1.1"
 
 
 [libraries]
@@ -68,6 +69,7 @@ androidx-room-runtime = { group = "androidx.room", name = "room-runtime", versio
 androidx-runtime-livedata = { group = "androidx.compose.runtime", name = "runtime-livedata", version.ref = "runtimeLivedata" }
 firebase-database-ktx = { group = "com.google.firebase", name = "firebase-database-ktx", version.ref = "firebaseDatabaseKtx" }
 androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3Exoplayer" }
+firebase-appdistribution-gradle = { group = "com.google.firebase", name = "firebase-appdistribution-gradle", version.ref = "firebaseAppdistributionGradle" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
