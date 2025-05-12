@@ -68,6 +68,9 @@ import com.example.capital_taxi.domain.Location
 import com.example.capital_taxi.domain.calculateFare
 import com.example.capital_taxi.domain.fetchTripDirections
 import com.example.capital_taxi.utils.Constants.ApiConstants
+import com.example.capital_taxi.utils.calculatePriceWithPeak
+import com.example.capital_taxi.utils.getPeakPeriods
+import com.example.capital_taxi.utils.isNowInPeakHourFromServer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 
@@ -381,6 +384,14 @@ fun PickupWithDropOffButtons(
                     vehicleOptionsState.value.isNotEmpty() -> {
                         // حالة النجاح
                         val vehicle = vehicleOptionsState.value.first()
+
+                        var adjustedPrice by remember { mutableStateOf(vehicle.price) }
+
+                        LaunchedEffect(Unit) {
+                            val isPeak = isNowInPeakHourFromServer()
+                            adjustedPrice = calculatePriceWithPeak(vehicle.price, isPeak)
+                        }
+
                         Box(
                             modifier = Modifier
                                 .shadow(
@@ -437,7 +448,7 @@ fun PickupWithDropOffButtons(
                                             color = Color.White
                                         )
                                         Text(
-                                            text = "£${vehicle.price}",
+                                            text = "£${String.format("%.2f", adjustedPrice)}",
                                             fontSize = 18.sp,
                                             color = Color.White
                                         )

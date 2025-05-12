@@ -78,6 +78,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import org.osmdroid.util.GeoPoint
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 @SuppressLint("UnrememberedMutableState")
 @Composable
@@ -277,8 +281,8 @@ fun driverHomeScreen(navController: NavController) {
         }
 
         val locationRequest = LocationRequest.create().apply {
-            interval = 5000
-            fastestInterval = 5000
+            interval = 2000
+            fastestInterval = 1000
             priority = Priority.PRIORITY_HIGH_ACCURACY
         }
 
@@ -539,15 +543,57 @@ fun driverHomeScreen(navController: NavController) {
 
                         )
                 }
+                fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+                    val earthRadius = 6371.0 // كيلومتر
 
+                    val dLat = Math.toRadians(lat2 - lat1)
+                    val dLon = Math.toRadians(lon2 - lon1)
+
+                    val a = sin(dLat / 2) * sin(dLat / 2) +
+                            cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) *
+                            sin(dLon / 2) * sin(dLon / 2)
+
+                    val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+
+                    return earthRadius * c
+                }
                 LaunchedEffect(tripState.isStart) {
                     while (tripState.isStart && !tripState.isAccepted && !tripState.isCancelled) {
-                        delay(2000)
+                        delay(2000) // تأخير 2000 ملي ثانية
+
                         if (tripState.isStart && !tripState.isAccepted && !tripState.isCancelled) {
+                            // احصل على موقع السائق الحالي
+                            val driverLocation = currentLocation2 ?: continue
+
                             tripViewModel.fetchTripsFromFirestore(
                                 onSuccess = { trips ->
-                                    availableTrips = trips.filter {
-                                        it.status == "pending" && it._id != tripId
+                                    availableTrips = trips.filter { trip ->
+                                        // تحقق من أن الرحلة في حالة انتظار وليست الرحلة الحالية
+                                        if (trip.status != "pending" || trip._id == tripId) return@filter false
+
+                                        try {
+                                            // احصل على موقع الراكب (origin)
+                                            val originMap = trip.originMap ?: return@filter false
+                                            val passengerLat = (originMap["lat"] as? Number)?.toDouble() ?: return@filter false
+                                            val passengerLng = (originMap["lng"] as? Number)?.toDouble() ?: return@filter false
+
+                                            // احسب المسافة بين السائق والراكب
+                                            val distance = calculateDistance(
+                                                driverLocation.latitude,
+                                                driverLocation.longitude,
+                                                passengerLat,
+                                                passengerLng
+                                            )
+
+                                            // المسافة القصوى المطلوبة (5 كيلومتر كمثال)
+                                            val maxDistance = 5.0
+
+                                            // عرض الرحلة فقط إذا كانت المسافة ضمن النطاق المطلوب
+                                            distance <= maxDistance
+                                        } catch (e: Exception) {
+                                            Log.e("DistanceFilter", "Error calculating distance", e)
+                                            false
+                                        }
                                     }
                                 },
                                 onError = { Log.e("driverHomeScreen", "❌ $it") },
@@ -556,6 +602,7 @@ fun driverHomeScreen(navController: NavController) {
                         }
                     }
                 }
+
 
                 Box(
                     modifier = Modifier.fillMaxSize(),

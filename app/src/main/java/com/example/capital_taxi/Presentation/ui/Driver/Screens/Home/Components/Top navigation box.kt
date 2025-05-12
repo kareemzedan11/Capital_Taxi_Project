@@ -42,10 +42,18 @@ import com.example.capital_taxi.domain.shared.decodePolyline
 import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+
+data class InstructionProgress(
+    val instructionId: String,
+    val originalDistance: Double,
+    val remainingDistance: Double
+)
 @Composable
 fun Top_Navigation_Box(tripId: String) {
     var allInstructions by remember { mutableStateOf<List<Instruction>>(emptyList()) }
     var driverLocation by remember { mutableStateOf<LatLng?>(null) }
+    var previousLocation by remember { mutableStateOf<LatLng?>(null) }
+    var currentInstructionIndex by remember { mutableStateOf<Int?>(null) } // نستخدم الفهرس بدلاً من ID
 
     val (currentInstruction, nextInstruction) = remember(allInstructions, driverLocation) {
         calculateCurrentAndNextInstructions(allInstructions, driverLocation)
@@ -54,52 +62,71 @@ fun Top_Navigation_Box(tripId: String) {
     DisposableEffect(tripId) {
         val instructionsListener = listenToInstructionsByTripId(tripId) { instructions ->
             instructions?.let {
-                // Update instruction status first when instructions are loaded/updated
                 allInstructions = updateInstructionsStatus(it, driverLocation)
+                currentInstructionIndex = null // نعيد تعيين الفهرس عند تلقي تعليمات جديدة
             }
         }
 
         val locationListener = listenToDriverLocation(tripId) { location ->
+            val distanceCovered = previousLocation?.let { prevLoc ->
+                calculateDistance(prevLoc, location!!)
+            } ?: 0.0
+
+            previousLocation = location
             driverLocation = location
-            // Update instruction status based on new location
             allInstructions = updateInstructionsStatus(allInstructions, location)
 
-            if (allInstructions.isNotEmpty()) { // Ensure instructions are loaded
-                // Calculate total distance and time
-                val totalDistance = allInstructions.sumOf { it.distance }
-                val totalTime = allInstructions.sumOf { it.time }
+            if (allInstructions.isNotEmpty()) {
+                currentInstruction?.let { currInstr ->
+                    // نجد فهرس التعليمه الحالية
+                    val newIndex = allInstructions.indexOfFirst { it == currInstr }
 
-                // Calculate completed distance and time
-                val completedDistance = allInstructions.filter { it.exited }.sumOf { it.distance }
-                val completedTime = allInstructions.filter { it.exited }.sumOf { it.time }
+                    if (currentInstructionIndex == null || currentInstructionIndex != newIndex) {
+                        currentInstructionIndex = newIndex
+                    }
 
-                // Calculate remaining distance and time
-                val remainingDistance = totalDistance - completedDistance
-                val remainingTime = totalTime - completedTime
+                    currentInstructionIndex?.let { index ->
+                        // نأكد أن الفهرس صالح
+                        if (index >= 0 && index < allInstructions.size) {
+                            val currentInstr = allInstructions[index]
+                            val newRemainingDistance = maxOf(0.0, currentInstr.distance - distanceCovered)
 
-                // Update Firestore with REMAINING distance and time
-                // Ensure non-negative values, although logically distance/time shouldn't be negative
-                updateTripProgress(tripId, maxOf(0.0, remainingDistance), maxOf(0L, remainingTime))
+                            // نحدث قائمة التعليمات
+                            allInstructions = allInstructions.toMutableList().apply {
+                                set(index, currentInstr.copy(distance = newRemainingDistance))
+                            }
+
+                            // حساب المسافات الإجمالية
+                            val totalDistance = allInstructions.sumOf { it.distance }
+                            val totalTime = allInstructions.sumOf { it.time }
+                            val completedDistance = allInstructions.filter { it.exited }.sumOf { it.distance }
+                            val completedTime = allInstructions.filter { it.exited }.sumOf { it.time }
+                            val remainingDistance = totalDistance - completedDistance
+                            val remainingTime = totalTime - completedTime
+
+                            updateTripProgress(tripId, maxOf(0.0, remainingDistance), maxOf(0L, remainingTime))
+                        }
+                    }
+                }
             } else {
-                // If no instructions, update progress to 0
                 updateTripProgress(tripId, 0.0, 0L)
             }
         }
 
         onDispose {
             instructionsListener.remove()
-            locationListener?.remove() // Make locationListener nullable and check before removing
+            locationListener?.remove()
         }
     }
 
-    // واجهة المستخدم (UI remains the same)
+    // واجهة المستخدم تبقى كما هي
     Box(modifier = Modifier.fillMaxSize()) {
         Card(
             shape = RoundedCornerShape(8.dp),
             elevation = CardDefaults.cardElevation(4.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .height(160.dp) // زيادة الارتفاع لعرض معلومات إضافية
+                .height(160.dp)
                 .padding(16.dp)
                 .align(Alignment.TopCenter)
         ) {
@@ -108,27 +135,18 @@ fun Top_Navigation_Box(tripId: String) {
                     .fillMaxWidth()
                     .background(color = Color(0xffce8907))
             ) {
-                // صف المعلومات الأساسية
                 Row(
                     horizontalArrangement = Arrangement.Start,
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(8.dp)
                 ) {
-                    // مسافة العمود
-                    // Display current instruction distance or remaining trip distance?
-                    // Assuming current instruction distance based on original code.
                     DistanceColumn(currentInstruction?.distance)
-
                     Spacer(modifier = Modifier.width(16.dp))
-
-                    // عمود الاتجاه
                     DirectionColumn(
                         text = currentInstruction?.text ?: "Waiting...",
                         street = currentInstruction?.street_name ?: "No street info"
                     )
                 }
-
-                // معلومات إضافية (الخطوة التالية أو الموقع)
                 NextStepOrLocationInfo(
                     nextInstruction = nextInstruction,
                     driverLocation = driverLocation,
