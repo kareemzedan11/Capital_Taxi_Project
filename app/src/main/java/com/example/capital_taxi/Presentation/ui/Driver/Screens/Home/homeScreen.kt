@@ -4,7 +4,9 @@ import TopBar
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Looper
 import android.util.Log
 import android.widget.Toast
@@ -128,6 +130,10 @@ fun driverHomeScreen(navController: NavController) {
     var smoothedLocation by remember { mutableStateOf<GeoPoint?>(null) }
     var currentLocation by remember { mutableStateOf<GeoPoint?>(null) }
     var passengerLocation2 by remember { mutableStateOf(GeoPoint(30.0444, 31.2357)) }
+    var rating by remember { mutableStateOf<Double?>(null) }
+    var showNavigationButton by remember { mutableStateOf(false) }
+    var originPoint by remember { mutableStateOf<GeoPoint?>(null) }
+    var destinationPoint by remember { mutableStateOf<GeoPoint?>(null) }
 
     // Handle trip state changes
     LaunchedEffect(tripState) {
@@ -135,7 +141,6 @@ fun driverHomeScreen(navController: NavController) {
             tripState.isCancelled -> {
                 showCancellationDialog = true
             }
-
             tripState.isEnd -> {
                 // Trip completed logic
             }
@@ -167,7 +172,6 @@ fun driverHomeScreen(navController: NavController) {
         }
     }
 
-    // Listen for trip status changes
     DisposableEffect(tripId) {
         var documentListener: ListenerRegistration? = null
 
@@ -183,18 +187,33 @@ fun driverHomeScreen(navController: NavController) {
 
                 if (querySnapshot != null && !querySnapshot.isEmpty) {
                     val document = querySnapshot.documents.first()
+                    Log.d("TripData", "Document found: ${document.id}")
 
                     val originMap = document.get("originMap") as? Map<String, Any>
+                    Log.d("TripData", "originMap: $originMap")
+
                     val originLat = originMap?.get("lat") as? Double
                     val originLng = originMap?.get("lng") as? Double
+                    Log.d("TripData", "originLat: $originLat, originLng: $originLng")
 
                     val destinationMap = document.get("destinationMap") as? Map<String, Any>
+                    Log.d("TripData", "destinationMap: $destinationMap")
+
                     val destinationLat = destinationMap?.get("lat") as? Double
                     val destinationLng = destinationMap?.get("lng") as? Double
+                    Log.d("TripData", "destinationLat: $destinationLat, destinationLng: $destinationLng")
 
                     passengerID = document.get("userId") as? String
+                    Log.d("TripData", "passengerID: $passengerID")
+
                     if (originLat != null && originLng != null) {
                         passengerLocation2 = GeoPoint(originLat, originLng)
+                        originPoint = GeoPoint(originLat, originLng)
+                        Log.d("TripData", "passengerLocation2 set: $passengerLocation2")
+                    }
+
+                    if (destinationLat != null && destinationLng != null) {
+                        destinationPoint = GeoPoint(destinationLat, destinationLng)
                     }
 
                     passengerID?.let { id ->
@@ -203,8 +222,20 @@ fun driverHomeScreen(navController: NavController) {
                             .limit(1)
                             .get()
                             .addOnSuccessListener { query ->
-                                passengerName = query.documents.firstOrNull()
-                                    ?.getString("name") ?: "مستخدم غير معروف"
+                                val userDoc = query.documents.firstOrNull()
+                                Log.d("UserData", "User document: $userDoc")
+
+                                val ratingMap = userDoc?.get("rating") as? Map<*, *>
+                                Log.d("UserData", "Rating map: $ratingMap")
+
+                                val count = (ratingMap?.get("count") as? Number)?.toInt() ?: 0
+                                val total = (ratingMap?.get("total") as? Number)?.toInt() ?: 0
+                                val averageRating = if (count > 0) total.toDouble() / count else null
+                                rating = averageRating
+                                Log.d("UserData", "count: $count, total: $total, averageRating: $averageRating")
+
+                                passengerName = userDoc?.getString("name") ?: "مستخدم غير معروف"
+                                Log.d("UserData", "passengerName: $passengerName")
                             }
                             .addOnFailureListener { e ->
                                 Log.e("Firestore", "Error fetching user name", e)
@@ -220,12 +251,16 @@ fun driverHomeScreen(navController: NavController) {
 
                         snapshot?.let { doc ->
                             val status = doc.getString("status") ?: "pending"
+                            Log.d("TripStatus", "Trip status: $status")
+
                             if (status == "Cancelled" && !tripState.isCancelled) {
                                 stateTripViewModel.setCancelled()
                                 Toast.makeText(context, "Trip cancelled by passenger", Toast.LENGTH_LONG).show()
                             }
                         }
                     }
+                } else {
+                    Log.w("TripData", "No trip document found for tripId: $tripId")
                 }
             }
 
@@ -237,7 +272,6 @@ fun driverHomeScreen(navController: NavController) {
             documentListener?.remove()
         }
     }
-
 
     fun updateLocationAndStatus(driverId: String, location: GeoPoint) {
         if (ContextCompat.checkSelfPermission(
@@ -303,23 +337,19 @@ fun driverHomeScreen(navController: NavController) {
 
     var previousLocation2 by remember { mutableStateOf<GeoPoint?>(null) }
     var currentLocation2 by remember { mutableStateOf<GeoPoint?>(null) }
-    // يمكنك استخدام حالة أكثر تعقيدًا لإدارة الموقع إذا لزم الأمر
-    // var smoothedLocation by remember { mutableStateOf<GeoPoint?>(null) }
-    // var rawLocation by remember { mutableStateOf<GeoPoint?>(null) }
 
     val fusedLocationClient2 = remember { LocationServices.getFusedLocationProviderClient(context) }
 
-    // طلب تحديثات الموقع
+    // Request location updates
     LaunchedEffect(Unit) {
-        // تأكد من وجود إذن تحديد الموقع
         if (ContextCompat.checkSelfPermission(
                 context,
                 Manifest.permission.ACCESS_FINE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED
         ) {
             val locationRequest = LocationRequest.create().apply {
-                interval = 2000 // تحديث كل ثانيتين
-                fastestInterval = 1000 // أسرع تحديث كل ثانية
+                interval = 2000
+                fastestInterval = 1000
                 priority = Priority.PRIORITY_HIGH_ACCURACY
             }
 
@@ -327,35 +357,21 @@ fun driverHomeScreen(navController: NavController) {
                 override fun onLocationResult(locationResult: LocationResult) {
                     locationResult.locations.lastOrNull()?.let { location ->
                         val newPoint = GeoPoint(location.latitude, location.longitude)
-                        // تحديث الموقع السابق والحالي
                         previousLocation2 = currentLocation2
                         currentLocation2 = newPoint
-
-                        // يمكنك إضافة منطق التنعيم هنا إذا أردت
-                        // val smoothed = if (smoothedLocation == null) newPoint else interpolateLocation(smoothedLocation!!, newPoint, 0.3f)
-                        // previousLocation = smoothedLocation
-                        // currentLocation = smoothed
-                        // smoothedLocation = smoothed
                     }
                 }
             }
 
-            // بدء طلب تحديثات الموقع
             fusedLocationClient2.requestLocationUpdates(
                 locationRequest,
                 locationCallback,
                 Looper.getMainLooper()
             )
-
-            // يمكنك إضافة منطق لإيقاف التحديثات عند الخروج من الشاشة
-            // currentCoroutineContext().job.invokeOnCompletion { fusedLocationClient.removeLocationUpdates(locationCallback) }
         } else {
-            // طلب الإذن إذا لم يكن ممنوحًا
-            // يجب التعامل مع حالة عدم منح الإذن
             println("Location permission not granted")
         }
     }
-
 
     fun parseGeoPoint(destination: String): GeoPoint {
         val parts = destination.split(",")
@@ -372,6 +388,33 @@ fun driverHomeScreen(navController: NavController) {
             Log.e("parseGeoPoint", "Invalid destination format: $destination")
             GeoPoint(30.0444, 31.2357)
         }
+    }
+
+    // Function to open Google Maps with navigation
+    fun openGoogleMapsNavigation(origin: GeoPoint, destination: GeoPoint) {
+        try {
+            val uri = Uri.parse("https://www.google.com/maps/dir/?api=1" +
+                    "&origin=${origin.latitude},${origin.longitude}" +
+                    "&destination=${destination.latitude},${destination.longitude}" +
+                    "&travelmode=driving")
+
+            val intent = Intent(Intent.ACTION_VIEW, uri)
+            intent.setPackage("com.google.android.apps.maps")
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(context, "Google Maps app not installed", Toast.LENGTH_SHORT).show()
+            val uri = Uri.parse("https://www.google.com/maps/dir/?api=1" +
+                    "&origin=${origin.latitude},${origin.longitude}" +
+                    "&destination=${destination.latitude},${destination.longitude}" +
+                    "&travelmode=driving")
+            val intent = Intent(Intent.ACTION_VIEW, uri)
+            context.startActivity(intent)
+        }
+    }
+
+    // Show navigation button when trip is accepted
+    LaunchedEffect(tripState.isAccepted) {
+        showNavigationButton = tripState.isAccepted && originPoint != null && destinationPoint != null
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -421,7 +464,6 @@ fun driverHomeScreen(navController: NavController) {
                             destination = document.get("destination") as? String
                             passengerID = document.get("userId") as? String
 
-                            // Fetch passenger name
                             passengerID?.let { id ->
                                 try {
                                     val query = FirebaseFirestore.getInstance()
@@ -477,7 +519,6 @@ fun driverHomeScreen(navController: NavController) {
                                             Log.d("time", "Encoded polyline: ${response.paths.firstOrNull()?.time}")
                                             Log.d("instructions", "Encoded polyline: ${response.paths.firstOrNull()?.instructions}")
 
-                                            // Update trip with directions data
                                             val updates = mapOf(
                                                 "points" to encodedPolyline,
                                                 "instructions" to (response.paths.firstOrNull()?.instructions ?: listOf()),
@@ -490,10 +531,8 @@ fun driverHomeScreen(navController: NavController) {
                                                 .addOnFailureListener {
                                                     Log.e("Firestore33", "فشل في تحديث البيانات: ${it.message}")
                                                 }
-
                                         }
                                     }
-
                                     is ResultWrapper.Failure -> {
                                         Log.e("Directions", "فشل في جلب الاتجاهات: ${result.exception.message}")
                                     }
@@ -540,9 +579,14 @@ fun driverHomeScreen(navController: NavController) {
                     com.example.capital_taxi.utils.DriverMapView(
                         currentLocation = currentLocation2,
                         previousLocation = previousLocation2,
-
-                        )
+                    )
                 }
+// بعد سطر تعبئة originPoint و destinationPoint في Listener
+                Log.d("LocationPoints", "Origin: ${originPoint?.latitude},${originPoint?.longitude}")
+                Log.d("LocationPoints", "Destination: ${destinationPoint?.latitude},${destinationPoint?.longitude}")
+                // Navigation Button - Only shown when trip is accepted
+
+
                 fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
                     val earthRadius = 6371.0 // كيلومتر
 
@@ -557,27 +601,24 @@ fun driverHomeScreen(navController: NavController) {
 
                     return earthRadius * c
                 }
+
                 LaunchedEffect(tripState.isStart) {
                     while (tripState.isStart && !tripState.isAccepted && !tripState.isCancelled) {
                         delay(2000) // تأخير 2000 ملي ثانية
 
                         if (tripState.isStart && !tripState.isAccepted && !tripState.isCancelled) {
-                            // احصل على موقع السائق الحالي
                             val driverLocation = currentLocation2 ?: continue
 
                             tripViewModel.fetchTripsFromFirestore(
                                 onSuccess = { trips ->
                                     availableTrips = trips.filter { trip ->
-                                        // تحقق من أن الرحلة في حالة انتظار وليست الرحلة الحالية
                                         if (trip.status != "pending" || trip._id == tripId) return@filter false
 
                                         try {
-                                            // احصل على موقع الراكب (origin)
                                             val originMap = trip.originMap ?: return@filter false
                                             val passengerLat = (originMap["lat"] as? Number)?.toDouble() ?: return@filter false
                                             val passengerLng = (originMap["lng"] as? Number)?.toDouble() ?: return@filter false
 
-                                            // احسب المسافة بين السائق والراكب
                                             val distance = calculateDistance(
                                                 driverLocation.latitude,
                                                 driverLocation.longitude,
@@ -585,10 +626,8 @@ fun driverHomeScreen(navController: NavController) {
                                                 passengerLng
                                             )
 
-                                            // المسافة القصوى المطلوبة (5 كيلومتر كمثال)
                                             val maxDistance = 5.0
 
-                                            // عرض الرحلة فقط إذا كانت المسافة ضمن النطاق المطلوب
                                             distance <= maxDistance
                                         } catch (e: Exception) {
                                             Log.e("DistanceFilter", "Error calculating distance", e)
@@ -602,7 +641,6 @@ fun driverHomeScreen(navController: NavController) {
                         }
                     }
                 }
-
 
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -734,6 +772,57 @@ fun driverHomeScreen(navController: NavController) {
                         }
                         Spacer(modifier = Modifier.weight(1f))
                     }
+                    if (tripState.inProgress ) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(top = 270.dp, end = 16.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    openGoogleMapsNavigation(currentLocation2!!, originPoint!!)
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color.Black,
+                                    contentColor = Color.White
+                                ),
+                                modifier = Modifier
+                                    .wrapContentWidth()
+                                    .height(40.dp)
+                            ) {
+                                Text(
+                                    text = "Navigate to Passenger",
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                    }
+
+                    if (tripState.isTripBegin ) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(top = 270.dp, end = 16.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    openGoogleMapsNavigation(currentLocation2!!, destinationPoint!!)
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color.Black,
+                                    contentColor = Color.White
+                                ),
+                                modifier = Modifier
+                                    .wrapContentWidth()
+                                    .height(40.dp)
+                            ) {
+                                Text(
+                                    text = "Navigate to Destination",
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
@@ -783,7 +872,9 @@ fun driverHomeScreen(navController: NavController) {
                     tripId = tripId!!,
                     mapchangetoInPrograss = { mapStateViewModel.startTrip() },
                     onTripStarted = { accepttrip.startTrip() },
-                    passengerName = passengerName?:"Loading"
+                    passengerName = passengerName ?: "Loading",
+                    rating = rating!!.toString(),
+                    userId2 = passengerID
                 )
             }
 

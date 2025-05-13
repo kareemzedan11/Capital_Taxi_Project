@@ -5,6 +5,7 @@ import ChatScreen
 import android.net.Uri
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -38,6 +39,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -47,6 +49,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
@@ -59,6 +62,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.example.capital_taxi.Navigation.Destination
 import com.example.capital_taxi.Presentation.ui.Passengar.Components.StateTripViewModel
 import com.example.capital_taxi.R
@@ -83,8 +87,11 @@ fun TripDetailsForDriver(navController: NavController,
                          onTripStarted:()->Unit,
                          passengerName:String,
                          chatId: String?=null,
+                         rating: String,
 
                          userId: String?=null,
+
+                         userId2: String?=null,
 
                          menu_close: suspend  () -> Unit) {
 
@@ -112,6 +119,7 @@ fun TripDetailsForDriver(navController: NavController,
             )
         }
     }
+    var imageUrl by remember { mutableStateOf<String?>(null) }
 
     val tripViewModel: dataTripViewModel = viewModel()
     val origin by tripViewModel.origin.collectAsState()
@@ -128,7 +136,20 @@ fun TripDetailsForDriver(navController: NavController,
             CancellationReasons(navController,tripId)
         }
     }
+    DisposableEffect(userId2) {
+        val listener = FirebaseFirestore.getInstance()
+            .collection("users")
+            .whereEqualTo("id", userId2)
+            .limit(1)
+            .addSnapshotListener { snapshot, _ ->
+                val document = snapshot?.documents?.firstOrNull()
+                imageUrl = document?.getString("imageUrl")
+            }
 
+        onDispose {
+            listener.remove()
+        }
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -164,12 +185,25 @@ fun TripDetailsForDriver(navController: NavController,
                                 horizontalArrangement = Arrangement.Start,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                androidx.compose.material.Icon(
-                                    modifier = Modifier.size(50.dp),
-                                    painter = painterResource(R.drawable.person),
-                                    contentDescription = null,
-                                    tint = Color.Unspecified
-                                )
+                                if (imageUrl != null) {
+                                    AsyncImage(
+                                        model = imageUrl,
+                                        contentDescription = "Driver Profile Image",
+                                        modifier = Modifier
+                                            .size(60.dp)
+                                            .clip(CircleShape),
+                                        placeholder = painterResource(R.drawable.person),
+                                        error = painterResource(R.drawable.person)
+                                    )
+                                } else {
+                                    Image(
+                                        painter = painterResource(R.drawable.person),
+                                        contentDescription = "Default Profile",
+                                        modifier = Modifier
+                                            .size(60.dp)
+                                            .clip(CircleShape)
+                                    )
+                                }
 
                                 Spacer(modifier = Modifier.width(10.dp))
 
@@ -182,9 +216,10 @@ fun TripDetailsForDriver(navController: NavController,
                                     )
                                     Row {
                                         Text(
-                                            text = "4.5",
-                                            color = Color.Black,
-                                            fontSize = 16.sp
+                                            rating.take(3),
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 20.sp,
+                                            color = Color.Black.copy(alpha = .3f)
                                         )
                                         Spacer(Modifier.width(5.dp))
                                         Icon(
