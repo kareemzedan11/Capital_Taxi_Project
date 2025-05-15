@@ -45,14 +45,19 @@ import androidx.lifecycle.ViewModel
 import android.location.Location
 import android.media.MediaPlayer
 import androidx.annotation.OptIn
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.draw.clip
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.RawResourceDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import coil.compose.AsyncImage
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.Home_Components.TripViewModel4
 import com.example.capital_taxi.domain.driver.model.Instruction
 import com.example.capital_taxi.domain.driver.model.getInstructionsFromFirebase
@@ -75,8 +80,11 @@ fun TripDetailsCard(
     availableTrips: List<Trip>,
     tripViewModel: TripViewModel,
     onTripAccepted: () -> Unit,
-    onTripCancelled: () -> Unit
-) {
+    onTripCancelled: () -> Unit,
+    userId2: String?=null,
+    rating: String?=null,
+
+    ) {
     if (availableTrips.isEmpty()) return
     val tripViewModel2: TripViewModel = viewModel()
     val StatusTripViewModel: StatusTripViewModel = viewModel()
@@ -114,8 +122,22 @@ fun TripDetailsCard(
 
     val scrollState = rememberScrollState()
 
+    var imageUrl by remember { mutableStateOf<String?>(null) }
 
+    DisposableEffect(userId2) {
+        val listener = FirebaseFirestore.getInstance()
+            .collection("users")
+            .whereEqualTo("id", userId2)
+            .limit(1)
+            .addSnapshotListener { snapshot, _ ->
+                val document = snapshot?.documents?.firstOrNull()
+                imageUrl = document?.getString("imageUrl")
+            }
 
+        onDispose {
+            listener.remove()
+        }
+    }
 
 
     Card(
@@ -213,18 +235,42 @@ fun TripDetailsCard(
                     horizontalArrangement = Arrangement.Start,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        modifier = Modifier.size(26.dp),
-                        painter = painterResource(R.drawable.person),
-                        contentDescription = null,
-                        tint = Color.Unspecified
-                    )
+                    if (imageUrl != null) {
+                        AsyncImage(
+                            model = imageUrl,
+                            contentDescription = "User Profile Image",
+                            modifier = Modifier
+                                .size(60.dp)
+                                .clip(CircleShape),
+                            placeholder = painterResource(R.drawable.person),
+                            error = painterResource(R.drawable.person)
+                        )
+                    } else {
+                        Image(
+                            painter = painterResource(R.drawable.person),
+                            contentDescription = "Default Profile",
+                            modifier = Modifier
+                                .size(60.dp)
+                                .clip(CircleShape)
+                        )
+                    }
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "4.5", // هنا يمكن لاحقًا استخدام تقييم الراكب إذا كان متاحًا
-                        color = Color.Black,
-                        fontSize = 16.sp
-                    )
+                   if (rating!=null){
+                       Text(
+                           rating.take(3),
+                           fontWeight = FontWeight.Bold,
+                           fontSize = 20.sp,
+                           color = Color.Black.copy(alpha = .3f)
+                       )
+                   }
+                    else {
+                       Text(
+                          "4.5",
+                           fontWeight = FontWeight.Bold,
+                           fontSize = 20.sp,
+                           color = Color.Black.copy(alpha = .3f)
+                       )
+                   }
                 }
 
                 // Ride Details

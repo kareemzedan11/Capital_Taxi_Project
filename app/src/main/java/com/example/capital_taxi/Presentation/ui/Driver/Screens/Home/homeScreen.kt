@@ -16,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -30,6 +31,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.app.ui.theme.CustomFontFamily
@@ -77,6 +79,9 @@ import com.google.maps.android.PolyUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import org.osmdroid.util.GeoPoint
@@ -660,10 +665,12 @@ fun driverHomeScreen(navController: NavController) {
                             context = context
                         )
                     }
-
+                    val tripDetailsViewModel: TripDetailsViewModel = viewModel()
                     val tripViewModel2: dataTripViewModel = viewModel()
+                    val passengerData by tripDetailsViewModel.passengerData.collectAsState()
                     availableTrips.firstOrNull()?.let { trip ->
                         if (tripState.isStart && !tripState.isAccepted) {
+                            TripListener(tripId = trip._id)
                             val token = sharedPreferences.getString("driver-token", null)
                             TripDetailsCard(
                                 light = false,
@@ -674,7 +681,7 @@ fun driverHomeScreen(navController: NavController) {
                                     mapStateViewModel.enableTracking()
                                     accepttrip.acceptTrip()
                                     stateTripViewModel.setAccepted()
-
+                                  tripDetailsViewModel.setTripId(trip._id)
                                     tripId = trip._id
                                     val destinationPoint = parseGeoPoint(trip.origin)
                                     val start = parseGeoPoint(trip.destination)
@@ -717,7 +724,10 @@ fun driverHomeScreen(navController: NavController) {
                                 },
                                 onTripCancelled = {
                                     availableTrips = availableTrips.filter { it._id != trip._id }
-                                }
+                                },
+                                userId2 = passengerData?.id ?: "",
+                                rating = passengerData?.rating?.toString() ?: "0.0",
+
                             )
                         }
                     }
@@ -945,6 +955,100 @@ fun driverHomeScreen(navController: NavController) {
                     }
                 )
             }
+        }
+    }
+}
+
+class TripDetailsViewModel : ViewModel() {
+    private val _tripId = MutableStateFlow<String?>(null)
+    val tripId: StateFlow<String?> = _tripId.asStateFlow()
+
+    private val _passengerData = MutableStateFlow<PassengerData?>(null)
+    val passengerData: StateFlow<PassengerData?> = _passengerData.asStateFlow()
+
+    private var firestoreListener: ListenerRegistration? = null
+
+    fun setTripId(newTripId: String) {
+        _tripId.value = newTripId
+        setupFirestoreListeners(newTripId)
+    }
+
+    private fun setupFirestoreListeners(tripId: String) {
+        firestoreListener?.remove()
+
+        val query = FirebaseFirestore.getInstance()
+            .collection("trips")
+            .whereEqualTo("_id", tripId)
+
+        firestoreListener = query.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                Log.e("TripDetails", "Error listening to trip", error)
+                return@addSnapshotListener
+            }
+
+            snapshot?.documents?.firstOrNull()?.let { document ->
+                // معالجة بيانات الرحلة
+                val originMap = document.get("originMap") as? Map<String, Any>
+                val destinationMap = document.get("destinationMap") as? Map<String, Any>
+                val userId = document.get("userId") as? String
+
+                // تحديث بيانات الراكب
+                userId?.let { fetchPassengerData(it) }
+            }
+        }
+    }
+
+    private fun fetchPassengerData(userId: String) {
+        FirebaseFirestore.getInstance()
+            .collection("users")
+            .whereEqualTo("id", userId)
+            .limit(1)
+            .get()
+            .addOnSuccessListener { querySnapshot ->
+                val userDoc = querySnapshot.documents.firstOrNull()
+                val ratingMap = userDoc?.get("rating") as? Map<*, *>
+
+                val passengerData = PassengerData(
+                    id = userId,
+                    name = userDoc?.getString("name") ?: "مستخدم غير معروف",
+                    rating = calculateRating(ratingMap)
+                )
+
+                _passengerData.value = passengerData
+            }
+            .addOnFailureListener { e ->
+                Log.e("TripDetails", "Error fetching passenger data", e)
+            }
+    }
+
+    private fun calculateRating(ratingMap: Map<*, *>?): Double {
+        val count = (ratingMap?.get("count") as? Number)?.toInt() ?: 0
+        val total = (ratingMap?.get("total") as? Number)?.toInt() ?: 0
+        return if (count > 0) total.toDouble() / count else 0.0
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        firestoreListener?.remove()
+    }
+}
+
+data class PassengerData(
+    val id: String,
+    val name: String,
+    val rating: Double
+)@Composable
+fun TripListener(
+    tripId: String?,
+    tripViewModel: TripDetailsViewModel = viewModel()
+) {
+    DisposableEffect(tripId) {
+        if (tripId != null) {
+            tripViewModel.setTripId(tripId)
+        }
+
+        onDispose {
+            // يتم التعامل مع إزالة الـ listeners داخل الـ ViewModel
         }
     }
 }

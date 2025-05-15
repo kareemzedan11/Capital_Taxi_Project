@@ -79,7 +79,8 @@ import kotlinx.coroutines.Dispatchers
 fun PickupWithDropOffButtons(
     navController: NavController,
     locationName: String? = "Select Pickup Location",
-    viewModel: LocationViewModel = viewModel()
+    viewModel: LocationViewModel = viewModel(),
+    issearch: Boolean = false
 ) {
     var showBottomSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -103,6 +104,7 @@ fun PickupWithDropOffButtons(
 
     val startPoint = remember { mutableStateOf<GeoPoint?>(null) }
     val endPoint = remember { mutableStateOf<GeoPoint?>(null) }
+    val isSearch = remember { mutableStateOf(issearch) }
 
     val sharedPreferences = context.getSharedPreferences("your_prefs", Context.MODE_PRIVATE)
     val token = sharedPreferences.getString("USER_TOKEN", null)
@@ -114,6 +116,8 @@ fun PickupWithDropOffButtons(
     var pickupSuggestions by remember { mutableStateOf(emptyList<String>()) }
     var dropOffLocation by remember { mutableStateOf("") }
     var dropOffSuggestions by remember { mutableStateOf(emptyList<String>()) }
+    var price by remember { mutableStateOf(0.0) }
+
 
     var selectedVehicleIndex by remember { mutableStateOf(-1) }
     var selectedVehicleName by remember { mutableStateOf("") }
@@ -328,6 +332,7 @@ fun PickupWithDropOffButtons(
                         fareViewModel = fareViewModel,
                         onSuccess = { options ->
                             vehicleOptionsState.value = options // تحديث حالة المركبات
+
                         },
                         onError = { error ->
                             fareViewModel.updateError(error)
@@ -390,6 +395,8 @@ fun PickupWithDropOffButtons(
                         LaunchedEffect(Unit) {
                             val isPeak = isNowInPeakHourFromServer()
                             adjustedPrice = calculatePriceWithPeak(vehicle.price, isPeak)
+                            price = adjustedPrice
+                            fareViewModel.setFare(adjustedPrice)
                         }
 
                         Box(
@@ -448,7 +455,7 @@ fun PickupWithDropOffButtons(
                                             color = Color.White
                                         )
                                         Text(
-                                            text = "£${String.format("%.2f", adjustedPrice)}",
+                                            text = "£${String.format("%.2f", adjustedPrice).take(4)}",
                                             fontSize = 18.sp,
                                             color = Color.White
                                         )

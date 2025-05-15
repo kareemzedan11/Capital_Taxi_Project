@@ -1,6 +1,8 @@
 package com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.drawerTabs.settings
 
 
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -47,7 +50,12 @@ import com.example.capital_taxi.R
 @Composable
 fun driversettings(navController: NavController) {
     var showBottomSheet by remember { mutableStateOf(false) }
+
     var isDark by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    val sharedPreferences = context.getSharedPreferences("your_prefs", Context.MODE_PRIVATE)
+    sharedPreferences.edit().remove("driver_token").apply()
 
     PartialBottomSheet(
         showBottomSheet = showBottomSheet,
@@ -177,18 +185,22 @@ fun driversettings(navController: NavController) {
                         )
 
                         Spacer(modifier = Modifier.height(20.dp))
-
-                        androidx.compose.material.Button(
-                            onClick = { },
+                         androidx.compose.material.Button(
+                            onClick = {
+                                Toast.makeText(context, "Logged out successfully", Toast.LENGTH_SHORT).show()
+                                // توجه المستخدم لشاشة تسجيل الدخول
+                                navController.navigate(Destination.driverLogin.route) {
+                                    popUpTo(Destination.DriverHomeScreen.route) { inclusive = true } // احذف الشاشة الحالية من back stack
+                                }
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 24.dp)
                                 .height(50.dp),
                             colors = ButtonDefaults.buttonColors(backgroundColor = Color.LightGray)
                         ) {
-                            androidx.compose.material.Text(
-                                 stringResource(id = R.string.Logout),
-
+                            Text(
+                                text = stringResource(id = R.string.Logout),
                                 color = Color.Red,
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold

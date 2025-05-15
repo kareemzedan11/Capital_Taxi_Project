@@ -957,7 +957,9 @@ when{
 
 
 
-                    if (startPoint.value == null || endPoint.value == null) {
+                    if (
+
+                        storedPoints == null  ||startPoint.value == null || endPoint.value == null||tripStatus!="pending") {
                         Toast.makeText(
                             context,
                             "Please select both pickup and drop-off locations",
@@ -965,6 +967,7 @@ when{
                         ).show()
                         return@FindDriverCard
                     }
+                    if (tripStatus=="pending") {
 
                     Log.d("TripScreen", "FindDriverCard clicked")
                     isSearch=true
@@ -1032,7 +1035,7 @@ when{
                     // Set the endpoint when the button is clicked
                     endPoint.value = GeoPoint(destinationLat, destinationLng)
 
-
+}
                 })
             }
         }
