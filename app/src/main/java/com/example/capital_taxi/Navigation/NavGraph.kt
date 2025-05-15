@@ -4,6 +4,7 @@ import ChatScreen
 import DriverHelpDetailScreen
 import LanguageDScreen
 import PhoneVerification
+import android.annotation.SuppressLint
 import android.app.Activity
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
@@ -62,11 +63,12 @@ import com.example.capital_taxi.ui.screens.Driver.VerficationScreens.DriverLicen
 import com.example.capital_taxi.ui.screens.Driver.VerficationScreens.NationalIDValidation
 
 
+@SuppressLint("SuspiciousIndentation")
 @Composable
 fun AppNavGraph(navController: NavHostController) {
 
     var context = LocalContext.current
-    NavHost(navController = navController, startDestination = Destination.UserHomeScreen.route) {
+        NavHost(navController = navController, startDestination = Destination.UserHomeScreen.route) {
 
         composable(Destination.SplashScreen.route) {
             SplashScreen(navController)

@@ -1,5 +1,7 @@
 package com.example.capital_taxi.Presentation.ui.Passengar.Screens.settings.Components
 
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -34,7 +37,10 @@ import com.example.capital_taxi.R
 fun settings(navController: NavController) {
     var showBottomSheet by remember { mutableStateOf(false) }
     var isDarkMode by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
+    val sharedPreferences = context.getSharedPreferences("your_prefs", Context.MODE_PRIVATE)
+    sharedPreferences.edit().remove("USER_TOKEN").apply()
     PartialBottomSheet(
         showBottomSheet = showBottomSheet,
         onDismissRequest = { showBottomSheet = false }
@@ -137,7 +143,12 @@ fun settings(navController: NavController) {
                         title = stringResource(R.string.Logout),
                         icon = painterResource(R.drawable.logout),
                         isRed = true,
-                        onClick = { /* Handle Logout */ }
+                        onClick = {
+                            Toast.makeText(context, "Logged out successfully", Toast.LENGTH_SHORT).show()
+                            // توجه المستخدم لشاشة تسجيل الدخول
+                            navController.navigate(Destination.UserLogin.route) {
+                                popUpTo(Destination.UserHomeScreen.route) { inclusive = true } // احذف الشاشة الحالية من back stack
+                            }}
                     )
                     SettingItem(
                         title = stringResource(R.string.Delete_Account),

@@ -70,6 +70,25 @@ driverId:String?=null ,
     // Firebase Firestore
     val db = FirebaseFirestore.getInstance()
     val tripRef = db.collection("trips")
+    var remainingDistance by remember { mutableStateOf(0.0) }
+    var remainingTime by remember { mutableStateOf(0L) }
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    val navigationBox = remember(tripId) {
+        Top_Navigation_Box(tripId).apply {
+            startTracking { distance, time ->
+                remainingDistance = distance
+                remainingTime = time
+                isLoading = false
+            }
+        }
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            navigationBox.stopTracking()
+        }
+    }
 
     // الاستماع للتحديثات بناءً على TripId
     LaunchedEffect(tripId) {
@@ -87,8 +106,8 @@ driverId:String?=null ,
 
                     // التأكد من أن البيانات موجودة وتحديث المسافة والوقت
                     data?.let {
-                        distance = it["distance"] as? Double
-                        val durationValue = it["time"] as? Long ?: 0L
+                        distance = it["remaining_distance_dynamic"] as? Double
+                        val durationValue = it["remaining_time_dynamic"] as? Long ?: 0L
                         duration = durationValue.toDouble() / 1000.0  // تحويل من milliseconds إلى seconds
 
                         Log.d("Firebase", "Data updated: Distance = $distance, Duration = $duration")
@@ -116,7 +135,19 @@ driverId:String?=null ,
             "${minutes} min"
         }
     } ?: "Loading..." // عرض Loading إذا كانت المدة null
+    fun formatDuration(millis: Long): String {
+        val minutes = (millis / 60000).toInt()
+        val seconds = (millis % 60000 / 1000).toInt()
+        return String.format("%02d:%02d", minutes, seconds)
+    }
 
+      fun formatDistance(meters: Double): String {
+        return if (meters >= 1000) {
+            "${String.format("%.1f", meters / 1000)} km"
+        } else {
+            "${meters.toInt()} m"
+        }
+    }
     Box(modifier = Modifier.fillMaxSize()) {
         // Loader: لو لسه البيانات ما وصلتش
         if (duration == null || distance == null) {
@@ -207,7 +238,7 @@ driverId:String?=null ,
                                 ) {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                         Text(
-                                            text = "Time Left: \n$formattedDuration",
+                                            text = "Time Left: \n${formattedDuration}",
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Medium
                                         )
@@ -220,7 +251,7 @@ driverId:String?=null ,
                                 ) {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                         Text(
-                                            text = "Left Distance: \n $formattedDistance",
+                                            text = "Left Distance: \n ${formattedDistance}",
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Medium
                                         )
