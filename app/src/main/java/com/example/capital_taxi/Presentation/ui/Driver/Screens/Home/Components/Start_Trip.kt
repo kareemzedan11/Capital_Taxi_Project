@@ -47,8 +47,10 @@ import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.DisposableEffect
 import com.example.capital_taxi.data.utils.DirectionsPrefs
+import com.google.firebase.Firebase
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -65,7 +67,7 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 
 @Composable
-fun StartTrip(tripId:String,TripEnd:()->Unit,driverId:String) {
+fun StartTrip(tripId:String,TripEnd:()->Unit,driverId:String,totalFare:Double) {
     val backgroundColor = colorResource(id = R.color.secondary_color)
     val primaryColor = colorResource(id = R.color.primary_color)
     val Icons_color = colorResource(id = R.color.Icons_color)
@@ -315,13 +317,48 @@ fun StartTrip(tripId:String,TripEnd:()->Unit,driverId:String) {
                                                     withContext(Dispatchers.Main) {
                                                         TripEnd()
                                                     }
-                                                } else {
+                                                }else {
                                                     stopRecordingAndUpload(tripId)
                                                     updateTripStatus(tripId, "Completed")
-                                                    driverId?.let { incrementDriverTrips(it) }
+
+
+                                                    val commissionRate = 0.2
+                                                    val commission = totalFare * commissionRate
+
+                                                    driverId?.let { id ->
+                                                        incrementDriverTrips(id)
+
+                                                        val db = Firebase.firestore
+                                                        val transaction = hashMapOf(
+                                                            "driverId" to id,
+                                                            "type" to "ride",
+                                                            "amount" to -commission,
+                                                            "tripId" to tripId,
+                                                            "note" to "Commission for trip $tripId",
+                                                            "timestamp" to FieldValue.serverTimestamp()
+                                                        )
+
+                                                        val walletRef = db.collection("drivers")
+                                                            .whereEqualTo("id", id)
+                                                            .limit(1)
+
+                                                        walletRef.get().addOnSuccessListener { result ->
+                                                            if (!result.isEmpty) {
+                                                                val doc = result.documents[0]
+                                                                val docRef = doc.reference
+                                                                val oldBalance = doc.getDouble("balance") ?: 0.0
+                                                                docRef.update("balance", oldBalance - commission)
+
+                                                                db.collection("walletTransactions").add(transaction)
+                                                            }
+                                                        }
+                                                    }
+
                                                     withContext(Dispatchers.Main) {
                                                         TripEnd()
                                                     }
+                                                }
+
 
 //                                                    withContext(Dispatchers.Main) {
 //                                                        Toast.makeText(
@@ -330,7 +367,7 @@ fun StartTrip(tripId:String,TripEnd:()->Unit,driverId:String) {
 //                                                            Toast.LENGTH_SHORT
 //                                                        ).show()
 //                                                    }
-                                                }
+
                                             }
                                         }
                                     }

@@ -16,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -72,9 +73,11 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.maps.model.LatLng
+import com.google.firebase.Firebase
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.firestore
 import com.google.maps.android.PolyUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -107,6 +110,9 @@ fun driverHomeScreen(navController: NavController) {
     val authToken = sharedPreferences.getString("driver_token", "") ?: ""
     val driver_id = sharedPreferences.getString("driver_id", "") ?: ""
     val directionsViewModel: DirectionsViewModel = viewModel()
+    val DriverViewModel: DriverViewModel = viewModel()
+
+
     val viewmodel: driverlocation = viewModel()
     var tripListener by remember { mutableStateOf<ListenerRegistration?>(null) }
 
@@ -733,6 +739,11 @@ fun driverHomeScreen(navController: NavController) {
                     }
                 }
 
+                val balance = DriverViewModel.balance.value
+
+                LaunchedEffect(driverId) {
+                    DriverViewModel.observeDriverBalance(driverId)
+                }
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -770,7 +781,7 @@ fun driverHomeScreen(navController: NavController) {
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "0.00 EGB",
+                                    text = if (balance != null) String.format("%.2f EGP", balance) else "Loading...",
                                     fontSize = responsiveTextSize(
                                         fraction = 0.06f,
                                         minSize = 14.sp,
@@ -889,7 +900,10 @@ fun driverHomeScreen(navController: NavController) {
             }
 
             if (tripState.isTripBegin) {
-                StartTrip(tripId!!, TripEnd = { accepttrip.EndTrip() },driverId)
+                StartTrip(
+                    tripId!!, TripEnd = { accepttrip.EndTrip() }, driverId,
+                    totalFare = fare!!
+                )
             }
 
             if (tripState.isEnd) {
@@ -1050,5 +1064,42 @@ fun TripListener(
         onDispose {
             // يتم التعامل مع إزالة الـ listeners داخل الـ ViewModel
         }
+    }
+}class DriverViewModel : ViewModel() {
+
+    private val _balance = mutableStateOf<Double?>(null)
+    val balance: State<Double?> = _balance
+
+    private var listenerRegistration: ListenerRegistration? = null
+
+    fun observeDriverBalance(driverId: String) {
+        val db = Firebase.firestore
+
+        // ألغِ أي Listener سابق
+        listenerRegistration?.remove()
+
+        listenerRegistration = db.collection("drivers")
+            .whereEqualTo("id", driverId)
+            .limit(1)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    _balance.value = 0.0
+                    return@addSnapshotListener
+                }
+
+                if (snapshot != null && !snapshot.isEmpty) {
+                    val doc = snapshot.documents[0]
+                    val balanceValue = doc.getDouble("balance") ?: 0.0
+                    _balance.value = balanceValue
+                } else {
+                    _balance.value = 0.0
+                }
+            }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // ألغِ الاستماع عند تدمير ViewModel
+        listenerRegistration?.remove()
     }
 }

@@ -186,6 +186,7 @@ fun DriverControls(
                                 if (!result.isEmpty) {
                                     val doc = result.documents.first()
                                     val status = doc.getString("status")
+                                    val balance = doc.getDouble("balance") ?: 0.0
 
                                     if (status != "active") {
                                         Toast.makeText(
@@ -193,22 +194,29 @@ fun DriverControls(
                                             "You are currently not eligible to go online. Your status is $status",
                                             Toast.LENGTH_LONG
                                         ).show()
+                                    } else if (balance < -299) {  // تعديل القيمة حسب حدود المديونية
+                                        withContext(Dispatchers.Main) {
+                                            showDialog(
+                                                context,
+                                                "Payment Required",
+                                                "You have an outstanding balance of ${-balance} EGP.\nPlease clear your debt before going online."
+                                            )
+                                        }
                                     } else {
                                         // Eligible to go online
-                                        onClick()
+                                        onClick()  // لو دي بتشغل عملية ثانية تأكد إنها مش بتسبب loop
+
                                         viewModel.setLoading(true) // شغّل اللودينج الأول
 
-                                        updateDriverStatusInFirestore(true) // حدّث في الفايرستور
+                                        updateDriverStatusInFirestore(true) // حدّث في Firestore
 
-                                        viewModel.setOnlineStatus(true) // وبعد ما تتأكد إنه Online، حدّث قيمة online
+                                        viewModel.setOnlineStatus(true) // حدث حالة الاتصال أونلاين
 
                                         tripLocation?.let {
                                             updateDriverLocation(driverId, it)
                                         }
 
                                         viewModel.setLoading(false) // وقفل اللودينج
-
-
                                     }
 
                                 } else {
@@ -220,8 +228,9 @@ fun DriverControls(
                             }
                         }
                     }
-                },
-                modifier = Modifier
+                }
+,
+                        modifier = Modifier
                     .fillMaxWidth(0.4f)
                     .fillMaxHeight(0.8f)
             ) {
