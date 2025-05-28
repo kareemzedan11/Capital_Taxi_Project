@@ -1,7 +1,9 @@
 package com.example.capital_taxi.Presentation.ui.Driver.Components
 // Android Imports
 import android.annotation.SuppressLint
+import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.drawable.BitmapDrawable
 import android.location.Location
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
@@ -140,13 +142,19 @@ fun InProgressMap(
 
             // سيارة السائق
             animatedPosition.value?.let { pos ->
+                val originalDrawable = ContextCompat.getDrawable(context, R.drawable.ic_car)
+                val bitmap = (originalDrawable as BitmapDrawable).bitmap
+                val scaledBitmap = Bitmap.createScaledBitmap(bitmap, 60, 60, true)
+                val scaledDrawable = BitmapDrawable(context.resources, scaledBitmap)
+
                 val driverMarker = Marker(map).apply {
                     position = pos
-                    icon = ContextCompat.getDrawable(context, R.drawable.ic_car)
+                    icon = scaledDrawable
                     rotation = animatedBearing.value
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                     infoWindow = null
                 }
+
                 map.overlays.add(driverMarker)
 
                 if (!cameraMovedByUser) {

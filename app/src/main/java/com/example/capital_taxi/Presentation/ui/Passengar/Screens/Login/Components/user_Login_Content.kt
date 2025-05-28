@@ -72,6 +72,8 @@ fun userLoginContent(
                         // 1. حفظ التوكن وID
                         editor.putString("USER_TOKEN", token)
                         editor.putString("USER_ID", userID)
+                        editor.putString("user_type", "rider") // أو "rider"
+
                         editor.apply()
 
                         // 2. تحديث بيانات Firestore
@@ -115,10 +117,7 @@ fun userLoginContent(
 
                         // 3. الانتقال للشاشة الرئيسية
                         navController.navigate(Destination.UserHomeScreen.route) {
-                            popUpTo(navController.graph.startDestinationId) {
-                                inclusive = true
-                            }
-                            launchSingleTop = true
+                            popUpTo(0) { inclusive = true } // تمسح كل الـ backstack
                         }
                     } else {
                         loginError = "No token received"

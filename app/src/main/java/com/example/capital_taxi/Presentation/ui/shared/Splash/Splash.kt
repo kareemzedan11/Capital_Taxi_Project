@@ -1,5 +1,6 @@
 package com.example.capital_taxi.Navigation
 
+import android.content.Context
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -14,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -31,7 +33,7 @@ import kotlinx.coroutines.delay
 fun SplashScreen(navController: NavHostController) {
     var progress by remember { mutableStateOf(0f) }
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
-
+    val context = LocalContext.current
     // Detect the current layout direction (LTR or RTL)
     val layoutDirection = LocalLayoutDirection.current
 
@@ -41,10 +43,35 @@ fun SplashScreen(navController: NavHostController) {
             progress += 0.005f
         }
 
-        navController.navigate(Destination.StartScreen.route) {
-            popUpTo(Destination.SplashScreen.route) { inclusive = true }
+        // اقرأ حالة الدخول من SharedPreferences
+
+        val sharedPreferences = context.getSharedPreferences("your_prefs", Context.MODE_PRIVATE)
+        val driverToken = sharedPreferences.getString("driver_token", null)
+        val userToken = sharedPreferences.getString("USER_TOKEN", null)
+        val userType = sharedPreferences.getString("user_type", null)
+
+        val isLoggedIn = (!driverToken.isNullOrEmpty() || !userToken.isNullOrEmpty())
+
+        // توجيه على حسب حالة الدخول
+        if (isLoggedIn) {
+            when (userType) {
+                "driver" -> navController.navigate(Destination.DriverHomeScreen.route) {
+                    popUpTo(Destination.SplashScreen.route) { inclusive = true }
+                }
+                "rider" -> navController.navigate(Destination.UserHomeScreen.route) {
+                    popUpTo(Destination.SplashScreen.route) { inclusive = true }
+                }
+                else -> navController.navigate(Destination.StartScreen.route) {
+                    popUpTo(Destination.SplashScreen.route) { inclusive = true }
+                }
+            }
+        } else {
+            navController.navigate(Destination.StartScreen.route) {
+                popUpTo(Destination.SplashScreen.route) { inclusive = true }
+            }
         }
     }
+
 
     Box(
         modifier = Modifier

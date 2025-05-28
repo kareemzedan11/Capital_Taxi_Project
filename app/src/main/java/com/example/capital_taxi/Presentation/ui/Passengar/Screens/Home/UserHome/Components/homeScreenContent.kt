@@ -160,7 +160,8 @@ fun homeScreenContent(navController: NavController) {
     val dropoffLatLng = locationViewModel.dropoffLocation
 
     val fareViewModel: FareViewModel = viewModel()
-    val fare = fareViewModel.fare  // لا حاجة لـ observeAsState
+    var fare2 = fareViewModel.fare  // لا حاجة لـ observeAsState
+    var fare by remember { mutableStateOf<Double?>(null) }
 
     val permissionViewModel: PermissionViewModel = viewModel()
     val context = LocalContext.current
@@ -243,6 +244,62 @@ fun homeScreenContent(navController: NavController) {
     }
 // ✅ إنشاء ViewModel مرة واحدة داخل Composable
     val locationViewModel2: LocationViewModel5 = viewModel()
+    LaunchedEffect(Unit) {
+        Log.d("TripCheck", "🚀 LaunchedEffect started")
+
+        val sharedPreferences = context.getSharedPreferences("your_prefs", Context.MODE_PRIVATE)
+        val activeTripId = sharedPreferences.getString("active_trip_id", null)
+
+        Log.d("TripCheck", "🧠 activeTripId = $activeTripId")
+        val sharedPref = context.getSharedPreferences("trip_prefs", Context.MODE_PRIVATE)
+        val fareStr = sharedPref.getString("fare", "0.0") ?: "0.0"
+        fare = fareStr.toDoubleOrNull() ?: 0.0
+        if (activeTripId == null) {
+            Log.d("TripCheck", "⚠️ No active trip found in SharedPreferences")
+            return@LaunchedEffect
+        }
+
+        // خزن القيمة في متغير tripId اللي بتستخدمه في Compose
+        tripId = activeTripId
+
+        try {
+            val querySnapshot = withContext(Dispatchers.IO) {
+                Log.d("TripCheck", "🔎 Fetching trip from Firestore")
+                FirebaseFirestore.getInstance().collection("trips")
+                    .whereEqualTo("_id", activeTripId)
+                    .get()
+                    .await()
+            }
+
+            val document = querySnapshot.documents.firstOrNull()
+            Log.d("TripCheck", "📄 Document fetched: ${document?.data}")
+
+            if (document != null) {
+                val status = document.getString("status") ?: ""
+                Log.d("TripCheck", "📌 Trip status = $status")
+
+                if (status in listOf("accepted", "Started", "InProgress")) {
+                    Log.d("TripCheck", "✅ Active trip detected, updating state")
+                    stateTripViewModel.updateTripStatus(status)
+                } else {
+                    Log.d("TripCheck", "🛑 Trip ended or cancelled, clearing active trip ID")
+                    sharedPreferences.edit().remove("active_trip_id").apply()
+                    stateTripViewModel.resetAll()
+                    tripId = null // برضه نزّل المتغير لو الرحلة خلصت
+                }
+            } else {
+                Log.d("TripCheck", "❌ No document found with this trip ID")
+                sharedPreferences.edit().remove("active_trip_id").apply()
+                stateTripViewModel.resetAll()
+                tripId = null
+            }
+        } catch (e: Exception) {
+            Log.e("TripCheck", "🔥 Exception while fetching trip: ${e.message}", e)
+            sharedPreferences.edit().remove("active_trip_id").apply()
+            stateTripViewModel.resetAll()
+            tripId = null
+        }
+    }
 
     LaunchedEffect(Unit) {
         val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
@@ -424,9 +481,19 @@ fun homeScreenContent(navController: NavController) {
                 val destinationLat = destinationMap?.get("lat") as? Double
                 val destinationLng = destinationMap?.get("lng") as? Double
 
+                fare = document.get("fare") as? Double ?: 0.0
+                val sharedPref = context.getSharedPreferences("trip_prefs", Context.MODE_PRIVATE)
+                sharedPref.edit().putString("fare", fare.toString()).apply()
+
+
+                val  driverLocation =
+                    document.get("driverLocation") as? Map<String, Any>
+                val driverLocationLat = driverLocation?.get("lat") as? Double
+                val driverLocationLng = driverLocation?.get("lng") as? Double
+
                 if (originLat != null && originLng != null && destinationLat != null && destinationLng != null) {
                     passengerLocation2 = GeoPoint(originLat, originLng)
-
+                    driverLocation2 = GeoPoint(driverLocationLat!!,driverLocationLng!!)
                     val result = DirectionsApi.getDirections(
                         start = passengerLocation2,
                         end = driverLocation2,
@@ -604,12 +671,16 @@ when{
             driverName = driverName?:"undefined", // "سائق غير معروف"
             carModel =carType?: "undefied", // "مركبة غير معروفة"
             onRateClick = {
+                sharedPreferences.edit().remove("active_trip_id").apply()
+
                 showRatingSheet = true
                 storedPoints=null
 
 
             },
             onReturnHomeClick = {
+                sharedPreferences.edit().remove("active_trip_id").apply()
+
                 storedPoints=null
                 stateTripViewModel.resetAll()
                 navController.navigate(Destination.UserHomeScreen.route) {
@@ -624,6 +695,8 @@ when{
         if (showRatingSheet) {
             RateDriverBottomSheet(
                 onSubmit = { ratingValue ->
+                    sharedPreferences.edit().remove("active_trip_id").apply()
+
                     showRatingSheet = false
                     if (driverId2State.value!!.isNotEmpty()) {
                         submitRatingToFirebase(driverId2State.value!!, ratingValue)
@@ -851,6 +924,14 @@ when{
                                 val userId = sharedPref.getString("USER_ID", null)
 
 
+                                if (tripId != null) {
+                                    sharedPreferences.edit().putString("active_trip_id", tripId).apply()
+                                    Log.d("SharedPreferences", "Saved active_trip_id = $tripId")
+                                } else {
+                                    Log.e("SharedPreferences", "tripId is null, cannot save active_trip_id")
+                                }
+
+
                                 if (driverId2State.value != null) {
                                     RideDetailsBottomSheetContent(
                                         onclick = { stateTripViewModel.setCancelled() },
@@ -858,6 +939,8 @@ when{
                                         tripid = tripId!!,
                                         UserId = userId!!,
                                         driverid = driverId2State.value!! // استخدم القيمة هنا
+                                    ,
+                                        fare!!
                                     )
                                 }
 
@@ -882,6 +965,8 @@ when{
 
                                     AlertDialog(
                                         onDismissRequest = {
+                                            sharedPreferences.edit().remove("active_trip_id").apply()
+
                                             showCancellationDialog = false
                                             stateTripViewModel.resetAll()
                                             navController.navigate(Destination.UserHomeScreen.route) {
@@ -897,6 +982,8 @@ when{
                                         confirmButton = {
                                             Button(
                                                 onClick = {
+                                                    sharedPreferences.edit().remove("active_trip_id").apply()
+
                                                     storedPoints = null
                                                     showCancellationDialog = false
                                                     stateTripViewModel.resetAll()
@@ -950,7 +1037,10 @@ when{
 
 
             val context = LocalContext.current
-            if (currentIsLocationEnabled.value && currentIsLocationGranted.value && !isConfirmed && !isSearch&&!isstart&&!isTripBegin&&state.isInitialPickup) {
+            if (currentIsLocationEnabled.value &&
+                currentIsLocationGranted.value && !isConfirmed && !isSearch&&!isstart
+                &&!isTripBegin&&state.isInitialPickup&&!state.isAccepted
+                &&!state.inProgress&&!state.isStart&&!state.isTripBegin ) {
                 val Savedtoken =
                     token // Fetch or pass the token
                 FindDriverCard(onclick = {
@@ -996,7 +1086,7 @@ when{
                             longitude = endPoint.value?.longitude ?: 0.0
 
                         )
-                    val fare = fare
+                    val fare = fare2
                     val distanceInKm = distance
                     val paymentMethod = "cash"
                     val apiKey =

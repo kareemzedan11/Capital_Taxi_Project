@@ -1,4 +1,6 @@
+import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.drawable.BitmapDrawable
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -46,10 +48,13 @@ fun AcceptanceMap(
                 setTileSource(TileSourceFactory.MAPNIK)
                 setMultiTouchControls(true)
                 controller.setZoom(15.0)
+                mapOrientation = 0.0f // تأكد إن اتجاه الخريطة ثابت
+
             }
         },
         update = { mapView ->
             mapView.overlays.clear()
+
             mapView.addMapListener(object : MapListener {
                 override fun onScroll(event: ScrollEvent?): Boolean {
                     cameraMovedByUser = true
@@ -62,11 +67,16 @@ fun AcceptanceMap(
                 }
             })
 
-            // إضافة موقع السائق (أيقونة سيارة)
+            // Marker السائق
             driverLocation?.let { newLocation ->
                 if (marker == null) {
+                    val originalDrawable = ContextCompat.getDrawable(mapView.context, R.drawable.ic_car)
+                    val bitmap = (originalDrawable as BitmapDrawable).bitmap
+                    val scaledBitmap = Bitmap.createScaledBitmap(bitmap, 60, 60, true)
+                    val scaledDrawable = BitmapDrawable(mapView.context.resources, scaledBitmap)
+
                     marker = Marker(mapView).apply {
-                        icon = ContextCompat.getDrawable(mapView.context, R.drawable.ic_car)
+                        icon = scaledDrawable
                         setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                         position = newLocation
                         rotation = 0f
@@ -97,8 +107,7 @@ fun AcceptanceMap(
                 lastDriverLocation = newLocation
             }
 
-
-            // إضافة موقع الراكب
+            // Marker الراكب
             passengerLocation?.let {
                 val passengerMarker = Marker(mapView).apply {
                     position = it
@@ -107,7 +116,7 @@ fun AcceptanceMap(
                 mapView.overlays.add(passengerMarker)
             }
 
-            // إضافة الاتجاهات
+            // Polyline للمسار
             val remainingPath = if (driverLocation != null && directions.isNotEmpty()) {
                 val nearestIndex = findNearestIndex(driverLocation, directions)
                 directions.subList(nearestIndex, directions.size)
@@ -124,14 +133,12 @@ fun AcceptanceMap(
                 mapView.overlays.add(polyline)
             }
 
-
             // تحديث مركز الخريطة
             val lastLocation = driverLocation ?: passengerLocation
             lastLocation?.let {
                 if (!cameraMovedByUser) {
                     mapView.controller.setCenter(it)
                 }
-
             }
 
             mapView.invalidate()
@@ -139,6 +146,79 @@ fun AcceptanceMap(
         modifier = modifier.fillMaxSize()
     )
 }
+
+// ================== HELPER FUNCTIONS =======================
+
+fun updateCarMarkerSmoothly(
+    marker: Marker,
+    startLoc: GeoPoint,
+    endLoc: GeoPoint,
+    mapView: MapView
+) {
+    val handler = Handler(Looper.getMainLooper())
+    val duration = 1000L
+    val frameRate = 16L
+    val steps = (duration / frameRate).toInt()
+    var step = 0
+
+    val targetBearing = calculateBearing(startLoc, endLoc)
+    val startBearing = marker.rotation
+    val bearingDiff = calculateBearingDifference(startBearing, targetBearing)
+
+    val runnable = object : Runnable {
+        override fun run() {
+            if (step <= steps) {
+                val fraction = step.toFloat() / steps.toFloat()
+                val easedFraction = easeInOutCubic(fraction)
+
+                // تحريك الموقع
+                val newPos = interpolatePosition(startLoc, endLoc, easedFraction.toDouble())
+                marker.position = newPos
+
+                // تدوير السيارة بسلاسة
+                val newBearing = (startBearing + (bearingDiff * easedFraction) + 360) % 360
+                marker.rotation = newBearing
+
+                mapView.invalidate()
+                step++
+                handler.postDelayed(this, frameRate)
+            }
+        }
+    }
+
+    handler.post(runnable)
+}
+
+fun calculateBearing(start: GeoPoint, end: GeoPoint): Float {
+    val lat1 = Math.toRadians(start.latitude)
+    val lon1 = Math.toRadians(start.longitude)
+    val lat2 = Math.toRadians(end.latitude)
+    val lon2 = Math.toRadians(end.longitude)
+
+    val dLon = lon2 - lon1
+    val y = sin(dLon) * cos(lat2)
+    val x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon)
+    val bearing = Math.toDegrees(atan2(y, x))
+    return ((bearing + 360) % 360).toFloat()
+}
+
+fun calculateBearingDifference(start: Float, end: Float): Float {
+    var diff = end - start
+    if (diff > 180) diff -= 360
+    else if (diff < -180) diff += 360
+    return diff
+}
+
+fun interpolatePosition(start: GeoPoint, end: GeoPoint, fraction: Double): GeoPoint {
+    val lat = start.latitude + (end.latitude - start.latitude) * fraction
+    val lon = start.longitude + (end.longitude - start.longitude) * fraction
+    return GeoPoint(lat, lon)
+}
+
+fun easeInOutCubic(t: Float): Float {
+    return if (t < 0.5f) 4 * t * t * t else 1 - Math.pow((-2 * t + 2).toDouble(), 3.0).toFloat() / 2
+}
+
 fun findNearestIndex(current: GeoPoint, path: List<GeoPoint>): Int {
     var minDistance = Double.MAX_VALUE
     var nearestIndex = 0
@@ -155,82 +235,4 @@ fun findNearestIndex(current: GeoPoint, path: List<GeoPoint>): Int {
     }
 
     return nearestIndex
-}
-
-fun updateCarMarkerSmoothly(
-    marker: Marker,
-    startLoc: GeoPoint,
-    endLoc: GeoPoint,
-    mapView: MapView
-) {
-    val handler = Handler(Looper.getMainLooper())
-    val duration = 1000L // زمن التحريك 1 ثانية
-    val frameRate = 16L // ~60 إطار في الثانية
-    val steps = (duration / frameRate).toInt()
-    var step = 0
-
-    // حساب الاتجاه المبدئي
-    val initialBearing = calculateBearing(startLoc, endLoc)
-    val startBearing = marker.rotation
-    val bearingDiff = calculateBearingDifference(startBearing, initialBearing)
-
-    val runnable = object : Runnable {
-        override fun run() {
-            if (step <= steps) {
-                val fraction = step.toFloat() / steps.toFloat()
-
-                // استخدام دالة ease-in-out لجعل الحركة أكثر سلاسة
-                val easedFraction = easeInOutCubic(fraction)
-
-                // تحديث الموقع
-                val newPos = interpolatePosition(startLoc, endLoc, easedFraction.toDouble())
-                marker.position = newPos
-
-                // تحديث الاتجاه تدريجياً
-                val newBearing = startBearing + (bearingDiff * easedFraction)
-                marker.rotation = newBearing
-
-                mapView.invalidate()
-                step++
-                handler.postDelayed(this, frameRate)
-            }
-        }
-    }
-
-    handler.post(runnable)
-}
-
-// دالة لحساب الفرق بين اتجاهين مع التعامل مع الزوايا الدائرية
-fun calculateBearingDifference(start: Float, end: Float): Float {
-    var diff = end - start
-    when {
-        diff > 180 -> diff -= 360
-        diff < -180 -> diff += 360
-    }
-    return diff
-}
-
-// دالة لإنشاء تأثير ease-in-out للحركة
-fun easeInOutCubic(t: Float): Float {
-    return if (t < 0.5f) 4 * t * t * t else 1 - Math.pow((-2 * t + 2).toDouble(), 3.0).toFloat() / 2
-}
-// حساب الاتجاه بين نقطتين (bearing)
-fun calculateBearing(start: GeoPoint, end: GeoPoint): Float {
-    val lat1 = Math.toRadians(start.latitude)
-    val lon1 = Math.toRadians(start.longitude)
-    val lat2 = Math.toRadians(end.latitude)
-    val lon2 = Math.toRadians(end.longitude)
-
-    val dLon = lon2 - lon1
-    val y = sin(dLon) * cos(lat2)
-    val x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon)
-    val bearing = Math.toDegrees(atan2(y, x))
-    return ((bearing + 360) % 360).toFloat()
-}
-
-// حساب الموقع بين نقطتين مع نسبة معينة (interpolation)
-fun interpolatePosition(start: GeoPoint, end: GeoPoint, fraction: Double): GeoPoint {
-    val lat = start.latitude + (end.latitude - start.latitude) * fraction
-    val lon = start.longitude + (end.longitude - start.longitude) * fraction
-    return GeoPoint(lat, lon)
 }

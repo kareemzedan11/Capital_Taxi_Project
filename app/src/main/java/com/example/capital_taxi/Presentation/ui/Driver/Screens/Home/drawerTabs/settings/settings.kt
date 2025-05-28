@@ -2,6 +2,7 @@ package com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.drawerTabs.
 
 
 import android.content.Context
+import android.content.Context.MODE_PRIVATE
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -188,8 +189,14 @@ fun driversettings(navController: NavController) {
                          androidx.compose.material.Button(
                             onClick = {
                                 Toast.makeText(context, "Logged out successfully", Toast.LENGTH_SHORT).show()
+
+
+                                val editor = sharedPreferences.edit()
+                                editor.clear()
+                                editor.apply()
+
                                 // توجه المستخدم لشاشة تسجيل الدخول
-                                navController.navigate(Destination.driverLogin.route) {
+                                navController.navigate(Destination.SplashScreen.route) {
                                     popUpTo(Destination.DriverHomeScreen.route) { inclusive = true } // احذف الشاشة الحالية من back stack
                                 }
                             },

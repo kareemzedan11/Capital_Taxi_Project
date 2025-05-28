@@ -145,8 +145,13 @@ fun settings(navController: NavController) {
                         isRed = true,
                         onClick = {
                             Toast.makeText(context, "Logged out successfully", Toast.LENGTH_SHORT).show()
+
+                            val editor = sharedPreferences.edit()
+                            editor.clear()
+                            editor.apply()
+
                             // توجه المستخدم لشاشة تسجيل الدخول
-                            navController.navigate(Destination.UserLogin.route) {
+                            navController.navigate(Destination.SplashScreen.route) {
                                 popUpTo(Destination.UserHomeScreen.route) { inclusive = true } // احذف الشاشة الحالية من back stack
                             }}
                     )

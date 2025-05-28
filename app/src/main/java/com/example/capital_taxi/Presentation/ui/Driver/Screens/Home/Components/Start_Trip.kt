@@ -1,6 +1,7 @@
 package com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.media.AudioFormat
 import android.media.MediaRecorder
 import android.widget.Toast
@@ -65,7 +66,19 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import java.io.ByteArrayOutputStream
 import java.io.IOException
+// في ملف Utils أو في مكان مناسب
+fun saveTripState(context: Context, tripId: String, isTripStarted: Boolean) {
+    val sharedPref = context.getSharedPreferences("TripPrefs", Context.MODE_PRIVATE)
+    with(sharedPref.edit()) {
+        putBoolean("${tripId}_isTripStarted", isTripStarted)
+        apply()
+    }
+}
 
+fun getTripState(context: Context, tripId: String): Boolean {
+    val sharedPref = context.getSharedPreferences("TripPrefs", Context.MODE_PRIVATE)
+    return sharedPref.getBoolean("${tripId}_isTripStarted", false)
+}
 @Composable
 fun StartTrip(tripId:String,TripEnd:()->Unit,driverId:String,totalFare:Double) {
     val backgroundColor = colorResource(id = R.color.secondary_color)
@@ -73,7 +86,6 @@ fun StartTrip(tripId:String,TripEnd:()->Unit,driverId:String,totalFare:Double) {
     val Icons_color = colorResource(id = R.color.Icons_color)
 
     var isLoading by remember { mutableStateOf(false) }
-    var tripStarted by remember { mutableStateOf(false) }
     var triggerStart by remember { mutableStateOf(false) }
     var showToast by remember { mutableStateOf(false) }
     var destination by remember { mutableStateOf("") }
@@ -82,6 +94,7 @@ fun StartTrip(tripId:String,TripEnd:()->Unit,driverId:String,totalFare:Double) {
 
     var isDataLoading by remember { mutableStateOf(true) }
     val context = LocalContext.current
+    var tripStarted by remember { mutableStateOf(getTripState(context, tripId)) }
 
     // ده اللي بيعمل delay لما الزر يتضغط
     LaunchedEffect(triggerStart) {
@@ -93,10 +106,12 @@ fun StartTrip(tripId:String,TripEnd:()->Unit,driverId:String,totalFare:Double) {
             triggerStart = false // نرجّعها تاني عشان نقدر نضغط الزر مرة تانية لو حبيت
 
 
-
+            saveTripState(context, tripId, tripStarted)
 
         }
     }
+
+
     DisposableEffect(tripId) {
         isDataLoading = true
 
@@ -112,7 +127,7 @@ fun StartTrip(tripId:String,TripEnd:()->Unit,driverId:String,totalFare:Double) {
             if (snapshot != null && !snapshot.isEmpty) {
                 val document = snapshot.documents.first()
                 destination = document.get("destination") as? String ?: ""
-                distanceInKm = document.get("distanceInKm") as? Double ?: 0.0
+                distanceInKm = document.get("distance") as? Double ?: 0.0
                 Time = document.get("time") as? Long ?: 0
             }
 
@@ -137,6 +152,14 @@ fun StartTrip(tripId:String,TripEnd:()->Unit,driverId:String,totalFare:Double) {
         }
     }
 
+    // تحويل المسافة إلى كيلومترات أو متر
+    val formattedDistance = distanceInKm?.let {
+        if (it >= 1000) {
+            "${String.format("%.2f", it / 1000)} km" // تحويل للمتر إلى كيلومتر
+        } else {
+            "${it.toInt()}  m" // إبقاءها متر إذا كانت أقل من 1000 متر
+        }
+    } ?: "Loading..." // عرض Loading إذا كانت المسافة null
 
     // استخدام MediaRecorder لبدء التسجيل الصوتي
 
@@ -193,7 +216,7 @@ fun StartTrip(tripId:String,TripEnd:()->Unit,driverId:String,totalFare:Double) {
                         )
                     } else {
                         Text(
-                            String.format("%.1f km", distanceInKm),
+                            formattedDistance,
                             fontSize = 22.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -222,19 +245,19 @@ fun StartTrip(tripId:String,TripEnd:()->Unit,driverId:String,totalFare:Double) {
                             fontSize = 14.sp
                         )
                         if (isDataLoading) {
-                        CircularProgressIndicator(
-                            color = Color.White,
-                            modifier = Modifier.size(24.dp),
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Text(
-                            text = destination.take(20),
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
-                    }
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text(
+                                text = destination.take(20),
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        }
                     }
 
                     Button(
@@ -373,7 +396,7 @@ fun StartTrip(tripId:String,TripEnd:()->Unit,driverId:String,totalFare:Double) {
                                     }
                                 }}
 
-                            },
+                        },
                         modifier = Modifier.height(48.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = primaryColor,
@@ -640,4 +663,3 @@ fun saveAudioUrlToFirestore(tripId: String, audioUrl: String) {
             Log.e("Firestore", "فشل في البحث عن الرحلة", e)
         }
 }
-

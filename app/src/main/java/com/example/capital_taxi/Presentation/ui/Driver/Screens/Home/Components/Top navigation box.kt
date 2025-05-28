@@ -100,9 +100,10 @@ class Top_Navigation_Box(private val tripId: String) {
 
                     // ✅ التحديث الديناميكي الجديد هنا
                     val originalTotalDistance = totalDistance + completedDistance
-                    val isDriverMoving = distanceCovered > 5 // السائق اتحرك أكتر من 5 متر
 
-                    if (isDriverMoving && originalTotalDistance > 0) {
+
+
+                    if ( originalTotalDistance > 0) {
                         val ratio = completedDistance / originalTotalDistance
                         val dynamicRemainingDistance = maxOf(0.0, originalTotalDistance - completedDistance)
                         val dynamicRemainingTime = maxOf(0L, ((1 - ratio) * (totalTime + completedTime)).toLong())
@@ -269,6 +270,8 @@ class Top_Navigation_Box(private val tripId: String) {
             .whereEqualTo("_id", tripId)
             .get()
             .addOnSuccessListener { snapshot ->
+                Log.d("UPDATE_DYNAMIC", "Updating dynamic: distance=$remainingDistance, time=$remainingTime")
+
                 snapshot.documents.firstOrNull()?.reference?.update(
                     mapOf(
                         "remaining_distance_dynamic" to remainingDistance,

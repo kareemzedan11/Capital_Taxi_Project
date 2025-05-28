@@ -2,6 +2,8 @@ package com.example.capital_taxi.utils
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.drawable.BitmapDrawable
 import android.location.Location
 import android.os.Looper
 import androidx.compose.animation.core.*
@@ -154,11 +156,19 @@ fun DriverMapView(
             animatedPosition.value?.let { location ->
                 val driverMarker = Marker(map).apply {
                     position = location
-                    icon = ContextCompat.getDrawable(context, R.drawable.ic_car)
+
+                    // Resize the icon manually
+                    val originalDrawable = ContextCompat.getDrawable(context, R.drawable.ic_car)
+                    val bitmap = (originalDrawable as BitmapDrawable).bitmap
+                    val scaledBitmap = Bitmap.createScaledBitmap(bitmap, 70, 70, true) // حجم صغير جدًا
+
+                    icon = BitmapDrawable(context.resources, scaledBitmap)
+
                     rotation = animatedBearing.value
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                     infoWindow = null
                 }
+
                 map.overlays.add(driverMarker)
 
                 if (!cameraMovedByUser) {

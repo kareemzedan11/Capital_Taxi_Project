@@ -106,8 +106,8 @@ driverId:String?=null ,
 
                     // التأكد من أن البيانات موجودة وتحديث المسافة والوقت
                     data?.let {
-                        distance = it["remaining_distance_dynamic"] as? Double
-                        val durationValue = it["remaining_time_dynamic"] as? Long ?: 0L
+                        distance = it["distance"] as? Double
+                        val durationValue = it["time"] as? Long ?: 0L
                         duration = durationValue.toDouble() / 1000.0  // تحويل من milliseconds إلى seconds
 
                         Log.d("Firebase", "Data updated: Distance = $distance, Duration = $duration")

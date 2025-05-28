@@ -2,6 +2,7 @@ package com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components
 
 
 import ChatScreen
+import android.content.Context
 import android.net.Uri
 import android.util.Log
 import android.widget.Toast
@@ -71,6 +72,7 @@ import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlin.math.atan2
@@ -121,12 +123,32 @@ fun TripDetailsForDriver(navController: NavController,
     }
     var imageUrl by remember { mutableStateOf<String?>(null) }
 
+    val sharedPref = context.getSharedPreferences("trip_prefs", Context.MODE_PRIVATE)
+
+    var origin by remember { mutableStateOf(sharedPref.getString("origin", "") ?: "") }
+    var destination by remember { mutableStateOf(sharedPref.getString("destination", "") ?: "") }
+
     val tripViewModel: dataTripViewModel = viewModel()
-    val origin by tripViewModel.origin.collectAsState()
-    val destination by tripViewModel.destination.collectAsState()
-    LaunchedEffect(Unit) {
-        tripViewModel.setTripDetails(origin, destination) // أدخل القيم الفعلية
+
+// لما القيم تتغير في الـ ViewModel، احفظها مرة واحدة بس لو مش محفوظة
+    LaunchedEffect(origin, destination) {
+        tripViewModel.origin.collectLatest { value ->
+            if (value.isNotBlank() && origin.isBlank()) {
+                origin = value
+                sharedPref.edit().putString("origin", value).apply()
+            }
+        }
     }
+
+    LaunchedEffect(origin, destination) {
+        tripViewModel.destination.collectLatest { value ->
+            if (value.isNotBlank() && destination.isBlank()) {
+                destination = value
+                sharedPref.edit().putString("destination", value).apply()
+            }
+        }
+    }
+
     if (showBottomSheet) {
         ModalBottomSheet(
             modifier = Modifier.fillMaxHeight(),

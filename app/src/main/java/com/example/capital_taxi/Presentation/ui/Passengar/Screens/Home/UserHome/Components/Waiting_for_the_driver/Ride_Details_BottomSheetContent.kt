@@ -52,7 +52,7 @@ fun RideDetailsBottomSheetContent(
     onclick:()->Unit,
     navController: NavController, tripid: String,
 
-    UserId:String,driverid:String) {
+    UserId:String,driverid:String,fare:Double) {
     val carType = remember { mutableStateOf("") }
     val carNumber = remember { mutableStateOf("") }
     val driverUsername = remember { mutableStateOf("") }
@@ -210,7 +210,7 @@ fun RideDetailsBottomSheetContent(
                         .height(60.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF2F2F2))
                 ) {
-                    Payment_trip_cost()
+                    Payment_trip_cost(fare=fare)
                 }
 
                 Spacer(modifier = Modifier.padding(top = 15.dp))

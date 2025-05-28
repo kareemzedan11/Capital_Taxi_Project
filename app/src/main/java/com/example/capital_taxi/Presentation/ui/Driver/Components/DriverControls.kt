@@ -194,7 +194,7 @@ fun DriverControls(
                                             "You are currently not eligible to go online. Your status is $status",
                                             Toast.LENGTH_LONG
                                         ).show()
-                                    } else if (balance < -299) {  // تعديل القيمة حسب حدود المديونية
+                                    } else if (balance < -2999) {  // تعديل القيمة حسب حدود المديونية
                                         withContext(Dispatchers.Main) {
                                             showDialog(
                                                 context,

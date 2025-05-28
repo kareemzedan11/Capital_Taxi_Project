@@ -122,6 +122,8 @@ fun driverLoginContent(
                         // 1. حفظ بيانات تسجيل الدخول في SharedPreferences
                         editor.putString("driver_token", token)
                         editor.putString("driver_id", userId)
+                        editor.putString("user_type", "driver") // أو "rider"
+
                         editor.apply()
 
                         // 2. الحصول على ملفات السائق من SharedPreferences
@@ -155,7 +157,10 @@ fun driverLoginContent(
                                     }
 
                                     // 7. الانتقال إلى الشاشة الرئيسية
-                                    navController.navigate(Destination.DriverHomeScreen.route)
+                                    navController.navigate(Destination.DriverHomeScreen.route) {
+                                        popUpTo(0) { inclusive = true } // تمسح كل الـ backstack
+                                    }
+
                                 }
                                 .addOnFailureListener { e ->
                                     Log.e("Login", "❌ فشل تحديث بيانات السائق: ${e.message}")

@@ -64,6 +64,7 @@ import com.example.capital_taxi.domain.fetchTripDirections
 import com.example.capital_taxi.domain.shared.TripViewModel
 import com.example.capital_taxi.domain.shared.saveDriverLocationToRealtimeDatabase
 import com.example.capital_taxi.domain.storedPoints
+import com.example.capital_taxi.utils.DirectionsUpdater
 import com.example.myapplication.DriverMapView
 import com.example.myapplication.interpolateLocation
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -87,6 +88,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import org.osmdroid.util.GeoPoint
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -111,6 +113,7 @@ fun driverHomeScreen(navController: NavController) {
     val driver_id = sharedPreferences.getString("driver_id", "") ?: ""
     val directionsViewModel: DirectionsViewModel = viewModel()
     val DriverViewModel: DriverViewModel = viewModel()
+
 
 
     val viewmodel: driverlocation = viewModel()
@@ -145,7 +148,8 @@ fun driverHomeScreen(navController: NavController) {
     var showNavigationButton by remember { mutableStateOf(false) }
     var originPoint by remember { mutableStateOf<GeoPoint?>(null) }
     var destinationPoint by remember { mutableStateOf<GeoPoint?>(null) }
-
+    val sharedPref = context.getSharedPreferences("trip_prefs", Context.MODE_PRIVATE)
+    var tripStarted by remember { mutableStateOf(sharedPref.getBoolean("trip_started", false)) }
     // Handle trip state changes
     LaunchedEffect(tripState) {
         when {
@@ -155,6 +159,86 @@ fun driverHomeScreen(navController: NavController) {
             tripState.isEnd -> {
                 // Trip completed logic
             }
+        }
+    }
+    LaunchedEffect(Unit) {
+        Log.d("TripCheck", "🚀 LaunchedEffect started")
+
+        val sharedPreferences = context.getSharedPreferences("your_prefs", Context.MODE_PRIVATE)
+        val activeTripId = sharedPreferences.getString("active_trip_id", null)
+           passengerID = sharedPreferences.getString("passenger_id", null)
+
+        Log.d("TripCheck", "🧠 activeTripId = $activeTripId")
+
+        if (activeTripId == null) {
+            Log.d("TripCheck", "⚠️ No active trip found in SharedPreferences")
+            return@LaunchedEffect
+        }
+        val sharedPref = context.getSharedPreferences("trip_prefs", Context.MODE_PRIVATE)
+        val fareStr = sharedPref.getString("fare", "0.0") ?: "0.0"
+          fare = fareStr.toDoubleOrNull() ?: 0.0
+
+        // خزن القيمة في متغير tripId اللي بتستخدمه في Compose
+        tripId = activeTripId
+
+        try {
+            val querySnapshot = withContext(Dispatchers.IO) {
+                Log.d("TripCheck", "🔎 Fetching trip from Firestore")
+                FirebaseFirestore.getInstance().collection("trips")
+                    .whereEqualTo("_id", activeTripId)
+                    .get()
+                    .await()
+            }
+
+            val document = querySnapshot.documents.firstOrNull()
+            Log.d("TripCheck", "📄 Document fetched: ${document?.data}")
+
+            if (document != null) {
+                val status = document.getString("status") ?: ""
+                Log.d("TripCheck", "📌 Trip status = $status")
+
+                if (status in listOf("accepted", "InProgress", "Started")) {
+                    Log.d("TripCheck", "✅ Active trip detected, updating state")
+
+                    // تحويل الحالة حسب التدرج
+                    val updatedStatus = when (status) {
+                        "accepted" -> {
+                            stateTripViewModel.setStart(true)
+                            "Started"
+
+                        }
+                        "InProgress" -> {
+                            stateTripViewModel.setStart(true)
+                            "InProgress"
+                        }
+                        "Started" -> {
+                            stateTripViewModel.setStart(true)
+                            "InProgress"
+                        }
+
+                        else -> status // لو هي Started تفضل زي ما هي
+                    }
+                    Log.d("TripCheck", "📌 Updated status: $updatedStatus")
+                    stateTripViewModel.updateTripStatus(updatedStatus)
+                }
+
+                else {
+                    Log.d("TripCheck", "🛑 Trip ended or cancelled, clearing active trip ID")
+                    sharedPreferences.edit().remove("active_trip_id").apply()
+                    stateTripViewModel.resetAll()
+                    tripId = null // برضه نزّل المتغير لو الرحلة خلصت
+                }
+            } else {
+                Log.d("TripCheck", "❌ No document found with this trip ID")
+                sharedPreferences.edit().remove("active_trip_id").apply()
+                stateTripViewModel.resetAll()
+                tripId = null
+            }
+        } catch (e: Exception) {
+            Log.e("TripCheck", "🔥 Exception while fetching trip: ${e.message}", e)
+            sharedPreferences.edit().remove("active_trip_id").apply()
+            stateTripViewModel.resetAll()
+            tripId = null
         }
     }
 
@@ -182,6 +266,43 @@ fun driverHomeScreen(navController: NavController) {
             }
         }
     }
+    val directionsUpdater = remember(tripId) {
+        tripId?.let {
+            DirectionsUpdater(
+                tripId = it,
+                graphHopperApiKey = "c69abe50-60d2-43bc-82b1-81cbdcebeddc"
+            )
+        }
+    }
+    var originStr by remember { mutableStateOf<String?>(null) }
+    var destinationStr by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(tripState.isTripBegin, tripState.inProgress, directionsUpdater, driverLocationState, passengerLocation2, originStr, destinationStr) {
+        Log.d("TripLog", "LaunchedEffect triggered")
+        Log.d("TripLog", "isTripBegin: ${tripState.isTripBegin}, inProgress: ${tripState.inProgress}")
+
+        val shouldUseLiveTracking = tripState.inProgress
+        val driverLocation = driverLocationState
+        val passengerLocation = passengerLocation2
+
+        if (directionsUpdater != null) {
+            if (shouldUseLiveTracking && driverLocation != null && passengerLocation != null) {
+                val origin = "${driverLocation.latitude},${driverLocation.longitude}"
+                val destination = "${passengerLocation.latitude},${passengerLocation.longitude}"
+                Log.d("TripLog", "Live tracking: driver to passenger")
+                directionsUpdater.setRoute(originStr = origin, destinationStr = destination)
+                directionsUpdater.start()
+            } else if (tripState.isTripBegin && originStr != null && destinationStr != null) {
+                Log.d("TripLog", "Trip begin: using static origin/destination")
+                directionsUpdater.setRoute(originStr = originStr!!, destinationStr = destinationStr!!)
+                directionsUpdater.start()
+            } else {
+                Log.d("TripLog", "Stopping directionsUpdater")
+                directionsUpdater.stop()
+            }
+        }
+    }
+
 
     DisposableEffect(tripId) {
         var documentListener: ListenerRegistration? = null
@@ -225,6 +346,12 @@ fun driverHomeScreen(navController: NavController) {
 
                     if (destinationLat != null && destinationLng != null) {
                         destinationPoint = GeoPoint(destinationLat, destinationLng)
+                    }
+                    if (originLat != null && originLng != null) {
+                        originStr = "$originLat,$originLng"
+                    }
+                    if (destinationLat != null && destinationLng != null) {
+                        destinationStr = "$destinationLat,$destinationLng"
                     }
 
                     passengerID?.let { id ->
@@ -473,7 +600,17 @@ fun driverHomeScreen(navController: NavController) {
                         if (!querySnapshot.isEmpty) {
                             val document = querySnapshot.documents.first()
                             destination = document.get("destination") as? String
-                            passengerID = document.get("userId") as? String
+                              passengerID = document.get("userId") as? String
+
+                            if (passengerID != null) {
+                                val sharedPreferences = context.getSharedPreferences("your_prefs", Context.MODE_PRIVATE)
+                                sharedPreferences.edit()
+                                    .putString("passenger_id", passengerID)
+                                    .apply() // أو .commit() لو عايز تنتظر الحفظ
+                                Log.d("TripCheck", "💾 passengerID saved in SharedPreferences: $passengerID")
+                            } else {
+                                Log.d("TripCheck", "⚠️ passengerID is null, not saved.")
+                            }
 
                             passengerID?.let { id ->
                                 try {
@@ -493,6 +630,9 @@ fun driverHomeScreen(navController: NavController) {
                             }
 
                             fare = document.get("fare") as? Double ?: 0.0
+                            val sharedPref = context.getSharedPreferences("trip_prefs", Context.MODE_PRIVATE)
+                            sharedPref.edit().putString("fare", fare.toString()).apply()
+
                             distance = document.get("distanceInKm") as? Double ?: 0.0
 
                             val originMap = document.get("originMap") as? Map<String, Any>
@@ -592,10 +732,6 @@ fun driverHomeScreen(navController: NavController) {
                         previousLocation = previousLocation2,
                     )
                 }
-// بعد سطر تعبئة originPoint و destinationPoint في Listener
-                Log.d("LocationPoints", "Origin: ${originPoint?.latitude},${originPoint?.longitude}")
-                Log.d("LocationPoints", "Destination: ${destinationPoint?.latitude},${destinationPoint?.longitude}")
-                // Navigation Button - Only shown when trip is accepted
 
 
                 fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
@@ -626,6 +762,8 @@ fun driverHomeScreen(navController: NavController) {
                                         if (trip.status != "pending" || trip._id == tripId) return@filter false
 
                                         try {
+                                            sharedPreferences.edit().putString("active_trip_id", trip._id).apply()
+
                                             val originMap = trip.originMap ?: return@filter false
                                             val passengerLat = (originMap["lat"] as? Number)?.toDouble() ?: return@filter false
                                             val passengerLng = (originMap["lng"] as? Number)?.toDouble() ?: return@filter false
@@ -678,6 +816,9 @@ fun driverHomeScreen(navController: NavController) {
                         if (tripState.isStart && !tripState.isAccepted) {
                             TripListener(tripId = trip._id)
                             val token = sharedPreferences.getString("driver-token", null)
+
+                            sharedPreferences.edit().putString("active_trip_id", trip._id).apply()
+
                             TripDetailsCard(
                                 light = false,
                                 trip = trip,
@@ -686,6 +827,9 @@ fun driverHomeScreen(navController: NavController) {
                                 onTripAccepted = {
                                     mapStateViewModel.enableTracking()
                                     accepttrip.acceptTrip()
+                                    sharedPreferences.edit().putString("active_trip_id", trip._id).apply()
+
+
                                     stateTripViewModel.setAccepted()
                                   tripDetailsViewModel.setTripId(trip._id)
                                     tripId = trip._id
@@ -694,7 +838,7 @@ fun driverHomeScreen(navController: NavController) {
                                     tripViewModel2.setTripDetails(trip.origin, trip.destination)
                                     Log.d("TripDetails", "${trip.origin} ${trip.destination}")
                                     stateTripViewModel.setStart(false)
-
+// خزّن الـ tripId
                                     availableTrips = availableTrips.filter { it._id != trip._id }
                                     CoroutineScope(Dispatchers.IO).launch {
                                         if (token != null) {
@@ -707,6 +851,10 @@ fun driverHomeScreen(navController: NavController) {
                                                 ),
                                                 directionsViewModel = directionsViewModel,
                                                 onSuccess = { directionsResponse ->
+
+
+                                                    sharedPreferences.edit().putString("active_trip_id", trip._id).apply()
+
                                                     Log.d(
                                                         "TripDirections",
                                                         "Successfully fetched directions: $directionsResponse"
@@ -797,7 +945,7 @@ fun driverHomeScreen(navController: NavController) {
                         Box(
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
-                                .padding(top = 270.dp, end = 16.dp)
+                                .padding(top = 500.dp, end = 16.dp)
                         ) {
                             Button(
                                 onClick = {
@@ -823,7 +971,7 @@ fun driverHomeScreen(navController: NavController) {
                         Box(
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
-                                .padding(top = 270.dp, end = 16.dp)
+                                .padding(top = 500.dp, end = 16.dp)
                         ) {
                             Button(
                                 onClick = {
@@ -866,7 +1014,7 @@ fun driverHomeScreen(navController: NavController) {
                 }
             }
 
-            if (!tripState.isAccepted) {
+            if (!tripState.isAccepted && !tripState.inProgress) {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -894,7 +1042,7 @@ fun driverHomeScreen(navController: NavController) {
                     mapchangetoInPrograss = { mapStateViewModel.startTrip() },
                     onTripStarted = { accepttrip.startTrip() },
                     passengerName = passengerName ?: "Loading",
-                    rating = rating!!.toString(),
+                    rating = rating.toString()?:"",
                     userId2 = passengerID
                 )
             }
@@ -919,6 +1067,8 @@ fun driverHomeScreen(navController: NavController) {
                             .show()
                     },
                     onclick = {
+                        sharedPreferences.edit().remove("active_trip_id").apply()
+
                         storedPoints = null
                         stateTripViewModel.resetAll()
                         navController.navigate(Destination.DriverHomeScreen.route) {
@@ -933,6 +1083,8 @@ fun driverHomeScreen(navController: NavController) {
             if (showCancellationDialog) {
                 AlertDialog(
                     onDismissRequest = {
+                        sharedPreferences.edit().remove("active_trip_id").apply()
+
                         storedPoints=null
 
                         showCancellationDialog = false
@@ -952,6 +1104,8 @@ fun driverHomeScreen(navController: NavController) {
                     confirmButton = {
                         Button(
                             onClick = {
+                                sharedPreferences.edit().remove("active_trip_id").apply()
+
                                 storedPoints=null
 
                                 showCancellationDialog = false
