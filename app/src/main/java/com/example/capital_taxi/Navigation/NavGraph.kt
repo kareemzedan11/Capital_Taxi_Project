@@ -13,6 +13,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.example.capital_taxi.Presentation.ui.Driver.Screens.DriverPhotoValidationScreen
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.HelpScreen.DriverHelpScreen
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.drawerTabs.Inbox.InboxPage
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.drawerTabs.income.IncomePage
@@ -164,6 +165,12 @@ fun AppNavGraph(navController: NavHostController) {
         composable(Destination.CapitalTaxiChatScreen.route) {
             CapitalTaxiChatScreen(navController)
         }
+            composable(Destination.DriverPhotoValidationScreen.route) {
+                DriverPhotoValidationScreen(
+                    navController,
+                    onValidationComplete = {}
+                )
+            }
         composable(Destination.HelpScreen.route) {
             HelpScreen(navController)
         }

@@ -1,11 +1,8 @@
 package com.example.capital_taxi.utils
 
-import android.Manifest
-import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.location.Location
-import android.os.Looper
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
@@ -14,7 +11,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import com.example.capital_taxi.R
-import com.google.android.gms.location.*
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapListener
@@ -24,28 +20,17 @@ import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import java.lang.Math.toDegrees
+import java.lang.Math.toRadians
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
-
-fun calculateBearing(startPoint: GeoPoint, endPoint: GeoPoint): Double {
-    val startLocation = Location("").apply {
-        latitude = startPoint.latitude
-        longitude = startPoint.longitude
-    }
-    val endLocation = Location("").apply {
-        latitude = endPoint.latitude
-        longitude = endPoint.longitude
-    }
-    return startLocation.bearingTo(endLocation).toDouble()
-}
 
 fun interpolateLocation(start: GeoPoint, end: GeoPoint, fraction: Float): GeoPoint {
     val lat = (end.latitude - start.latitude) * fraction + start.latitude
     val lon = (end.longitude - start.longitude) * fraction + start.longitude
     return GeoPoint(lat, lon)
 }
-
 
 @Composable
 fun DriverMapView(
@@ -65,7 +50,7 @@ fun DriverMapView(
     var cameraMovedByUser by remember { mutableStateOf(false) }
 
     fun calculateDistance(loc1: GeoPoint, loc2: GeoPoint): Double {
-        val results = FloatArray(3)
+        val results = FloatArray(1)
         Location.distanceBetween(
             loc1.latitude, loc1.longitude,
             loc2.latitude, loc2.longitude,
@@ -74,11 +59,44 @@ fun DriverMapView(
         return results[0].toDouble()
     }
 
+    fun calculateBearing(start: GeoPoint, end: GeoPoint): Double {
+        val lat1 = Math.toRadians(start.latitude)
+        val lon1 = Math.toRadians(start.longitude)
+        val lat2 = Math.toRadians(end.latitude)
+        val lon2 = Math.toRadians(end.longitude)
+
+        val dLon = lon2 - lon1
+        val y = sin(dLon) * cos(lat2)
+        val x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon)
+        return (Math.toDegrees(atan2(y, x)) + 360) % 360
+    }
+
     LaunchedEffect(currentLocation, previousLocation) {
         if (currentLocation != null && previousLocation != null && currentLocation != previousLocation) {
             val distance = calculateDistance(previousLocation, currentLocation)
-            if (distance > 1.0) {
-                val newBearing = calculateBearing(previousLocation, currentLocation).toFloat()
+            if (distance > 2.5) {
+                val rawBearing = calculateBearing(previousLocation, currentLocation).toFloat()
+
+                // تدوير ناعم مثل rotateMarker
+                val startRotation = animatedBearing.value
+                val endRotation = rawBearing
+
+                launch {
+                    animate(
+                        initialValue = 0f,
+                        targetValue = 1f,
+                        animationSpec = tween(durationMillis = 800, easing = LinearEasing)
+                    ) { value, _ ->
+                        val rotation = (1 - value) * startRotation + value * endRotation
+                        launch {
+                            animatedBearing.animateTo(
+                                targetValue = rawBearing,
+                                animationSpec = tween(durationMillis = 800, easing = LinearEasing)
+                            )
+                        }
+
+                    }
+                }
 
                 animationProgress.snapTo(0f)
                 animatedPosition.value = previousLocation
@@ -86,26 +104,12 @@ fun DriverMapView(
                 launch {
                     animationProgress.animateTo(
                         targetValue = 1f,
-                        animationSpec = tween(durationMillis = 1900, easing = LinearEasing)
+                        animationSpec = tween(durationMillis = 1800, easing = LinearEasing)
                     )
                     animatedPosition.value = currentLocation
                 }
 
-                launch {
-                    val currentRotation = animatedBearing.value
-                    var delta = newBearing - currentRotation
-                    delta = (delta + 180) % 360 - 180
-                    val targetRotation = currentRotation + delta
-
-                    animatedBearing.animateTo(
-                        targetValue = targetRotation,
-                        animationSpec = tween(durationMillis = 500, easing = LinearOutSlowInEasing)
-                    )
-                }
-
                 cameraMovedByUser = false
-            } else {
-                animatedPosition.value = currentLocation
             }
         } else if (currentLocation != null && animatedPosition.value == null) {
             animatedPosition.value = currentLocation
@@ -157,14 +161,15 @@ fun DriverMapView(
                 val driverMarker = Marker(map).apply {
                     position = location
 
-                    // Resize the icon manually
                     val originalDrawable = ContextCompat.getDrawable(context, R.drawable.ic_car)
                     val bitmap = (originalDrawable as BitmapDrawable).bitmap
-                    val scaledBitmap = Bitmap.createScaledBitmap(bitmap, 70, 70, true) // حجم صغير جدًا
+                    val scaledBitmap = Bitmap.createScaledBitmap(bitmap, 70, 70, true)
 
                     icon = BitmapDrawable(context.resources, scaledBitmap)
 
-                    rotation = animatedBearing.value
+                    // تصحيح الاتجاه (لو الأيقونة وشها يمين)
+                    rotation = -animatedBearing.value
+
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                     infoWindow = null
                 }
@@ -175,6 +180,7 @@ fun DriverMapView(
                     map.controller.animateTo(location)
                 }
             }
+
             map.invalidate()
         }
     )

@@ -204,7 +204,7 @@ fun DriverDocumentCaptureSection(title: String, capturedBitmap: MutableState<Bit
                 )
             } else {
                 Image(
-                    painter = painterResource(R.drawable.message),
+                    painter = painterResource(R.drawable.baseline_camera_alt_24),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
@@ -215,8 +215,8 @@ fun DriverDocumentCaptureSection(title: String, capturedBitmap: MutableState<Bit
         Button(
             onClick = { captureLauncher.launch(null) },
             modifier = Modifier
-                .width(200.dp)
-                .height(50.dp),
+                .width(215.dp)
+                .height(70.dp),
             shape = RoundedCornerShape(10.dp)
         ) {
             Text(text = "Capture $title", fontSize = 16.sp)

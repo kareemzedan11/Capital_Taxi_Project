@@ -11,6 +11,7 @@ import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -23,8 +24,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import calculateBearing
 import com.example.capital_taxi.R
 import com.example.myapplication.interpolateLocation
-import com.google.android.gms.maps.model.LatLng
-import com.google.maps.android.SphericalUtil
 import findNearestIndex
 import kotlinx.coroutines.launch
 import org.osmdroid.events.MapListener
@@ -35,12 +34,9 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
-import updateCarMarkerSmoothly
 
 
 // Your custom imports
-
-@SuppressLint("RememberReturnType")
 @Composable
 fun InProgressMap(
     currentLocation: GeoPoint? = null,
@@ -50,13 +46,40 @@ fun InProgressMap(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+
     val animatedBearing = remember { Animatable(0f) }
     val animatedPosition = remember { mutableStateOf<GeoPoint?>(null) }
     val animationProgress = remember { Animatable(0f) }
     var cameraMovedByUser by remember { mutableStateOf(false) }
 
-    val mapView = remember { MapView(context) }
+    // إنشاء mapView وحفظه مع التنظيف عند إلغاء التركيب
+    val mapView = remember {
+        MapView(context).apply {
+            setTileSource(TileSourceFactory.MAPNIK)
+            setMultiTouchControls(true)
+            controller.setZoom(16.0)
+        }
+    }
+    DisposableEffect(Unit) {
+        val listener = object : MapListener {
+            override fun onScroll(event: ScrollEvent?): Boolean {
+                cameraMovedByUser = true
+                return true
+            }
+            override fun onZoom(event: ZoomEvent?): Boolean {
+                cameraMovedByUser = true
+                return true
+            }
+        }
+        mapView.addMapListener(listener)
 
+        onDispose {
+            mapView.removeMapListener(listener)
+            mapView.onDetach() // تنظيف MapView
+        }
+    }
+
+    // وظيفة لحساب المسافة (ممكن تنقلها خارج)
     fun calculateDistance(loc1: GeoPoint, loc2: GeoPoint): Double {
         val results = FloatArray(1)
         Location.distanceBetween(
@@ -120,23 +143,7 @@ fun InProgressMap(
     }
 
     AndroidView(
-        factory = { mapView.apply {
-            setTileSource(TileSourceFactory.MAPNIK)
-            setMultiTouchControls(true)
-            controller.setZoom(16.0)
-
-            addMapListener(object : MapListener {
-                override fun onScroll(event: ScrollEvent?) = run {
-                    cameraMovedByUser = true
-                    true
-                }
-
-                override fun onZoom(event: ZoomEvent?) = run {
-                    cameraMovedByUser = true
-                    true
-                }
-            })
-        }},
+        factory = { mapView },
         update = { map ->
             map.overlays.clear()
 
@@ -150,7 +157,7 @@ fun InProgressMap(
                 val driverMarker = Marker(map).apply {
                     position = pos
                     icon = scaledDrawable
-                    rotation = animatedBearing.value
+                    rotation = -animatedBearing.value // التدوير معكوس في OSMDroid
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                     infoWindow = null
                 }

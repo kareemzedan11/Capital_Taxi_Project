@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -46,6 +47,19 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+fun getColorFromString(colorName: String): Color {
+    return when (colorName.lowercase()) {
+        "red" -> Color.Red
+        "blue" -> Color.Blue
+        "black" -> Color.Black
+        "white" -> Color.White
+        "gray", "grey" -> Color.Gray
+        "green" -> Color.Green
+        "yellow" -> Color.Yellow
+        "orange" -> Color(0xFFFFA500)
+        else -> Color.Gray
+    }
+}
 
 @Composable
 fun RideDetailsBottomSheetContent(
@@ -59,6 +73,7 @@ fun RideDetailsBottomSheetContent(
     val driverRating = remember { mutableStateOf<Double?>(null) }
     val carColor = remember { mutableStateOf("") }
     val tripsCount = remember { mutableStateOf(0) }
+    val carColor2 = getColorFromString(carColor.value)
 
     LaunchedEffect(tripid) {
         fetchDriverCarDetails(
@@ -145,12 +160,14 @@ fun RideDetailsBottomSheetContent(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+
                             Image(
                                 painter = painterResource(R.drawable.uber),
                                 contentDescription = "car image",
                                 modifier = Modifier
                                     .size(160.dp)
-                                    .clip(RoundedCornerShape(12.dp))
+                                    .clip(RoundedCornerShape(12.dp)),
+                                colorFilter = ColorFilter.tint(carColor2)
                             )
 
                             Spacer(modifier = Modifier.weight(1f))
