@@ -12,6 +12,7 @@ import com.example.capital_taxi.domain.TripResponse
 import com.google.firebase.crashlytics.buildtools.reloc.com.google.common.reflect.TypeToken
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.GeoPoint
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -111,30 +112,31 @@ class TripViewModel : ViewModel() {
     }
 
 
-
-    fun fetchTripsFromFirestore(
+    fun observePendingTrips(
         driverId: String,
-        onSuccess: (List<Trip>) -> Unit,
+        onUpdate: (List<Trip>) -> Unit,
         onError: (String) -> Unit
-    ) {
+    ): ListenerRegistration {
         val db = FirebaseFirestore.getInstance()
 
-        db.collection("trips")
+        return db.collection("trips")
             .whereEqualTo("status", "pending")
-            .get()
-            .addOnSuccessListener { documents ->
-                val trips = documents.mapNotNull { doc ->
-                    val trip = doc.toObject(Trip::class.java)
-                    // افترض أن لديك حقل اسمه cancelledByDrivers في الموديل من نوع List<String>
-                    val cancelled = trip.cancelledByDrivers ?: emptyList()
-                    if (!cancelled.contains(driverId)) trip else null
+            .addSnapshotListener { snapshots, error ->
+                if (error != null) {
+                    onError(error.message ?: "خطأ غير معروف")
+                    return@addSnapshotListener
                 }
-                onSuccess(trips)
-            }
-            .addOnFailureListener { e ->
-                onError(e.message ?: "خطأ غير معروف")
+
+                val trips = snapshots?.documents?.mapNotNull { doc ->
+                    val trip = doc.toObject(Trip::class.java)
+                    val cancelled = trip?.cancelledByDrivers ?: emptyList()
+                    if (trip != null && !cancelled.contains(driverId)) trip else null
+                } ?: emptyList()
+
+                onUpdate(trips)
             }
     }
+
 
 
     var responseMessage = mutableStateOf("")

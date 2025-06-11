@@ -279,6 +279,8 @@ sealed class ApiResponse<out T> {
     data class Error(val message: String) : ApiResponse<Nothing>()
     object Loading : ApiResponse<Nothing>()
 }
+
+
 fun calculateFare(
     origin: Location,
     destination: Location,
@@ -289,7 +291,7 @@ fun calculateFare(
     onSuccess: (List<VehicleOption>) -> Unit,
     onError: (String) -> Unit
 ) {
-    fareViewModel.startLoading() // 🔄 بدء التحميل
+    fareViewModel.startLoading()
 
     coroutineScope.launch {
         try {
@@ -305,10 +307,10 @@ fun calculateFare(
 
             if (response.isSuccessful) {
                 response.body()?.let { fareResponse ->
-                    // ✅ تحديث ViewModel
+
                     fareViewModel.setFare(fareResponse.fare)
 
-                    // إنشاء قائمة المركبات
+
                     val updatedVehicleOptions = createVehicleOptions(fareResponse.fare)
                     onSuccess(updatedVehicleOptions)
                 } ?: run {

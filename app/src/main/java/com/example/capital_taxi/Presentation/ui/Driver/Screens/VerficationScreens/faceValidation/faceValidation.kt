@@ -303,6 +303,29 @@ fun DocumentButton(
                 fontFamily = CustomFontFamily,
             )
         }
+        Spacer(modifier = Modifier.height(30.dp))
+
+        Button(
+            onClick = {
+                // التنقل إلى الشاشة التالية أو تنفيذ الإجراء المناسب
+            },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color.Black,
+                contentColor = Color.White
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .height(50.dp),
+            shape = RoundedCornerShape(10.dp)
+        ) {
+            Text(
+                text = "Continue", // تأكد من إضافة هذا النص في ملفات string.xml
+                fontSize = responsiveTextSize(fraction = 0.06f, minSize = 14.sp, maxSize = 18.sp),
+                fontFamily = CustomFontFamily,
+                fontWeight = FontWeight.Bold
+            )
+        }
 
     }
 }

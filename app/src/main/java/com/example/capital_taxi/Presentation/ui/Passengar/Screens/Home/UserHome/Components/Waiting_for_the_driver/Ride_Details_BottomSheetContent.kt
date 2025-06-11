@@ -167,7 +167,7 @@ fun RideDetailsBottomSheetContent(
                                 modifier = Modifier
                                     .size(160.dp)
                                     .clip(RoundedCornerShape(12.dp)),
-                                colorFilter = ColorFilter.tint(carColor2)
+
                             )
 
                             Spacer(modifier = Modifier.weight(1f))

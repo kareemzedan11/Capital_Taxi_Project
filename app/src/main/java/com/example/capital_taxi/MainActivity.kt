@@ -32,8 +32,7 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.core.content.ContextCompat.startActivity
 import com.example.capital_taxi.utils.NetworkMonitor
-import io.github.jan.supabase.SupabaseClient
-import io.github.jan.supabase.createSupabaseClient
+
 
 
 class MainActivity : ComponentActivity() {

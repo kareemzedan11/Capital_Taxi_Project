@@ -2,6 +2,7 @@ package com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components
 
 import androidx.compose.runtime.Composable
 import android.Manifest
+import android.annotation.SuppressLint
 import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -42,8 +43,13 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 
 
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.Snackbar
+
 import android.location.Location
 import android.media.MediaPlayer
+import android.net.ConnectivityManager
+import android.widget.Toast
 import androidx.annotation.OptIn
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.rememberScrollState
@@ -68,9 +74,17 @@ import com.google.android.gms.location.LocationServices
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import org.osmdroid.util.GeoPoint
 import java.io.IOException
 import java.util.Locale
+@SuppressLint("ServiceCast")
+fun isInternetAvailable(context: Context): Boolean {
+    val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    val activeNetwork = cm.activeNetworkInfo
+    return activeNetwork != null && activeNetwork.isConnected
+}
 
 @OptIn(UnstableApi::class)
 @Composable
@@ -92,6 +106,7 @@ fun TripDetailsCard(
     val trip = availableTrips.first()
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
 
     // متغيرات لإدارة الرسالة الوامضة
     var isMessageBlinking by remember { mutableStateOf(false) }
@@ -153,26 +168,7 @@ fun TripDetailsCard(
                 .fillMaxWidth()
                 .background(Color.White)
         ) {
-            // تأثير الوميض للخلفية
-            var blinkState by remember { mutableStateOf(true) }
-            LaunchedEffect(Unit) {
-                while (true) {
-                    blinkState = !blinkState
-                    delay(700L)
-                }
-            }
 
-            if (light) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight(.7f)
-                        .fillMaxWidth()
-                        .background(
-                            color = if (blinkState) colorResource(R.color.secondary_color) else Color.Transparent,
-                            shape = RoundedCornerShape(16.dp)
-                        )
-                )
-            }
 
             Column(
                 modifier = Modifier
@@ -344,77 +340,79 @@ fun TripDetailsCard(
 
 
 
+                val snackbarHostState = remember { SnackbarHostState() }
+                val coroutineScope = rememberCoroutineScope()
 
 
                 val instructionState = remember { mutableStateOf<Instruction?>(null) }
+                val isLoading = remember { mutableStateOf(false) }
 
                 Button(
                     onClick = {
-                        val fusedLocationClient =
-                            LocationServices.getFusedLocationProviderClient(context)
-                        val permissionGranted = ContextCompat.checkSelfPermission(
-                            context, Manifest.permission.ACCESS_FINE_LOCATION
-                        ) == PackageManager.PERMISSION_GRANTED
-
-                        if (permissionGranted) {
-                            val locationRequest = LocationRequest.create().apply {
-                                priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-                                interval = 10000 // 10 seconds
-                                fastestInterval = 5000 // 5 seconds
+                        if (!isInternetAvailable(context)) {
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar("لا يوجد اتصال بالإنترنت")
                             }
+                            return@Button
                         }
 
-                        // تخصيص السائق للرحلة
-                        assignDriver(
-                            tripId = trip._id,
-                            driverId = driver_id,
-                            token = authToken,
-                            coroutineScope = coroutineScope,
-                            onSuccess = {
+                        isLoading.value = true
 
-
-                                StatusTripViewModel.updateTripId(trip._id, "accepted")
-                                Log.d("TripDetailsCard", "✅ Driver assigned successfully")
-                            },
-                            onError = { errorMessage ->
-                                Log.e("TripDetailsCard", "❌ Error assigning driver: $errorMessage")
-                            }
-                        )
-                        getInstructionsFromFirebase(trip._id) { instructions ->
-                            if (instructions != null) {
-                                instructions.forEach {
-                                    Log.d("INSTRUCTION", it.text)
-                                }
-
-                                // مثلاً: خزن أول Instruction في State لعرضها في الواجهة
-                                instructionState.value = instructions.firstOrNull()
-                            } else {
-                                Log.e("INSTRUCTION", "Failed to get instructions")
-                            }
-                        }
-
-                        // قبول الرحلة
                         tripViewModel.acceptTrip(
                             trip._id,
                             onSuccess = {
-                                onTripAccepted()
-                                startUpdatingDriverLocation(trip._id, driver_id, context)
+                                updateTripStatusInFirestore(
+                                    trip._id, "accepted",
+                                    onSuccess = {
+                                        startUpdatingDriverLocation(trip._id, driver_id, context)
+                                        isLoading.value = false
+                                        onTripAccepted()
+                                    },
+                                    onError = { error ->
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar("فشل في قبول الرحلة: ${error.message}")
+                                        }
+                                        isLoading.value = false
+                                    }
+                                )
                             },
-                            onError = { Log.e("TripDetailsCard", "❌ Error accepting trip: $it") }
+                            onError = { error ->
+                                val errorMessage = error.toString() ?: "خطأ غير معروف"
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        message = "فشل في قبول الرحلة: $errorMessage",
+                                        duration = SnackbarDuration.Short
+                                    )
+                                }
+
+
+
+
+                                isLoading.value = false
+                            }
                         )
                     },
-                    modifier = Modifier
+                            modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),
+                    enabled = !isLoading.value,
                     colors = ButtonDefaults.buttonColors(colorResource(R.color.primary_color)),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text(text = "Accept Trip", color = Color.White, fontSize = 16.sp)
+                    if (isLoading.value) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(text = "Accept Trip", color = Color.White, fontSize = 16.sp)
+                    }
                 }
 
 
-                // Cancel Trip Button
-                // Inside the TripDetailsCard Composable
+
+
                 Button(
                     onClick = {
                         onTripCancelled()
@@ -638,6 +636,7 @@ fun RidePointDetails(
             }
         }
     }
+
 }
 
 
@@ -658,4 +657,43 @@ class StatusTripViewModel : ViewModel() {
     fun updateTripStatus(newStatus: String) {
         _tripStatus.value = newStatus
     }
+}
+
+fun updateTripStatusInFirestore(
+    tripId: String,
+    status: String,
+    onSuccess: () -> Unit,
+    onError: (Exception) -> Unit
+) {
+    val db = FirebaseFirestore.getInstance()
+    val tripsRef = db.collection("trips")
+
+    tripsRef.whereEqualTo("_id", tripId).limit(1).get()
+        .addOnSuccessListener { documents ->
+            if (documents.isEmpty) {
+                onError(Exception("Trip not found"))
+                return@addOnSuccessListener
+            }
+
+            val total = documents.size()
+            var successCount = 0
+            var failed = false
+
+            for (doc in documents) {
+                tripsRef.document(doc.id).update("status", status)
+                    .addOnSuccessListener {
+                        successCount++
+                        if (successCount == total && !failed) {
+                            onSuccess() // كل المستندات اتحدثت بنجاح
+                        }
+                    }
+                    .addOnFailureListener { e ->
+                        if (!failed) {
+                            failed = true
+                            onError(e) // أول خطأ يحصل
+                        }
+                    }
+            }
+        }
+        .addOnFailureListener { e -> onError(e) }
 }

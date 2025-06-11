@@ -58,220 +58,112 @@ import com.example.capital_taxi.Navigation.Destination
 import com.example.capital_taxi.Presentation.Common.ForgetPassword
 import com.example.capital_taxi.Presentation.Common.userMediaLoginOption
 import com.example.capital_taxi.Presentation.Common.LoginForm
+import com.example.capital_taxi.Presentation.ui.Driver.viewmodel.DriverLoginViewModel
 import com.example.capital_taxi.R
 
-import com.google.firebase.Firebase
-import com.google.firebase.database.database
+
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 
-import com.google.firebase.firestore.SetOptions
-import com.google.firebase.firestore.firestore
-import com.google.firebase.messaging.FirebaseMessaging
-import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.tasks.await
 import org.json.JSONObject
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
-import java.io.File
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun driverLoginContent(
-
     navController: NavController
 ) {
+    val viewModel: DriverLoginViewModel = viewModel()
     val permissionViewModel: PermissionViewModel = viewModel()
 
-
     val context = LocalContext.current
-
-    // تأكد من التحقق من الصلاحية عند تحميل الشاشة
-    LaunchedEffect(context) {
-        checkLocationPermission(context, permissionViewModel)
-    }
-
     val isLocationGranted by permissionViewModel.isLocationGranted.collectAsState()
-    var loginError by remember { mutableStateOf<String?>(null) }
-    var isLoading by remember { mutableStateOf(false) }
+    val loginSuccess by viewModel.loginSuccess.collectAsState()
 
-    // SharedPreferences for storing token
-    val sharedPreferences: SharedPreferences = context.getSharedPreferences("your_prefs", Context.MODE_PRIVATE)
-    val editor: SharedPreferences.Editor = sharedPreferences.edit()
-
-
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var passwordVisible by remember { mutableStateOf(false) }
-    LaunchedEffect(isLoading) {
-        if (isLoading) {
-            val role = "driver"
-            val request = LoginRequest(email, password, role)
-
-            try {
-                val response = LoginApiClient.loginApiService.loginuser(request)
-                if (response.isSuccessful) {
-                    val responseBody = response.body()
-                    val token = responseBody?.token
-                    val userId = responseBody?.account?.userId
-
-                    if (token != null && userId != null) {
-                        // 1. حفظ بيانات تسجيل الدخول في SharedPreferences
-                        editor.putString("driver_token", token)
-                        editor.putString("driver_id", userId)
-                        editor.putString("user_type", "driver") // أو "rider"
-
-                        editor.apply()
-
-                        // 2. الحصول على ملفات السائق من SharedPreferences
-                        val sharedPref = context.getSharedPreferences("DriverDocuments", Context.MODE_PRIVATE)
-                        val updates = hashMapOf<String, Any>(
-                            "id" to userId,
-                            "updatedAt" to FieldValue.serverTimestamp()
-                        )
-
-
-
-                        // 4. البحث عن السائق في Firebase وتحديث بياناته
-                        val db = FirebaseFirestore.getInstance()
-                        val driverRef = db.collection("drivers")
-                            .whereEqualTo("email", email)
-                            .get()
-                            .await()
-
-                        if (!driverRef.isEmpty) {
-                            val driverDoc = driverRef.documents[0]
-
-                            // 5. تنفيذ التحديث
-                            driverDoc.reference.update(updates)
-                                .addOnSuccessListener {
-                                    Log.d("Login", "✅ تم تحديث بيانات السائق بنجاح")
-
-                                    // 6. مسح بيانات SharedPreferences بعد التحديث
-                                    with(sharedPref.edit()) {
-                                        clear()
-                                        apply()
-                                    }
-
-                                    // 7. الانتقال إلى الشاشة الرئيسية
-                                    navController.navigate(Destination.DriverHomeScreen.route) {
-                                        popUpTo(0) { inclusive = true } // تمسح كل الـ backstack
-                                    }
-
-                                }
-                                .addOnFailureListener { e ->
-                                    Log.e("Login", "❌ فشل تحديث بيانات السائق: ${e.message}")
-                                    loginError = "⚠️ فشل في تحديث بيانات السائق"
-                                }
-                        } else {
-                            Log.e("Login", "❌ لم يتم العثور على مستند السائق")
-                            loginError = "⚠️ لا يوجد حساب سائق مسجل بهذا البريد"
-                        }
-                    } else {
-                        loginError = "🚨 لم يتم استلام التوكن أو معرف المستخدم من السيرفر"
-                    }
-                } else {
-                    loginError = response.errorBody()?.string()?.let {
-                        try {
-                            JSONObject(it).getString("message")
-                        } catch (e: Exception) {
-                            response.message()
-                        }
-                    } ?: response.message()
-                }
-            } catch (e: Exception) {
-                loginError = "⚠️ حدث خطأ أثناء تسجيل الدخول: ${e.localizedMessage}"
-                Log.e("Login", "Exception: ${e.stackTraceToString()}")
-            } finally {
-                isLoading = false
+    // عند تسجيل الدخول بنجاح
+    LaunchedEffect(loginSuccess) {
+        if (loginSuccess) {
+            navController.navigate(Destination.DriverHomeScreen.route) {
+                popUpTo(0) { inclusive = true }
             }
         }
     }
 
-
-
+    // فحص الصلاحيات
+    LaunchedEffect(context) {
+        checkLocationPermission(context, permissionViewModel)
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
 
-
         Text(
             text = stringResource(R.string.signin),
-            fontSize = responsiveTextSize(fraction = 0.06f, minSize = 20.sp, maxSize = 32.sp),
-
+            fontSize = responsiveTextSize(0.06f, 20.sp, 32.sp),
             fontFamily = CustomFontFamily,
             fontWeight = FontWeight.Bold,
-            color = Color.Black,
-            style = MaterialTheme.typography.headlineMedium
+            color = Color.Black
         )
 
         Spacer(modifier = Modifier.height(40.dp))
+
         LoginForm(
-            email = email,
-            password = password,
-            onEmailChange = { email = it },
-            onPasswordChange = { password = it },
-            passwordVisible = passwordVisible,
-            onPasswordToggle = { passwordVisible = !passwordVisible }
+            email = viewModel.email,
+            password = viewModel.password,
+            onEmailChange = { viewModel.email = it },
+            onPasswordChange = { viewModel.password = it },
+            passwordVisible = viewModel.passwordVisible,
+            onPasswordToggle = { viewModel.passwordVisible = !viewModel.passwordVisible }
         )
 
         Spacer(modifier = Modifier.height(16.dp))
+
         Box(modifier = Modifier.align(alignment = Alignment.End)) {
             ForgetPassword(navController)
         }
+
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
             onClick = {
                 if (isLocationGranted) {
-                    // Start the login process when the button is clicked
-                    isLoading = true
+                    viewModel.onLogin(navController)
                 } else {
                     navController.navigate(Destination.searchForLocation.route)
                 }
-
-
             },
             modifier = Modifier
                 .fillMaxWidth()
-
-
                 .height(60.dp),
             colors = ButtonDefaults.buttonColors(colorResource(R.color.primary_color)),
             shape = RoundedCornerShape(8.dp)
-
-
         ) {
             Text(
                 text = stringResource(R.string.signin),
-                fontSize = responsiveTextSize(fraction = 0.06f, minSize = 14.sp, maxSize = 18.sp),
-
-
+                fontSize = responsiveTextSize(0.06f, 14.sp, 18.sp),
                 fontFamily = CustomFontFamily,
                 color = Color.Black
             )
-
         }
 
-        // Show loading indicator while isLoading is true
-        if (isLoading) {
+        if (viewModel.isLoading) {
             CircularProgressIndicator()
         }
 
-        if (loginError != null) {
-            // Show error message if login fails
+        if (viewModel.loginError != null) {
             Text(
-                text = loginError ?: "",
+                text = viewModel.loginError ?: "",
                 color = Color.Red,
                 fontSize = 14.sp,
                 modifier = Modifier.padding(top = 8.dp)
@@ -280,41 +172,33 @@ fun driverLoginContent(
 
         Spacer(modifier = Modifier.height(60.dp))
 
-
         Text(
             text = stringResource(R.string.sign_in_with),
             color = Color.Black,
-            fontSize = responsiveTextSize(fraction = 0.06f, minSize = 14.sp, maxSize = 20.sp),
-
+            fontSize = responsiveTextSize(0.06f, 14.sp, 20.sp),
             fontFamily = CustomFontFamily,
             fontWeight = FontWeight.Bold
         )
 
         Spacer(modifier = Modifier.height(40.dp))
+
         userMediaLoginOption()
 
         Spacer(modifier = Modifier.height(60.dp))
 
-        // SignUp Text
         Row {
             Text(
                 text = stringResource(id = R.string.Dont_have_an_account),
-                fontSize = responsiveTextSize(fraction = 0.06f, minSize = 14.sp, maxSize = 20.sp),
-
-
-
-                fontFamily = CustomFontFamily,
-                )
+                fontSize = responsiveTextSize(0.06f, 14.sp, 20.sp),
+                fontFamily = CustomFontFamily
+            )
 
             Spacer(modifier = Modifier.width(4.dp))
 
             Text(
                 text = stringResource(id = R.string.SignUp),
                 color = colorResource(R.color.primary_color),
-                fontSize = responsiveTextSize(fraction = 0.06f, minSize = 14.sp, maxSize = 20.sp),
-
-
-
+                fontSize = responsiveTextSize(0.06f, 14.sp, 20.sp),
                 fontFamily = CustomFontFamily,
                 modifier = Modifier.clickable {
                     navController.navigate(Destination.driverSignUp.route)
@@ -322,7 +206,7 @@ fun driverLoginContent(
             )
         }
     }
-}    // ✅ تحديث FCM Token في Firestore
+}
 
 @Composable
 fun driverMapViewComposable(

@@ -10,6 +10,8 @@ class MapStateViewModel : ViewModel() {
 
     private val _isTripInProgress = mutableStateOf(false)
     val isTripInProgress: State<Boolean> = _isTripInProgress
+    private val _isSearching = mutableStateOf(false)
+    val isSearching: State<Boolean> = _isSearching
 
     fun enableTracking() {
         _shouldShowTracking.value = true
@@ -21,6 +23,14 @@ class MapStateViewModel : ViewModel() {
 
     fun startTrip() {
         _isTripInProgress.value = true
+    }
+
+    fun startSearch() {
+        _isSearching.value = true
+    }
+
+    fun stopSearch() {
+        _isSearching.value = false
     }
 
     fun endTrip() {

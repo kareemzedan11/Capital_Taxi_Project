@@ -65,6 +65,9 @@ driverId:String?=null ,
 
     var distance by rememberSaveable { mutableStateOf<Double?>(null) }
     var duration by rememberSaveable { mutableStateOf<Double?>(null) }
+
+    var origin by rememberSaveable { mutableStateOf<String?>(null) }
+    var destination by rememberSaveable { mutableStateOf<String?>(null) }
     val bottomSheetState = rememberModalBottomSheetState(initialValue = ModalBottomSheetValue.Hidden)
     val scope = rememberCoroutineScope()
     // Firebase Firestore
@@ -109,8 +112,11 @@ driverId:String?=null ,
                         distance = it["distance"] as? Double
                         val durationValue = it["time"] as? Long ?: 0L
                         duration = durationValue.toDouble() / 1000.0  // تحويل من milliseconds إلى seconds
-
+                        origin = it["origin"] as? String
+                        destination = it["destination"] as? String
                         Log.d("Firebase", "Data updated: Distance = $distance, Duration = $duration")
+                        Log.d("origin", "origin= $origin, destination = $destination")
+
                     }
                 }
             }
@@ -177,6 +183,8 @@ driverId:String?=null ,
                             passengerName = passengerName,
                             userId2 =userId2 ,
                             rating = rating,
+                            origin = origin,
+                            destination = destination,
 
                         )
 

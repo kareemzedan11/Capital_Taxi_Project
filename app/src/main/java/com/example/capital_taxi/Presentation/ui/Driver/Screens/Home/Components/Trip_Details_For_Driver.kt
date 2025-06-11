@@ -94,6 +94,8 @@ fun TripDetailsForDriver(navController: NavController,
                          userId: String?=null,
 
                          userId2: String?=null,
+                         origin:String ?=null ,
+                         destination: String ?= null ,
 
                          menu_close: suspend  () -> Unit) {
 
@@ -125,29 +127,8 @@ fun TripDetailsForDriver(navController: NavController,
 
     val sharedPref = context.getSharedPreferences("trip_prefs", Context.MODE_PRIVATE)
 
-    var origin by remember { mutableStateOf(sharedPref.getString("origin", "") ?: "") }
-    var destination by remember { mutableStateOf(sharedPref.getString("destination", "") ?: "") }
-
     val tripViewModel: dataTripViewModel = viewModel()
 
-// لما القيم تتغير في الـ ViewModel، احفظها مرة واحدة بس لو مش محفوظة
-    LaunchedEffect(origin, destination) {
-        tripViewModel.origin.collectLatest { value ->
-            if (value.isNotBlank() && origin.isBlank()) {
-                origin = value
-                sharedPref.edit().putString("origin", value).apply()
-            }
-        }
-    }
-
-    LaunchedEffect(origin, destination) {
-        tripViewModel.destination.collectLatest { value ->
-            if (value.isNotBlank() && destination.isBlank()) {
-                destination = value
-                sharedPref.edit().putString("destination", value).apply()
-            }
-        }
-    }
 
     if (showBottomSheet) {
         ModalBottomSheet(
@@ -265,8 +246,8 @@ fun TripDetailsForDriver(navController: NavController,
                             RidePointDetails(
                                 Locationicon = R.drawable.circle,
                                 Destinationicon = R.drawable.travel,
-                                LocationText = origin,
-                                DestinationText = destination,
+                                LocationText = origin ?: "Loading",
+                                DestinationText = destination ?: "Loading",
                                 isDestance = false,
                                 onClick = { }
                             )

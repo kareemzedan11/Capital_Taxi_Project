@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.BottomSheetValue
@@ -52,6 +53,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.toMutableStateList
+import kotlin.math.*  // يحتوي على sin, cos, sqrt, atan2, p*
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -99,6 +102,10 @@ import java.io.IOException
 
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.rememberLottieComposition
 import com.example.capital_taxi.Helper.rating.RateDriverBottomSheet
 import com.example.capital_taxi.Helper.rating.submitRatingToFirebase
 import com.example.capital_taxi.Navigation.Destination
@@ -106,12 +113,14 @@ import com.example.capital_taxi.Presentation.ui.Driver.Components.InProgressMap
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.Home_Components.TripViewModel2
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.Home_Components.getAddressFromLatLng
 import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.updateTripStatus
+import com.example.capital_taxi.Presentation.ui.Driver.viewmodel.DriversViewModel
 import com.example.capital_taxi.Presentation.ui.Passengar.Components.StateTripViewModel
 import com.example.capital_taxi.Presentation.ui.Passengar.Components.fetchDriverInfo
 import com.example.capital_taxi.Presentation.ui.Passengar.Components.waitForDriverIdFromTrip
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.During_the_trip.DriverArrivalCard
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.During_the_trip.RideInProgressScreen
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.Trip_Rating.TripCompletedScreen
+import com.example.capital_taxi.R
 import com.example.capital_taxi.data.repository.graphhopper_response.Details
 import com.example.capital_taxi.data.repository.graphhopper_response.Hints
 import com.example.capital_taxi.data.repository.graphhopper_response.Info
@@ -120,6 +129,7 @@ import com.example.capital_taxi.data.repository.graphhopper_response.Path
 import com.example.capital_taxi.data.repository.graphhopper_response.graphhopper_response
 import com.example.capital_taxi.domain.shared.TripInfoViewModel
 import com.example.capital_taxi.domain.storedPoints
+import com.example.capital_taxi.utils.SearchMapView
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.SetOptions
 import com.google.maps.android.PolyUtil
@@ -131,6 +141,9 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import java.util.Locale
+import kotlin.math.cos
+import kotlin.math.pow
+import kotlin.math.sin
 
 private val Context.dataStore by preferencesDataStore(name = "location_prefs")
 
@@ -231,6 +244,12 @@ fun homeScreenContent(navController: NavController) {
     var tripListener by remember { mutableStateOf<ListenerRegistration?>(null) }
     val firestore = FirebaseFirestore.getInstance()
     var previousDriverLocation2 by remember { mutableStateOf<GeoPoint?>(null) }
+
+    val DriversViewModel: DriversViewModel = viewModel()
+    val coroutineScope = rememberCoroutineScope()
+
+
+    val driverLocations = DriversViewModel.driverLocations
 // Modify the state handling in LaunchedEffect
     LaunchedEffect(stateTripViewModel) {
         when {
@@ -365,8 +384,6 @@ fun homeScreenContent(navController: NavController) {
                             val status = doc.getString("status") ?: "pending"
                             if (status == "Cancelled" && !state.isCancelled) {
                                 stateTripViewModel.setCancelled()
-                                // Update the toast message to English
-                                Toast.makeText(context, "Trip cancelled by driver", Toast.LENGTH_LONG).show()
                             }
                         }
                     }
@@ -557,6 +574,21 @@ fun homeScreenContent(navController: NavController) {
     }
 
 
+    fun calculateDistanceInMeters(start: GeoPoint, end: GeoPoint): Double {
+        val R = 6371000.0 // نصف قطر الأرض بالمتر
+        val lat1 = Math.toRadians(start.latitude)
+        val lon1 = Math.toRadians(start.longitude)
+        val lat2 = Math.toRadians(end.latitude)
+        val lon2 = Math.toRadians(end.longitude)
+
+        val dLat = lat2 - lat1
+        val dLon = lon2 - lon1
+
+        val a = sin(dLat / 2).pow(2.0) + cos(lat1) * cos(lat2) * sin(dLon / 2).pow(2.0)
+        val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+
+        return R * c
+    }
 
     val directions2 = remember { mutableStateListOf<GeoPoint>() }
     var showRatingSheet by remember { mutableStateOf(false) }
@@ -781,7 +813,37 @@ when{
                                 endPoint = endPoint.value
                             )
                         }
+                        if (state.isSearch) {
 
+                            // نزّل تركيبة Lottie مرّة واحدة وتتكرر إلى ما لا نهاية
+                            val composition by rememberLottieComposition(
+                                LottieCompositionSpec.RawRes(R.raw.searching)         // أو LottieCompositionSpec.Url(...)
+                            )
+
+                            // غلّف الخريطة والأنيميشن في Box بحيث تُرسَم Lottie فوقها
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                val nearbyDrivers = driverLocations.filter { (_, location) ->
+                                    calculateDistanceInMeters(location, startPoint.value!!) <= 1000  // أقل من 1000 متر (1 كم)
+                                }
+
+                                // الخريطة
+                                SearchMapView(
+                                    driverLocations = nearbyDrivers.toMutableStateList(),
+                                    pickupLocation = startPoint.value!!,
+                                    dropoffLocation = endPoint.value!!
+                                )
+
+
+                                // أنيميشن Lottie يشتغل بلا توقف
+                                LottieAnimation(
+                                    composition = composition,
+                                    iterations  = LottieConstants.IterateForever,
+                                    modifier    = Modifier
+                                        .align(Alignment.Center)   // مكان العرض (أعلى المنتصف مثالًا)
+                                        .size(220.dp)                 // غيّر الحجم كما تريد
+                                )
+                            }
+                        }
 
                         LaunchedEffect("67b0b246322cf017e42a9d3c") {
                             val database = FirebaseDatabase.getInstance()
@@ -953,13 +1015,26 @@ when{
                             }
 
                             state.isSearch -> {
-                                searchAboutADriver()
+                                searchAboutADriver(
+                                    oncancelled = {
+                                        coroutineScope.launch {
+                                            updateTripStatus(tripId!!, "Cancelled")
+                                            storedPoints = null
+                                            stateTripViewModel.resetAll()
+                                            navController.navigate(Destination.UserHomeScreen.route) {
+                                                popUpTo(Destination.UserHomeScreen.route) { inclusive = true }
+                                            }
+                                        }
+                                    }
+                                )
+
                                 LaunchedEffect(tripStatus) {
                                     if (tripStatus == "accepted") {
                                         stateTripViewModel.updateTripStatus("accepted")
                                     }
                                 }
                             }
+
 
                             state.isCancelled ->{
 
@@ -1236,15 +1311,12 @@ fun TrackDriverScreen(
             }
         }
     }
+    var previousDriverLocation by remember { mutableStateOf<GeoPoint?>(null) }
 
-    // Listen for trip updates
     LaunchedEffect(tripId) {
         tripsRef.whereEqualTo("_id", tripId)
             .addSnapshotListener { documents, error ->
-                if (error != null) {
-                    Log.e("Firestore", "❌ Error listening for updates: ${error.message}")
-                    return@addSnapshotListener
-                }
+                if (error != null) return@addSnapshotListener
 
                 documents?.let {
                     for (document in it) {
@@ -1252,13 +1324,15 @@ fun TrackDriverScreen(
                         val driverLng = document.getDouble("driverLocation.longitude")
 
                         if (driverLat != null && driverLng != null) {
-                            driverLocation = GeoPoint(driverLat, driverLng)
-                            Log.d("Firestore", "✅ Driver Location Updated: $driverLocation")
+                            val newLocation = GeoPoint(driverLat, driverLng)
+                            previousDriverLocation = driverLocation
+                            driverLocation = newLocation
                         }
                     }
                 }
             }
     }
+
 
     // Fetch directions when locations are available
     LaunchedEffect(driverLocation, passengerLocation) {
@@ -1284,13 +1358,13 @@ fun TrackDriverScreen(
     // UI
     Box(modifier = Modifier.fillMaxSize()) {
 
-
-
         AcceptanceMap(
-            driverLocation = driverLocation,
+            currentLocation = driverLocation,
+            previousLocation = previousDriverLocation,
             passengerLocation = passengerLocation,
             directions = directions
         )
+
 
         if (isLoading) {
             CircularProgressIndicator(

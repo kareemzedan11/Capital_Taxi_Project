@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.BitmapDrawable
 import android.location.Location
+import android.util.Log
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
@@ -24,6 +25,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import calculateBearing
 import com.example.capital_taxi.R
 import com.example.myapplication.interpolateLocation
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.SphericalUtil
 import findNearestIndex
 import kotlinx.coroutines.launch
 import org.osmdroid.events.MapListener
@@ -34,9 +37,10 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
 
-
-// Your custom imports
 @Composable
 fun InProgressMap(
     currentLocation: GeoPoint? = null,
@@ -52,7 +56,6 @@ fun InProgressMap(
     val animationProgress = remember { Animatable(0f) }
     var cameraMovedByUser by remember { mutableStateOf(false) }
 
-    // إنشاء mapView وحفظه مع التنظيف عند إلغاء التركيب
     val mapView = remember {
         MapView(context).apply {
             setTileSource(TileSourceFactory.MAPNIK)
@@ -60,6 +63,7 @@ fun InProgressMap(
             controller.setZoom(16.0)
         }
     }
+
     DisposableEffect(Unit) {
         val listener = object : MapListener {
             override fun onScroll(event: ScrollEvent?): Boolean {
@@ -75,11 +79,12 @@ fun InProgressMap(
 
         onDispose {
             mapView.removeMapListener(listener)
-            mapView.onDetach() // تنظيف MapView
+            mapView.onDetach()
         }
     }
 
-    // وظيفة لحساب المسافة (ممكن تنقلها خارج)
+    // حدد دوال مساعدة خارج Composable لو تفضل، لكن هنا للمثال داخلية
+
     fun calculateDistance(loc1: GeoPoint, loc2: GeoPoint): Double {
         val results = FloatArray(1)
         Location.distanceBetween(
@@ -90,12 +95,50 @@ fun InProgressMap(
         return results[0].toDouble()
     }
 
+    fun calculateBearing(start: GeoPoint, end: GeoPoint): Float {
+        val lat1 = Math.toRadians(start.latitude)
+        val lon1 = Math.toRadians(start.longitude)
+        val lat2 = Math.toRadians(end.latitude)
+        val lon2 = Math.toRadians(end.longitude)
+
+        val dLon = lon2 - lon1
+        val y = sin(dLon) * cos(lat2)
+        val x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon)
+
+        var bearing = Math.toDegrees(atan2(y, x))
+        bearing = (bearing + 360) % 360
+        return bearing.toFloat()
+    }
+
+    fun interpolateLocation(start: GeoPoint, end: GeoPoint, fraction: Float): GeoPoint {
+        val lat = start.latitude + (end.latitude - start.latitude) * fraction
+        val lon = start.longitude + (end.longitude - start.longitude) * fraction
+        return GeoPoint(lat, lon)
+    }
+
+    fun findNearestIndex(current: GeoPoint, path: List<GeoPoint>): Int {
+        var minDistance = Double.MAX_VALUE
+        var nearestIndex = 0
+
+        path.forEachIndexed { index, point ->
+            val distance = SphericalUtil.computeDistanceBetween(
+                LatLng(current.latitude, current.longitude),
+                LatLng(point.latitude, point.longitude)
+            )
+            if (distance < minDistance) {
+                minDistance = distance
+                nearestIndex = index
+            }
+        }
+        return nearestIndex
+    }
+
     // تشغيل الأنيميشن عند تغير الموقع
     LaunchedEffect(currentLocation, previousLocation) {
         if (currentLocation != null && previousLocation != null && currentLocation != previousLocation) {
             val distance = calculateDistance(previousLocation, currentLocation)
             if (distance > 1.0) {
-                val newBearing = calculateBearing(previousLocation, currentLocation).toFloat()
+                val newBearing = calculateBearing(previousLocation, currentLocation)
                 animationProgress.snapTo(0f)
                 animatedPosition.value = previousLocation
 
@@ -146,8 +189,10 @@ fun InProgressMap(
         factory = { mapView },
         update = { map ->
             map.overlays.clear()
+            Log.d("InProgressMap", "Directions size: ${directions.size}")
+            Log.d("InProgressMap", "Nearest index: ${findNearestIndex(currentLocation!!, directions)}")
 
-            // سيارة السائق
+            // ماركر سيارة السائق مع التدوير
             animatedPosition.value?.let { pos ->
                 val originalDrawable = ContextCompat.getDrawable(context, R.drawable.ic_car)
                 val bitmap = (originalDrawable as BitmapDrawable).bitmap
@@ -157,11 +202,10 @@ fun InProgressMap(
                 val driverMarker = Marker(map).apply {
                     position = pos
                     icon = scaledDrawable
-                    rotation = -animatedBearing.value // التدوير معكوس في OSMDroid
+                    rotation = -animatedBearing.value // تدوير معكوس في OSMDroid
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                     infoWindow = null
                 }
-
                 map.overlays.add(driverMarker)
 
                 if (!cameraMovedByUser) {
@@ -169,24 +213,24 @@ fun InProgressMap(
                 }
             }
 
-            // ماركر الراكب
+            // ماركر الوجهة
             destination?.let {
-                val marker = Marker(map).apply {
+                val destMarker = Marker(map).apply {
                     position = it
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                 }
-                map.overlays.add(marker)
+                map.overlays.add(destMarker)
             }
 
-            // رسم الاتجاهات المتبقية
-            val path = if (currentLocation != null && directions.isNotEmpty()) {
-                val nearest = findNearestIndex(currentLocation, directions)
-                directions.subList(nearest, directions.size)
+            // رسم الخط المتبقي للمسار
+            val remainingPath = if (currentLocation != null && directions.isNotEmpty()) {
+                val nearestIndex = findNearestIndex(currentLocation, directions)
+                directions.subList(nearestIndex, directions.size)
             } else directions
 
-            if (path.isNotEmpty()) {
+            if (remainingPath.isNotEmpty()) {
                 val polyline = Polyline(map).apply {
-                    setPoints(path)
+                    setPoints(remainingPath)
                     outlinePaint.color = Color.GREEN
                     outlinePaint.strokeWidth = 8f
                 }

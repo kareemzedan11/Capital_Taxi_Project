@@ -66,7 +66,7 @@ import kotlinx.coroutines.tasks.await
 
 @SuppressLint("NewApi")
 @Composable
-fun searchAboutADriver() {
+fun searchAboutADriver(oncancelled: () -> Unit) {
 
     val tripInfoViewModel: DirectionsViewModel = viewModel()
     val durationState by tripInfoViewModel.duration.collectAsState() // اقرأ القيمة من الـ ViewModel
@@ -80,6 +80,23 @@ fun searchAboutADriver() {
             val arrivalTime = currentTime.plus(durationLeft)
             arrivalTime.format(DateTimeFormatter.ofPattern("hh:mm a"))
         } ?: "..."
+    }
+    val messages = listOf(
+        stringResource(R.string.Ride_requested),
+        "Please wait, we're looking for a driver...",
+        "Still searching for nearby drivers...",
+        "We're doing our best to find someone for you...",
+        "Just a moment more, hang tight...",
+        "No drivers found. Please cancel and try again."
+    )
+
+    var messageIndex by remember { mutableStateOf(0) }
+
+    LaunchedEffect(Unit) {
+        while (messageIndex < messages.lastIndex) {
+            delay(10000L) // 5 ثواني
+            messageIndex++
+        }
     }
 
 
@@ -128,10 +145,11 @@ fun searchAboutADriver() {
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        stringResource(R.string.Ride_requested),
+                        text = messages[messageIndex],
                         fontSize = 18.sp,
                         fontWeight = FontWeight.SemiBold
                     )
+
 
                     Spacer(modifier = Modifier.height(4.dp))
 
@@ -187,6 +205,30 @@ fun searchAboutADriver() {
                         }
                     }
 
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    Button(
+                        onClick = {
+
+                            Log.d("TripRequest", "Search cancelled by user")
+
+                     oncancelled()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                        modifier = Modifier
+                            .fillMaxWidth(0.7f)
+                            .height(60.dp)
+                            .padding(top = 8.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = "Cancel Search",
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(20.dp))
 
                     val composition by rememberLottieComposition(
                         spec = LottieCompositionSpec.RawRes(R.raw.loadinganimation)
@@ -202,6 +244,8 @@ fun searchAboutADriver() {
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
+
+
                 }
             }
         }

@@ -69,14 +69,12 @@ fun userLoginContent(
                     val userID = response.body()?.account!!.userId
 
                     if (token != null) {
-                        // 1. حفظ التوكن وID
                         editor.putString("USER_TOKEN", token)
                         editor.putString("USER_ID", userID)
                         editor.putString("user_type", "rider") // أو "rider"
 
                         editor.apply()
 
-                        // 2. تحديث بيانات Firestore
                         val firestore = FirebaseFirestore.getInstance()
                         val query = firestore.collection("users")
                             .whereEqualTo("email", email)
@@ -91,8 +89,6 @@ fun userLoginContent(
                                 "id" to userID,
                             )
 
-                            // أضف قيمة ابتدائية للتقييم إذا لم تكن موجودة
-                            // أضف قيمة ابتدائية للتقييم إذا لم تكن موجودة
                             if (!document.contains("rating")) {
                                 updates["rating"] = mapOf(
                                     "count" to 0,
@@ -101,12 +97,10 @@ fun userLoginContent(
                             }
 
 
-                            // أضف عداد الرحلات إذا لم يكن موجود
                             if (!document.contains("trips")) {
                                 updates["trips"] = 0
                             }
 
-                            // أضف عداد الشكاوى إذا لم يكن موجود
                             if (!document.contains("complaints")) {
                                 updates["complaints"] = 0
                             }
@@ -115,7 +109,6 @@ fun userLoginContent(
                             println("✅ Updated user Firestore document for: $email")
                         }
 
-                        // 3. الانتقال للشاشة الرئيسية
                         navController.navigate(Destination.UserHomeScreen.route) {
                             popUpTo(0) { inclusive = true } // تمسح كل الـ backstack
                         }

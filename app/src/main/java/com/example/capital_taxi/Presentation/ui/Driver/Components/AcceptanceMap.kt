@@ -1,20 +1,27 @@
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.BitmapDrawable
+import android.location.Location
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.view.animation.LinearInterpolator
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components.calculateDistance
 import com.example.capital_taxi.R
+import com.example.myapplication.interpolateLocation
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.SphericalUtil
+import kotlinx.coroutines.launch
 import org.osmdroid.events.MapListener
 import org.osmdroid.events.ScrollEvent
 import org.osmdroid.events.ZoomEvent
@@ -26,136 +33,167 @@ import org.osmdroid.views.overlay.Polyline
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
-
 @Composable
 fun AcceptanceMap(
-    driverLocation: GeoPoint? = null,
+    currentLocation: GeoPoint? = null,
+    previousLocation: GeoPoint? = null,
     passengerLocation: GeoPoint? = null,
     directions: List<GeoPoint> = emptyList(),
     modifier: Modifier = Modifier
 ) {
-    var lastDriverLocation by remember { mutableStateOf<GeoPoint?>(null) }
-    val animatedBearing = remember { Animatable(0f) }
-    var targetBearing by remember { mutableStateOf<Float?>(null) }
+    val context = LocalContext.current
 
-    // حساب التدوير المستهدف كل مرة الموقع يتغير
-    LaunchedEffect(driverLocation) {
-        driverLocation?.let { newLoc ->
-            val lastLoc = lastDriverLocation
-            if (lastLoc != null) {
-                val target = calculateBearing(lastLoc, newLoc)
-                val diff = calculateBearingDifference(animatedBearing.value, target)
-                // تحديث التدوير بسلاسة
-                animatedBearing.animateTo(
-                    targetValue = (animatedBearing.value + diff + 360) % 360,
-                    animationSpec = tween(durationMillis = 800)
-                )
-            } else {
-                animatedBearing.snapTo(0f)
+    val animatedBearing = remember { Animatable(0f) }
+    val animatedPosition = remember { mutableStateOf<GeoPoint?>(null) }
+    val animationProgress = remember { Animatable(0f) }
+    var cameraMovedByUser by remember { mutableStateOf(false) }
+
+    val mapView = remember {
+        MapView(context).apply {
+            setTileSource(TileSourceFactory.MAPNIK)
+            setMultiTouchControls(true)
+            controller.setZoom(16.0)
+        }
+    }
+
+    DisposableEffect(Unit) {
+        val listener = object : MapListener {
+            override fun onScroll(event: ScrollEvent?): Boolean {
+                cameraMovedByUser = true
+                return true
             }
-            lastDriverLocation = newLoc
+
+            override fun onZoom(event: ZoomEvent?): Boolean {
+                cameraMovedByUser = true
+                return true
+            }
+        }
+        mapView.addMapListener(listener)
+
+        onDispose {
+            mapView.removeMapListener(listener)
+            mapView.onDetach()
+        }
+    }
+
+    // تشغيل الأنيميشن عند تغير الموقع
+    LaunchedEffect(currentLocation, previousLocation) {
+        if (currentLocation != null && previousLocation != null && currentLocation != previousLocation) {
+            val distance = calculateDistance(previousLocation, currentLocation)
+            if (distance > 1.0) {
+                val newBearing = calculateBearing(previousLocation, currentLocation).toFloat()
+                animationProgress.snapTo(0f)
+                animatedPosition.value = previousLocation
+
+                launch {
+                    animationProgress.animateTo(
+                        targetValue = 1f,
+                        animationSpec = tween(durationMillis = 1900, easing = LinearEasing)
+                    )
+                    animatedPosition.value = currentLocation
+                }
+
+                launch {
+                    val currentRotation = animatedBearing.value
+                    var delta = newBearing - currentRotation
+                    delta = (delta + 180) % 360 - 180
+                    val targetRotation = currentRotation + delta
+
+                    animatedBearing.animateTo(
+                        targetValue = targetRotation,
+                        animationSpec = tween(durationMillis = 500, easing = LinearOutSlowInEasing)
+                    )
+                }
+
+                cameraMovedByUser = false
+            } else {
+                animatedPosition.value = currentLocation
+            }
+        } else if (currentLocation != null && animatedPosition.value == null) {
+            animatedPosition.value = currentLocation
+            mapView.controller.setCenter(currentLocation)
+        }
+    }
+
+    // تحديث الموقع أثناء الأنيميشن
+    LaunchedEffect(animationProgress.value) {
+        if (currentLocation != null && previousLocation != null &&
+            animationProgress.value > 0f && animationProgress.value < 1f
+        ) {
+            animatedPosition.value = interpolateLocation(
+                previousLocation,
+                currentLocation,
+                animationProgress.value
+            )
         }
     }
 
     AndroidView(
-        factory = { context ->
-            MapView(context).apply {
-                setTileSource(TileSourceFactory.MAPNIK)
-                setMultiTouchControls(true)
-                controller.setZoom(15.0)
-                mapOrientation = 0.0f
-            }
-        },
-        update = { mapView ->
-            mapView.overlays.clear()
+        factory = { mapView },
+        update = { map ->
 
-            // Marker السائق
-            driverLocation?.let { newLocation ->
-                val marker = Marker(mapView).apply {
-                    val originalDrawable = ContextCompat.getDrawable(mapView.context, R.drawable.ic_car)
-                    val bitmap = (originalDrawable as BitmapDrawable).bitmap
-                    val scaledBitmap = Bitmap.createScaledBitmap(bitmap, 100, 100, true)
-                    val scaledDrawable = BitmapDrawable(mapView.context.resources, scaledBitmap)
+            map.overlays.clear()
 
+            // ماركر السائق
+            animatedPosition.value?.let { pos ->
+                val originalDrawable = ContextCompat.getDrawable(context, R.drawable.ic_car)
+                val bitmap = (originalDrawable as BitmapDrawable).bitmap
+                val scaledBitmap = Bitmap.createScaledBitmap(bitmap, 60, 60, true)
+                val scaledDrawable = BitmapDrawable(context.resources, scaledBitmap)
+
+                val driverMarker = Marker(map).apply {
+                    position = pos
                     icon = scaledDrawable
+                    rotation = -animatedBearing.value
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                    position = newLocation
-                    rotation = -animatedBearing.value  // هنا نطبق التدوير السلس
+                    infoWindow = null
                 }
-                mapView.overlays.add(marker)
+
+                map.overlays.add(driverMarker)
+
+                if (!cameraMovedByUser) {
+                    map.controller.animateTo(pos)
+                }
             }
 
-            // باقي الكود (marker الراكب، polyline، تحريك الكاميرا) كما هو...
+            // ماركر الراكب
             passengerLocation?.let {
-                val passengerMarker = Marker(mapView).apply {
+                val passengerMarker = Marker(map).apply {
                     position = it
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                 }
-                mapView.overlays.add(passengerMarker)
+                map.overlays.add(passengerMarker)
             }
 
-            val remainingPath = if (driverLocation != null && directions.isNotEmpty()) {
-                val nearestIndex = findNearestIndex(driverLocation, directions)
+            // الخط بين السائق والوجهة
+            val remainingPath = if (currentLocation != null && directions.isNotEmpty()) {
+                val nearestIndex = findNearestIndex(currentLocation, directions)
                 directions.subList(nearestIndex, directions.size)
-            } else {
-                directions
-            }
+            } else directions
 
             if (remainingPath.isNotEmpty()) {
-                val polyline = Polyline(mapView).apply {
+                val polyline = Polyline(map).apply {
                     setPoints(remainingPath)
                     outlinePaint.color = Color.BLUE
                     outlinePaint.strokeWidth = 8f
                 }
-                mapView.overlays.add(polyline)
+                map.overlays.add(polyline)
             }
 
-            if (driverLocation != null) {
-                mapView.controller.setCenter(driverLocation)
-            } else if (passengerLocation != null) {
-                mapView.controller.setCenter(passengerLocation)
-            }
-
-            mapView.invalidate()
+            map.invalidate()
         },
         modifier = modifier.fillMaxSize()
     )
 }
-
-
-// ================== HELPER FUNCTIONS =======================
-
-fun updateCarMarkerSmoothlyPositionOnly(
-    marker: Marker,
-    startLoc: GeoPoint,
-    endLoc: GeoPoint,
-    mapView: MapView
-) {
-    val handler = Handler(Looper.getMainLooper())
-    val duration = 1000L
-    val startTime = SystemClock.uptimeMillis()
-    val interpolator = LinearInterpolator()
-
-    val runnable = object : Runnable {
-        override fun run() {
-            val elapsed = SystemClock.uptimeMillis() - startTime
-            val t = interpolator.getInterpolation(elapsed.toFloat() / duration)
-
-            if (t < 1.0) {
-                val easedFraction = easeInOutCubic(t)
-                val newPos = interpolatePosition(startLoc, endLoc, easedFraction.toDouble())
-                marker.position = newPos
-
-                mapView.invalidate()
-                handler.postDelayed(this, 16L)
-            } else {
-                marker.position = endLoc
-                mapView.invalidate()
-            }
-        }
-    }
-
-    handler.post(runnable)
+// وظيفة لحساب المسافة (ممكن تنقلها خارج)
+fun calculateDistance(loc1: GeoPoint, loc2: GeoPoint): Double {
+    val results = FloatArray(1)
+    Location.distanceBetween(
+        loc1.latitude, loc1.longitude,
+        loc2.latitude, loc2.longitude,
+        results
+    )
+    return results[0].toDouble()
 }
 
 fun calculateBearing(start: GeoPoint, end: GeoPoint): Float {
