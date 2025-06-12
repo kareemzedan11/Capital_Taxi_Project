@@ -101,7 +101,7 @@ fun PickupWithDropOffButtons(
     val locationViewModel: LocationViewModel = viewModel()
     val pickupLatLng = locationViewModel.pickupLocation
     val dropoffLatLng = locationViewModel.dropoffLocation
-
+    var isLoading by remember { mutableStateOf(false) }
     val startPoint = remember { mutableStateOf<GeoPoint?>(null) }
     val endPoint = remember { mutableStateOf<GeoPoint?>(null) }
     val isSearch = remember { mutableStateOf(issearch) }
@@ -117,6 +117,7 @@ fun PickupWithDropOffButtons(
     var dropOffLocation by remember { mutableStateOf("") }
     var dropOffSuggestions by remember { mutableStateOf(emptyList<String>()) }
     var price by remember { mutableStateOf(0.0) }
+    var locationError by remember { mutableStateOf<String?>(null) }
 
 
     var selectedVehicleIndex by remember { mutableStateOf(-1) }
@@ -228,28 +229,48 @@ fun PickupWithDropOffButtons(
             value = dropOffLocation
         )
 
+        if (locationError != null) {
+            Text(
+                text = locationError!!,
+                color = Color.Red,
+                modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+            )
+        }
         if (pickupSuggestions.isNotEmpty()) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 pickupSuggestions.forEach { suggestion ->
-                    Text(
-                        text = suggestion,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                pickupLocation = suggestion
-                                pickupSuggestions = emptyList()
+                    if (isLoading) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    } else {
+                        Text(
+                            text = suggestion,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    isLoading = true
+                                    pickupLocation = suggestion
+                                    pickupSuggestions = emptyList()
 
-                                getLatLngFromAddress(context, suggestion) { latLng ->
-                                    latLng?.let {
-                                        startPoint.value = GeoPoint(it.latitude, it.longitude)
-                                        viewModel.setPickupLocation(it)
+                                    getLatLngFromAddress(context, suggestion) { latLng ->
+                                        isLoading = false
+                                        latLng?.let {
+                                            startPoint.value = GeoPoint(it.latitude, it.longitude)
+                                            viewModel.setPickupLocation(it)
+                                        }
                                     }
                                 }
-                            }
-                            .padding(10.dp),
-                        color = Color.Black,
-                        fontSize = 16.sp
-                    )
+                                .padding(10.dp),
+                            color = Color.Black,
+                            fontSize = 16.sp
+                        )
+                    }
                 }
             }
         }
@@ -257,43 +278,77 @@ fun PickupWithDropOffButtons(
         if (dropOffSuggestions.isNotEmpty()) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 dropOffSuggestions.forEach { suggestion ->
-                    Text(
-                        text = suggestion,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                dropOffLocation = suggestion
-                                dropOffSuggestions = emptyList()
+                    if (isLoading) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    } else {
+                        Text(
+                            text = suggestion,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    isLoading = true
+                                    dropOffLocation = suggestion
+                                    dropOffSuggestions = emptyList()
 
-                                getLatLngFromAddress(context, suggestion) { latLng ->
-                                    latLng?.let {
-                                        endPoint.value = GeoPoint(it.latitude, it.longitude)
-                                        viewModel.setDropoffLocation(it)
+                                    getLatLngFromAddress(context, suggestion) { latLng ->
+                                        isLoading = false
+                                        if (latLng == null) {
+                                            locationError = "Location not available , Select another Location"
+                                        } else {
+                                            locationError = null
+                                            latLng?.let {
+                                                endPoint.value = GeoPoint(it.latitude, it.longitude)
+                                                viewModel.setDropoffLocation(it)
 
-                                        if (startPoint.value != null && endPoint.value != null) {
-                                            val origin = Location(startPoint.value!!.latitude, startPoint.value!!.longitude)
-                                            val destination = Location(endPoint.value!!.latitude, endPoint.value!!.longitude)
-
-                                            CoroutineScope(Dispatchers.IO).launch {
-                                                token?.let {
-                                                    fetchTripDirections(
-                                                        token = token,
-                                                        origin = origin,
-                                                        destination = destination,
-                                                        directionsViewModel = directionsViewModel,
-                                                        onSuccess = { Log.d("TripDirections", "Successfully fetched directions.") },
-                                                        onError = { Log.e("TripDirections", "Error: $it") }
+                                                if (startPoint.value != null && endPoint.value != null) {
+                                                    val origin = Location(
+                                                        startPoint.value!!.latitude,
+                                                        startPoint.value!!.longitude
                                                     )
+                                                    val destination = Location(
+                                                        endPoint.value!!.latitude,
+                                                        endPoint.value!!.longitude
+                                                    )
+
+                                                    CoroutineScope(Dispatchers.IO).launch {
+                                                        token?.let {
+                                                            fetchTripDirections(
+                                                                token = token,
+                                                                origin = origin,
+                                                                destination = destination,
+                                                                directionsViewModel = directionsViewModel,
+                                                                onSuccess = {
+                                                                    Log.d(
+                                                                        "TripDirections",
+                                                                        "Successfully fetched directions."
+                                                                    )
+                                                                },
+                                                                onError = {
+                                                                    Log.e(
+                                                                        "TripDirections",
+                                                                        "Error: $it"
+                                                                    )
+                                                                }
+                                                            )
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
                                     }
                                 }
-                            }
-                            .padding(10.dp),
-                        color = Color.Black,
-                        fontSize = 16.sp
-                    )
+                                .padding(10.dp),
+                            color = Color.Black,
+                            fontSize = 16.sp
+                        )
+                    }
                 }
             }
         }
@@ -503,13 +558,15 @@ fun getLatLngFromAddress(
         if (addressList != null && addressList.isNotEmpty()) {
             val location = addressList[0]
             val latLng = LatLng(location.latitude, location.longitude)
-            onLocationRetrieved(latLng) // Return the LatLng
+            onLocationRetrieved(latLng)
         } else {
-            onLocationRetrieved(null) // If no location found
+            Toast.makeText(context, "Location not available", Toast.LENGTH_SHORT).show()
+            onLocationRetrieved(null)
         }
     } catch (e: Exception) {
         Log.e("LocationError", "Error fetching location: ${e.message}")
-        onLocationRetrieved(null) // Return null if an error occurs
+        Toast.makeText(context, "Location not available", Toast.LENGTH_SHORT).show()
+        onLocationRetrieved(null)
     }
 }
 

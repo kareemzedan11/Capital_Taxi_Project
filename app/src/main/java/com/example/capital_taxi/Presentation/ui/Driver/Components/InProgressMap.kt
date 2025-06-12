@@ -137,7 +137,7 @@ fun InProgressMap(
     LaunchedEffect(currentLocation, previousLocation) {
         if (currentLocation != null && previousLocation != null && currentLocation != previousLocation) {
             val distance = calculateDistance(previousLocation, currentLocation)
-            if (distance > 1.0) {
+            if (distance > 3.0) {
                 val newBearing = calculateBearing(previousLocation, currentLocation)
                 animationProgress.snapTo(0f)
                 animatedPosition.value = previousLocation

@@ -236,7 +236,7 @@ fun registerDriver(
                     Log.d("RegisterDriver", "Uploading file: ${nationalIdFront?.name}")
 
                     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                    navController.navigate("homeScreen")
+                    navController.navigate(navController.popBackStack())
                 } else {
                     val errorResponse = response.errorBody()?.string() ?: "Unknown error"
                     Toast.makeText(context, "Registration failed: $errorResponse", Toast.LENGTH_SHORT).show()
@@ -325,7 +325,6 @@ fun sendDriverData(
 ) {
     val db = FirebaseFirestore.getInstance()
 
-    // 1. إنشاء بيانات السائق الأساسية في Firestore
     val driverData = hashMapOf(
         "id" to "",
         "name" to name,
@@ -337,7 +336,10 @@ fun sendDriverData(
         "carModel" to carModel,
         "carColor" to carColor,
         "fareRate" to fareRate,
-        "rating" to rating,
+        "rating" to mapOf( // ← تعديل هذا الجزء
+            "count" to 1,
+            "total" to 5
+        ),
         "balance" to balance,
         "totalEarnings" to totalEarnings,
         "trips" to trips,

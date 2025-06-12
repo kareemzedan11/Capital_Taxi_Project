@@ -75,6 +75,7 @@ fun driverProfile(navController: NavController, ) {
         driverId?.let { viewModel.fetchDriverProfileById(it) }
     }
 
+    var imageUrl by remember { mutableStateOf<String?>(null) }
 
     val userProfile by viewModel.driverProfile.observeAsState()
 
@@ -88,8 +89,10 @@ fun driverProfile(navController: NavController, ) {
             userName = it.name
             email = it.email
             phone = it.phone
+            imageUrl = it.imageUrl // ← نضيف دي
         }
     }
+
 
     // --- Image Persistence Logic (Internal Storage) ---
     // 1. Load the saved file path from SharedPreferences
@@ -115,15 +118,18 @@ fun driverProfile(navController: NavController, ) {
                     editor.putString("PROFILE_IMAGE_PATH", it)
                     editor.apply()
 
-                    // 🔁 رفع الصورة لـ Supabase وتحديث Firestore
+
                     driverId?.let { id ->
                         CoroutineScope(Dispatchers.IO).launch {
-                            val imageUrl = uploadDriverProfileImage(id, file)
-                            imageUrl?.let { url ->
+                            val uploadedUrl = uploadDriverProfileImage(id, file)
+                            uploadedUrl?.let { url ->
                                 updateDriverImageUrlInFirestore(id, url)
+                                imageUrl = url  // ← هنا التحديث المباشر للعرض بعد الرفع
                             }
                         }
                     }
+
+
                 }
             }
         }
@@ -162,18 +168,23 @@ fun driverProfile(navController: NavController, ) {
                 Box(
                     modifier = Modifier.padding(top = 16.dp).size(120.dp)
                 ) {
-                    // 6. Image composable now loads from the internal File object
+                    val painter = when {
+                        imageUrl != null -> rememberAsyncImagePainter(imageUrl)
+                        imageFile != null -> rememberAsyncImagePainter(imageFile)
+                        else -> painterResource(R.drawable.person)
+                    }
+
                     Image(
-                        painter = imageFile?.let { rememberAsyncImagePainter(it) }
-                            ?: painterResource(R.drawable.person),
+                        painter = painter,
                         contentDescription = "Profile Picture",
-                        contentScale = ContentScale.Crop, // يملأ الدائرة بالصورة
+                        contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .size(120.dp)
-                            .clip(CircleShape) // هذا هو المهم لقص الصورة بشكل دائري
+                            .clip(CircleShape)
                             .background(Color.Gray, CircleShape)
                             .clickable { launcher.launch("image/*") }
                     )
+
 
                     IconButton(
                         onClick = { launcher.launch("image/*") }, // Launch image picker on click
@@ -232,10 +243,13 @@ fun driverProfile(navController: NavController, ) {
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Button(
-                    onClick = { navController.popBackStack() },
+                    onClick = {
+
+                        navController.navigate(Destination.DriverHomeScreen.route) },
                     modifier = Modifier.fillMaxWidth(0.9f).height(60.dp),
                     colors = ButtonDefaults.buttonColors(colorResource(R.color.primary_color)),
                     shape = RoundedCornerShape(16.dp)
+
                 ) {
                     Text(text = "Save", fontSize = 18.sp, color = Color.Black)
                 }
