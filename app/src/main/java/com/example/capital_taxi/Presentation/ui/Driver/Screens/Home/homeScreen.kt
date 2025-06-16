@@ -637,7 +637,7 @@ fun driverHomeScreen(navController: NavController) {
                 showCancellationDialog = true
             }
             tripState.isEnd -> {
-                // Trip completed logic
+
             }
         }
     }
@@ -772,9 +772,11 @@ fun driverHomeScreen(navController: NavController) {
                 Log.d("TripLog", "Live tracking: driver to passenger")
                 directionsUpdater.setRoute(originStr = origin, destinationStr = destination)
                 directionsUpdater.start()
-            } else if (tripState.isTripBegin && originStr != null && destinationStr != null) {
+            } else if (tripState.isTripBegin && originStr != null && destinationStr != null && driverLocation != null) {
+                val origin = "${driverLocation.latitude},${driverLocation.longitude}"
+
                 Log.d("TripLog", "Trip begin: using static origin/destination")
-                directionsUpdater.setRoute(originStr = originStr!!, destinationStr = destinationStr!!)
+                directionsUpdater.setRoute(originStr = origin, destinationStr = destinationStr!!)
                 directionsUpdater.start()
             } else {
                 Log.d("TripLog", "Stopping directionsUpdater")
