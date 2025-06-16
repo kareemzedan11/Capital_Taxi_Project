@@ -1,6 +1,8 @@
 package com.example.capital_taxi.Presentation.ui.Driver.Screens
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Environment
 import android.util.Log
@@ -9,7 +11,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -18,7 +19,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
-
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,55 +30,60 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.ImageLoader
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import coil.request.CachePolicy
 import coil.request.ImageRequest
+import com.example.capital_taxi.Navigation.Destination
 import com.example.capital_taxi.R
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.gson.annotations.SerializedName
+import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.createSupabaseClient
+import io.github.jan.supabase.postgrest.Postgrest
+import io.github.jan.supabase.storage.Storage
+import io.github.jan.supabase.storage.storage
+import kotlinx.coroutines.launch
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.http.Body
+import retrofit2.http.POST
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
+
 @Composable
 fun DriverPhotoValidationScreen(
     navController: NavController,
-    onValidationComplete: () -> Unit
+    onValidationComplete: () -> Unit,
+    viewModel: DriverPhotoValidationViewModel = viewModel()
 ) {
-
     val context = LocalContext.current
     var profileImageUrl by remember { mutableStateOf<String?>(null) }
+    var isProfileLoading by remember { mutableStateOf(true) }
     val sharedPreferences = context.getSharedPreferences("your_prefs", Context.MODE_PRIVATE)
-    val driverId = sharedPreferences.getString("driver_id", null)  // القيمة الافتراضية لو مش موجودة هنا null
-
-    LaunchedEffect(driverId) {
-        val db = FirebaseFirestore.getInstance()
-        db.collection("drivers")
-            .whereEqualTo("id", driverId)
-            .get()
-            .addOnSuccessListener { documents ->
-                for (doc in documents) {
-                    profileImageUrl = doc.getString("imageUrl")
-                    break // نكتفي بأول نتيجة
-                }
-            }
-            .addOnFailureListener { e ->
-                Log.e("DriverPhotoValidation", "Error fetching image URL", e)
-            }
-    }
-
-
+    val driverId = sharedPreferences.getString("driver_id", null)
 
     var showError by remember { mutableStateOf(false) }
     var imageFile by remember { mutableStateOf<File?>(null) }
     var capturedImageUri by remember { mutableStateOf<Uri?>(null) }
     var pendingImageUri by remember { mutableStateOf<Uri?>(null) }
+    var isVerifying by remember { mutableStateOf(false) }
+    var verificationResult by remember { mutableStateOf<Boolean?>(null) }
+    var showConfirmDialog by remember { mutableStateOf(false) }
+
+    // تعريف cameraLauncher هنا بحيث يكون في نفس النطاق
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
@@ -91,6 +96,49 @@ fun DriverPhotoValidationScreen(
         }
     }
 
+    // Permission handling
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            createImageFile(context)?.let { file ->
+                imageFile = file
+                createImageUri(context, file)?.let { uri ->
+                    pendingImageUri = uri
+                    cameraLauncher.launch(uri) // استخدام cameraLauncher هنا
+                } ?: run {
+                    showError = true
+                }
+            } ?: run {
+                showError = true
+            }
+        } else {
+            showError = true
+        }
+    }
+
+
+    // Load driver profile
+    LaunchedEffect(driverId) {
+        if (driverId != null) {
+            val db = FirebaseFirestore.getInstance()
+            db.collection("drivers")
+                .whereEqualTo("id", driverId)
+                .get()
+                .addOnSuccessListener { documents ->
+                    isProfileLoading = false
+                    for (doc in documents) {
+                        profileImageUrl = doc.getString("imageUrl")
+                        break
+                    }
+                }
+                .addOnFailureListener { e ->
+                    isProfileLoading = false
+                    Log.e("DriverPhotoValidation", "Error fetching image URL", e)
+                }
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -99,7 +147,7 @@ fun DriverPhotoValidationScreen(
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Header with icon
+        // Header
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
@@ -133,9 +181,7 @@ fun DriverPhotoValidationScreen(
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
+            Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = "Your Current Profile Photo",
                     style = MaterialTheme.typography.titleMedium.copy(
@@ -149,24 +195,23 @@ fun DriverPhotoValidationScreen(
                     modifier = Modifier
                         .size(150.dp)
                         .clip(CircleShape)
-                        .border(
-                            2.dp,
-                            MaterialTheme.colorScheme.primary,
-                            CircleShape
-                        )
+                        .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
                         .background(MaterialTheme.colorScheme.surface)
                         .align(Alignment.CenterHorizontally)
                 ) {
-                    if (profileImageUrl != null) {
-                        AsyncImage(
+                    when {
+                        isProfileLoading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                        profileImageUrl != null -> AsyncImage(
                             model = profileImageUrl,
                             contentDescription = "Original driver photo",
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize()
                         )
-                    } else {
-                        // صورة افتراضية أو تحميل
-                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                        else -> Icon(
+                            painter = painterResource(id = R.drawable.baseline_camera_alt_24),
+                            contentDescription = "No photo",
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
                 }
             }
@@ -182,9 +227,7 @@ fun DriverPhotoValidationScreen(
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
+            Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = "Photo Requirements",
                     style = MaterialTheme.typography.titleMedium.copy(
@@ -231,11 +274,10 @@ fun DriverPhotoValidationScreen(
                 .clip(RoundedCornerShape(16.dp))
                 .border(
                     2.dp,
-                    if (capturedImageUri == null) {
-                        if (showError) MaterialTheme.colorScheme.error
-                        else MaterialTheme.colorScheme.outline
-                    } else {
-                        MaterialTheme.colorScheme.primary
+                    when {
+                        capturedImageUri != null -> MaterialTheme.colorScheme.primary
+                        showError -> MaterialTheme.colorScheme.error
+                        else -> MaterialTheme.colorScheme.outline
                     },
                     RoundedCornerShape(16.dp)
                 )
@@ -282,24 +324,32 @@ fun DriverPhotoValidationScreen(
                 }
             }
         }
+
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(
             onClick = {
-                createImageFile(context)?.let { file ->
-                    imageFile = file
-                    createImageUri(context, file)?.let { uri ->
-                        pendingImageUri = uri
-                        cameraLauncher.launch(uri)
-                    } ?: run {
-                        showError = true
-                        Log.e("PhotoDebug", "Failed to create URI")
+                when {
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.CAMERA
+                    ) == PackageManager.PERMISSION_GRANTED -> {
+                        createImageFile(context)?.let { file ->
+                            imageFile = file
+                            createImageUri(context, file)?.let { uri ->
+                                pendingImageUri = uri
+                                cameraLauncher.launch(uri)
+                            } ?: run {
+                                showError = true
+                            }
+                        } ?: run {
+                            showError = true
+                        }
                     }
-                } ?: run {
-                    showError = true
-                    Log.e("PhotoDebug", "Failed to create file")
+                    else -> {
+                        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                    }
                 }
-
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -317,24 +367,37 @@ fun DriverPhotoValidationScreen(
             )
         }
 
+        // Verification result message
+        verificationResult?.let { isMatch ->
+            if (isMatch) {
+                LaunchedEffect(Unit) {
+                    updateDriverPhotoVerification(driverId!!)
+                    navController.navigate(Destination.DriverHomeScreen.route) {
+                        popUpTo(Destination.SplashScreen.route) { inclusive = true }
+                    }
+                }
+
+                Text(
+                    text = "✅ Identity verified successfully!",
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+            else {
+                Text(
+                    text = "❌ Photos don't match. Please try again.",
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+        }
+
+
         Spacer(modifier = Modifier.height(32.dp))
 
         // Confirm Button
         Button(
-            onClick = {
-                imageFile?.let { file ->
-                    Log.d("DriverPhotoValidation", "File exists: ${file.exists()}, size: ${file.length()}")
-
-                    if (file.exists() && file.length() > 0) {
-                        onValidationComplete()
-                    } else {
-                        // ممكن تظهر رسالة خطأ أو تعامل الحالة دي
-                        Log.e("DriverPhotoValidation", "Image file does not exist or is empty!")
-                    }
-                } ?: run {
-                    Log.e("DriverPhotoValidation", "Image file is null!")
-                }
-            },
+            onClick = { showConfirmDialog = true },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
@@ -349,22 +412,61 @@ fun DriverPhotoValidationScreen(
                 else
                     MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
             ),
-            enabled = capturedImageUri != null,
+            enabled = capturedImageUri != null && !isVerifying,
             elevation = ButtonDefaults.buttonElevation(
                 defaultElevation = 4.dp,
                 pressedElevation = 8.dp
             )
         ) {
-            Text(
-                text = "Submit Verification",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.5.sp
+            if (isVerifying) {
+                CircularProgressIndicator(
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(24.dp)
                 )
-            )
+            } else {
+                Text(
+                    text = "Submit Verification",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp
+                    )
+                )
+            }
         }
     }
-}
+// Confirmation Dialog
+    if (showConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showConfirmDialog = false },
+            title = { Text("Confirm Submission") },
+            text = { Text("Are you sure you want to submit this photo for verification?") },
+            confirmButton = {
+                Button(onClick = {
+                    showConfirmDialog = false
+                    isVerifying = true
+                    viewModel.verifyImages(
+                        originalUrl = profileImageUrl,
+                        newImageUri = capturedImageUri,
+                        onResult = { isMatch ->
+                            isVerifying = false
+                            verificationResult = isMatch
+                            if (isMatch == true) {
+                                onValidationComplete()
+                            }
+                        },
+                        context = context
+                    )
+                }) {
+                    Text("Confirm")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirmDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }}
 
 @Composable
 private fun InstructionPoint(text: String) {
@@ -387,24 +489,94 @@ private fun InstructionPoint(text: String) {
         )
     }
 }
+
+class DriverPhotoValidationViewModel : ViewModel() {
+
+    private val api = retrofit.create(MatchApi::class.java)
+    private val supabase = createSupabaseClient(
+        supabaseUrl = "https://mwncdoelxuwhtlrvtnap.supabase.co",
+        supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im13bmNkb2VseHV3aHRscnZ0bmFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUwMjU4NjUsImV4cCI6MjA2MDYwMTg2NX0.f5Zlz_WSLypyCUn67g2PEA5ZjHa8VsqjJDbxIgtBBTk"
+
+    ) {
+        install(Postgrest)
+        install(Storage)
+    }
+
+    suspend fun uploadImageToSupabase(context: Context, imageUri: Uri): String? {
+        return try {
+            val fileName = "verify-driver/${UUID.randomUUID()}.jpg"
+            val inputStream = context.contentResolver.openInputStream(imageUri) ?: return null
+            val byteArray = inputStream.readBytes()
+
+            Log.d("SupabaseUpload", "Uploading to Supabase... FileName: $fileName")
+
+            val result = supabase.storage.from("verify-driver")
+                .upload(fileName, byteArray, upsert = true)
+
+            Log.d("SupabaseUpload", "Upload complete: $result")
+
+            "https://mwncdoelxuwhtlrvtnap.supabase.co/storage/v1/object/public/verify-driver/$fileName"
+        } catch (e: Exception) {
+            Log.e("SupabaseUpload", "Upload failed: ${e.message}", e)
+            null
+        }
+    }
+
+
+    fun verifyImages(
+        context: Context,
+        originalUrl: String?,
+        newImageUri: Uri?,
+        onResult: (Boolean?) -> Unit
+    )
+ {
+        viewModelScope.launch {
+            try {
+                if (originalUrl == null || newImageUri == null) {
+                    onResult(null)
+                    return@launch
+                }
+
+                // رفع الصورة الجديدة إلى Supabase
+                val uploadedUrl = uploadImageToSupabase(context, newImageUri)
+
+                if (uploadedUrl == null) {
+                    onResult(null)
+                    return@launch
+                }
+
+                Log.d("PhotoValidation", "Original URL: $originalUrl")
+                Log.d("PhotoValidation", "Uploaded URL: $uploadedUrl")
+
+                val response = api.compareImages(
+                    MatchRequest(
+                        originalImageUrl = originalUrl,
+                        newImageUrl = uploadedUrl
+                    )
+                )
+                onResult(response.match)
+            } catch (e: Exception) {
+                Log.e("PhotoValidation", "Error: ${e.message}")
+                onResult(null)
+            }
+        }
+    }
+}
+
 private fun createImageFile(context: Context): File? {
     return try {
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val imageFileName = "JPEG_${timeStamp}_"
-        val storageDir = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)?.apply {
-            mkdirs() // تأكد من وجود المجلد
-        }
+        val storageDir = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+            ?: context.filesDir
+
         File.createTempFile(
-            imageFileName,
+            "JPEG_${timeStamp}_",
             ".jpg",
             storageDir
         ).apply {
-            createNewFile() // تأكد من إنشاء الملف فعلياً
-        }.also {
-            Log.d("PhotoDebug", "File created at: ${it.absolutePath}")
+            createNewFile()
         }
     } catch (e: Exception) {
-        Log.e("PhotoDebug", "Error creating file", e)
         null
     }
 }
@@ -413,13 +585,56 @@ private fun createImageUri(context: Context, file: File): Uri? {
     return try {
         FileProvider.getUriForFile(
             context,
-            "${context.packageName}.fileprovider", // يجب أن يتطابق مع الـ Manifest
+            "${context.packageName}.fileprovider",
             file
-        ).also {
-            Log.d("PhotoDebug", "URI created: $it")
-        }
+        )
     } catch (e: Exception) {
-        Log.e("PhotoDebug", "Error creating URI", e)
         null
     }
 }
+
+private val retrofit = Retrofit.Builder()
+    .baseUrl("https://68f5-41-34-47-1.ngrok-free.app/")
+    .addConverterFactory(GsonConverterFactory.create())
+    .build()
+
+interface MatchApi {
+    @POST("verify-driver/")
+
+
+    suspend fun compareImages(@Body request: MatchRequest): MatchResponse
+}
+
+data class MatchRequest(
+    @SerializedName("original_image_url") val originalImageUrl: String,
+    @SerializedName("new_image_url") val newImageUrl: String
+)
+
+data class MatchResponse(
+    val match: Boolean
+)
+
+fun updateDriverPhotoVerification(driverId: String) {
+    val db = FirebaseFirestore.getInstance()
+    db.collection("drivers")
+        .whereEqualTo("id", driverId)
+        .limit(1)
+        .get()
+        .addOnSuccessListener { documents ->
+            if (!documents.isEmpty) {
+                val docId = documents.documents[0].id
+                db.collection("drivers").document(docId).update(
+                    mapOf(
+                        "lastPhotoCheck" to FieldValue.serverTimestamp(),
+                        "isPhotoVerified" to true
+                    )
+                )
+            } else {
+                Log.e("DriverUpdate", "Driver not found with _id = $driverId")
+            }
+        }
+        .addOnFailureListener { e ->
+            Log.e("DriverUpdate", "Error fetching driver: ${e.message}", e)
+        }
+}
+

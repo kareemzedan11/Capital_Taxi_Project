@@ -27,6 +27,8 @@ import androidx.navigation.NavHostController
 import com.example.capital_taxi.Presentation.ui.shared.Splash.Components.SplashLogo
 import com.example.capital_taxi.Presentation.ui.shared.Splash.Components.SplashProgressBar
 import com.example.capital_taxi.R
+import com.google.firebase.Timestamp
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.delay
 
 @Composable
@@ -50,19 +52,33 @@ fun SplashScreen(navController: NavHostController) {
         val userToken = sharedPreferences.getString("USER_TOKEN", null)
         val userType = sharedPreferences.getString("user_type", null)
 
-        val isLoggedIn = (!driverToken.isNullOrEmpty() || !userToken.isNullOrEmpty())
+        val driverid = sharedPreferences.getString("driver_id", null)
 
-        // توجيه على حسب حالة الدخول
+        val isLoggedIn = (!driverToken.isNullOrEmpty() || !userToken.isNullOrEmpty())
         if (isLoggedIn) {
             when (userType) {
-                "driver" -> navController.navigate(Destination.DriverHomeScreen.route) {
-                    popUpTo(Destination.SplashScreen.route) { inclusive = true }
+                "driver" -> {
+                    shouldForcePhotoVerification(driverid!!) { shouldVerify ->
+                        if (shouldVerify) {
+                            navController.navigate(Destination.DriverPhotoValidationScreen.route) {
+                                popUpTo(Destination.SplashScreen.route) { inclusive = true }
+                            }
+                        } else {
+                            navController.navigate(Destination.DriverHomeScreen.route) {
+                                popUpTo(Destination.SplashScreen.route) { inclusive = true }
+                            }
+                        }
+                    }
                 }
-                "rider" -> navController.navigate(Destination.UserHomeScreen.route) {
-                    popUpTo(Destination.SplashScreen.route) { inclusive = true }
+                "rider" -> {
+                    navController.navigate(Destination.UserHomeScreen.route) {
+                        popUpTo(Destination.SplashScreen.route) { inclusive = true }
+                    }
                 }
-                else -> navController.navigate(Destination.StartScreen.route) {
-                    popUpTo(Destination.SplashScreen.route) { inclusive = true }
+                else -> {
+                    navController.navigate(Destination.StartScreen.route) {
+                        popUpTo(Destination.SplashScreen.route) { inclusive = true }
+                    }
                 }
             }
         } else {
@@ -70,6 +86,7 @@ fun SplashScreen(navController: NavHostController) {
                 popUpTo(Destination.SplashScreen.route) { inclusive = true }
             }
         }
+
     }
 
 
@@ -108,3 +125,33 @@ fun SplashScreen(navController: NavHostController) {
 
 
 
+fun shouldForcePhotoVerification(
+    driverId: String,
+    onResult: (Boolean) -> Unit
+) {
+    val db = FirebaseFirestore.getInstance()
+    db.collection("drivers")
+        .whereEqualTo("id", driverId)
+        .limit(1)
+        .get()
+        .addOnSuccessListener { snapshot ->
+            if (!snapshot.isEmpty) {
+                val doc = snapshot.documents[0]
+                val lastCheck = doc.getTimestamp("lastPhotoCheck")
+                val now = Timestamp.now()
+
+                if (lastCheck == null) {
+                    onResult(true) // أول مرة يتحقق
+                } else {
+                    val diff = now.seconds - lastCheck.seconds
+                    val hours = diff / 3600
+                    onResult(hours >= 24)
+                }
+            } else {
+                onResult(true) // لو مفيش document، نطلب تحقق
+            }
+        }
+        .addOnFailureListener {
+            onResult(true) // في حالة فشل القراءة، نطلب تحقق
+        }
+}
