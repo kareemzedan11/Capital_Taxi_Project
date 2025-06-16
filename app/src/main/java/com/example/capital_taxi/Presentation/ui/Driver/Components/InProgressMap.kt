@@ -22,12 +22,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.compose.ui.viewinterop.AndroidView
-import calculateBearing
 import com.example.capital_taxi.R
-import com.example.myapplication.interpolateLocation
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.SphericalUtil
-import findNearestIndex
 import kotlinx.coroutines.launch
 import org.osmdroid.events.MapListener
 import org.osmdroid.events.ScrollEvent

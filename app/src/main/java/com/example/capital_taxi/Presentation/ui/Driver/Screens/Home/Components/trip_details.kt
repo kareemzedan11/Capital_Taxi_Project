@@ -358,9 +358,6 @@ fun TripDetailsCard(
 
                         isLoading.value = true
 
-                        tripViewModel.acceptTrip(
-                            trip._id,
-                            onSuccess = {
                                 updateTripStatusInFirestore(
                                     trip._id, "accepted",
                                     onSuccess = {
@@ -373,23 +370,9 @@ fun TripDetailsCard(
                                             snackbarHostState.showSnackbar("فشل في قبول الرحلة: ${error.message}")
                                         }
                                         isLoading.value = false
-                                    }
-                                )
-                            },
-                            onError = { error ->
-                                val errorMessage = error.toString() ?: "خطأ غير معروف"
-                                coroutineScope.launch {
-                                    snackbarHostState.showSnackbar(
-                                        message = "فشل في قبول الرحلة: $errorMessage",
-                                        duration = SnackbarDuration.Short
-                                    )
-                                }
+                                    },
 
 
-
-
-                                isLoading.value = false
-                            }
                         )
                     },
                             modifier = Modifier
@@ -682,6 +665,7 @@ fun updateTripStatusInFirestore(
             for (doc in documents) {
                 tripsRef.document(doc.id).update("status", status)
                     .addOnSuccessListener {
+                        Log.d("TripUpdate", "Trip ${doc.id} updated to $status")
                         successCount++
                         if (successCount == total && !failed) {
                             onSuccess() // كل المستندات اتحدثت بنجاح

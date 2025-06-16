@@ -261,6 +261,10 @@ fun homeScreenContent(navController: NavController) {
             }
         }
     }
+
+
+
+
 // ✅ إنشاء ViewModel مرة واحدة داخل Composable
     val locationViewModel2: LocationViewModel5 = viewModel()
     LaunchedEffect(Unit) {
@@ -1148,6 +1152,7 @@ fun homeScreenContent(navController: NavController) {
             delay(2000L) // كل خطوة 1.5 ثانية
         }
     }
+
     var showBottomSheet by remember { mutableStateOf(false) }
 
     PartialBottomSheet(
@@ -1257,9 +1262,15 @@ when{
                                 TrackDriverScreen(
                                     tripId = it,
 
-
                                     passengerLocation = passengerLocation2
                                 )
+//                                TrackDriverScreen(
+//                                    tripId = it,
+//
+//                                    driverLocation = current2,
+//                                    previousDriverLocation = previous2,
+//                                    passengerLocation = passengerLocation2
+//                                )
                             }
 
                         }
@@ -1269,8 +1280,8 @@ when{
                             isTripBegin=true
                             isstart = true
                             InProgressMap(
-                                currentLocation = current,
-                                previousLocation = previous,
+                                currentLocation = driverLocation2,
+                                previousLocation = previousDriverLocation2,
                                 destination = destination,
                                 directions = directions2
                             )
@@ -1720,9 +1731,7 @@ fun getLatLngFromAddressNominatim(address: String, onResult: (LatLng?) -> Unit) 
             onResult(null)
         }
     })
-}
-
-@Composable
+}@Composable
 fun TrackDriverScreen(
     passengerLocation: GeoPoint?,
     tripId: String,
@@ -1848,6 +1857,8 @@ fun TrackDriverScreen(
     }
 }
 
+
+
 // ملف ResultWrapper.kt
 sealed class ResultWrapper<out T> {
     data class Success<out T>(val value: T) : ResultWrapper<T>()
@@ -1959,23 +1970,23 @@ object DirectionsApi {
 
             Log.d("New", "New path:   time=${pathObj.getInt("time")}")
             paths.add(path)
-
-// تجهيز التعليمات بصيغة Map
-            val instructionList = instructions.map { inst ->
-                mapOf(
-                    "text" to inst.text,
-                    "distance" to inst.distance,
-                    "time" to inst.time,
-                    "sign" to inst.sign,
-                    "street_name" to inst.street_name,
-                    "street_destination" to inst.street_destination,
-                    "exit_number" to inst.exit_number,
-                    "exited" to inst.exited,
-                    "interval" to inst.interval,
-                    "last_heading" to inst.last_heading,
-                    "turn_angle" to inst.turn_angle
-                )
-            }
+//
+//// تجهيز التعليمات بصيغة Map
+//            val instructionList = instructions.map { inst ->
+//                mapOf(
+//                    "text" to inst.text,
+//                    "distance" to inst.distance,
+//                    "time" to inst.time,
+//                    "sign" to inst.sign,
+//                    "street_name" to inst.street_name,
+//                    "street_destination" to inst.street_destination,
+//                    "exit_number" to inst.exit_number,
+//                    "exited" to inst.exited,
+//                    "interval" to inst.interval,
+//                    "last_heading" to inst.last_heading,
+//                    "turn_angle" to inst.turn_angle
+//                )
+//            }
 
             val db = FirebaseFirestore.getInstance()
 
@@ -2005,7 +2016,7 @@ object DirectionsApi {
                                     "distance" to path.distance,
                                     "points" to path.points,
                                     "time" to pathObj.getInt("time"),
-                                    "instructions" to instructionList // ✅ تم إضافة التعليمات هنا
+                                  //  "instructions" to instructionList // ✅ تم إضافة التعليمات هنا
                                 )
 
                                 Log.d("Firebase", "New path: distance=${path.distance}, time=${path.time}")

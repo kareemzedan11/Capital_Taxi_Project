@@ -33,6 +33,7 @@ import org.osmdroid.views.overlay.Polyline
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
+
 @Composable
 fun AcceptanceMap(
     currentLocation: GeoPoint? = null,
@@ -58,37 +59,58 @@ fun AcceptanceMap(
 
     DisposableEffect(Unit) {
         val listener = object : MapListener {
-            override fun onScroll(event: ScrollEvent?): Boolean {
-                cameraMovedByUser = true
-                return true
-            }
-
-            override fun onZoom(event: ZoomEvent?): Boolean {
-                cameraMovedByUser = true
-                return true
-            }
+            override fun onScroll(event: ScrollEvent?) = true.also { cameraMovedByUser = true }
+            override fun onZoom(event: ZoomEvent?) = true.also { cameraMovedByUser = true }
         }
         mapView.addMapListener(listener)
-
         onDispose {
             mapView.removeMapListener(listener)
             mapView.onDetach()
         }
     }
 
-    // تشغيل الأنيميشن عند تغير الموقع
+    fun calculateDistance(loc1: GeoPoint, loc2: GeoPoint): Double {
+        val results = FloatArray(1)
+        Location.distanceBetween(
+            loc1.latitude, loc1.longitude,
+            loc2.latitude, loc2.longitude,
+            results
+        )
+        return results[0].toDouble()
+    }
+
+    fun calculateBearing(start: GeoPoint, end: GeoPoint): Float {
+        val lat1 = Math.toRadians(start.latitude)
+        val lon1 = Math.toRadians(start.longitude)
+        val lat2 = Math.toRadians(end.latitude)
+        val lon2 = Math.toRadians(end.longitude)
+        val dLon = lon2 - lon1
+        val y = sin(dLon) * cos(lat2)
+        val x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon)
+        return ((Math.toDegrees(atan2(y, x)) + 360) % 360).toFloat()
+    }
+
+    fun interpolateLocation(start: GeoPoint, end: GeoPoint, fraction: Float): GeoPoint {
+        val lat = start.latitude + (end.latitude - start.latitude) * fraction
+        val lon = start.longitude + (end.longitude - start.longitude) * fraction
+        return GeoPoint(lat, lon)
+    }
+
+
+
+    // حركة السيارة والزاوية
     LaunchedEffect(currentLocation, previousLocation) {
         if (currentLocation != null && previousLocation != null && currentLocation != previousLocation) {
             val distance = calculateDistance(previousLocation, currentLocation)
-            if (distance > 1.0) {
-                val newBearing = calculateBearing(previousLocation, currentLocation).toFloat()
+            if (distance > 3.0) {
+                val newBearing = calculateBearing(previousLocation, currentLocation)
                 animationProgress.snapTo(0f)
                 animatedPosition.value = previousLocation
 
                 launch {
                     animationProgress.animateTo(
                         targetValue = 1f,
-                        animationSpec = tween(durationMillis = 1900, easing = LinearEasing)
+                        animationSpec = tween(durationMillis = 2000, easing = LinearEasing)
                     )
                     animatedPosition.value = currentLocation
                 }
@@ -115,10 +137,10 @@ fun AcceptanceMap(
         }
     }
 
-    // تحديث الموقع أثناء الأنيميشن
+    // أثناء الأنيميشن
     LaunchedEffect(animationProgress.value) {
         if (currentLocation != null && previousLocation != null &&
-            animationProgress.value > 0f && animationProgress.value < 1f
+            animationProgress.value in 0f..1f
         ) {
             animatedPosition.value = interpolateLocation(
                 previousLocation,
@@ -131,7 +153,6 @@ fun AcceptanceMap(
     AndroidView(
         factory = { mapView },
         update = { map ->
-
             map.overlays.clear()
 
             // ماركر السائق
@@ -165,7 +186,7 @@ fun AcceptanceMap(
                 map.overlays.add(passengerMarker)
             }
 
-            // الخط بين السائق والوجهة
+            // رسم المسار المتبقي
             val remainingPath = if (currentLocation != null && directions.isNotEmpty()) {
                 val nearestIndex = findNearestIndex(currentLocation, directions)
                 directions.subList(nearestIndex, directions.size)
@@ -185,49 +206,6 @@ fun AcceptanceMap(
         modifier = modifier.fillMaxSize()
     )
 }
-// وظيفة لحساب المسافة (ممكن تنقلها خارج)
-fun calculateDistance(loc1: GeoPoint, loc2: GeoPoint): Double {
-    val results = FloatArray(1)
-    Location.distanceBetween(
-        loc1.latitude, loc1.longitude,
-        loc2.latitude, loc2.longitude,
-        results
-    )
-    return results[0].toDouble()
-}
-
-fun calculateBearing(start: GeoPoint, end: GeoPoint): Float {
-    val lat1 = Math.toRadians(start.latitude)
-    val lon1 = Math.toRadians(start.longitude)
-    val lat2 = Math.toRadians(end.latitude)
-    val lon2 = Math.toRadians(end.longitude)
-
-    val dLon = lon2 - lon1
-    val y = sin(dLon) * cos(lat2)
-    val x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon)
-
-    var bearing = Math.toDegrees(atan2(y, x))
-    bearing = (bearing + 360) % 360
-    return bearing.toFloat()
-}
-
-fun calculateBearingDifference(start: Float, end: Float): Float {
-    var diff = end - start
-    if (diff > 180) diff -= 360
-    else if (diff < -180) diff += 360
-    return diff
-}
-
-fun interpolatePosition(start: GeoPoint, end: GeoPoint, fraction: Double): GeoPoint {
-    val lat = start.latitude + (end.latitude - start.latitude) * fraction
-    val lon = start.longitude + (end.longitude - start.longitude) * fraction
-    return GeoPoint(lat, lon)
-}
-
-fun easeInOutCubic(t: Float): Float {
-    return if (t < 0.5f) 4 * t * t * t else 1 - Math.pow((-2 * t + 2).toDouble(), 3.0).toFloat() / 2
-}
-
 fun findNearestIndex(current: GeoPoint, path: List<GeoPoint>): Int {
     var minDistance = Double.MAX_VALUE
     var nearestIndex = 0
