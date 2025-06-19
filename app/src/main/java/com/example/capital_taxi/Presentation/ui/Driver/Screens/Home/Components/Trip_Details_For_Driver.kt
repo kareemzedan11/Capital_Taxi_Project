@@ -3,6 +3,7 @@ package com.example.capital_taxi.Presentation.ui.Driver.Screens.Home.Components
 
 import ChatScreen
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.util.Log
 import android.widget.Toast
@@ -295,8 +296,16 @@ fun TripDetailsForDriver(navController: NavController,
                                 }
 
 
+
                                 Button(
-                                    onClick = { /* Handle call */ },
+                                    onClick = {
+                                        fetchPassengerPhoneFromTrip(tripId) { phone ->
+                                            phone?.let {
+                                                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$it"))
+                                                context.startActivity(intent)
+                                            }
+                                        }
+                                    },
                                     modifier = Modifier
                                         .weight(1f)
                                         .padding(start = 8.dp)
@@ -318,6 +327,7 @@ fun TripDetailsForDriver(navController: NavController,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
+
                             }
 
                             // Cancel Trip Button
@@ -410,6 +420,45 @@ fun TripDetailsForDriver(navController: NavController,
         }
     }
 }
+
+
+
+fun fetchPassengerPhoneFromTrip(tripId: String, onResult: (String?) -> Unit) {
+    val db = FirebaseFirestore.getInstance()
+
+    db.collection("trips")
+        .whereEqualTo("_id", tripId)
+        .get()
+        .addOnSuccessListener { tripSnapshot ->
+            val tripDoc = tripSnapshot.documents.firstOrNull()
+            if (tripDoc != null) {
+                val passengerId = tripDoc.getString("userId")
+                if (passengerId != null) {
+                    db.collection("users")
+                        .whereEqualTo("id", passengerId)
+                        .get()
+                        .addOnSuccessListener { userSnapshot ->
+                            val userDoc = userSnapshot.documents.firstOrNull()
+                            if (userDoc != null) {
+                                val phone = userDoc.getString("phone")
+                                onResult(phone)
+                            } else {
+                                onResult(null)
+                            }
+                        }
+                        .addOnFailureListener { onResult(null) }
+                } else {
+                    onResult(null)
+                }
+            } else {
+                onResult(null)
+            }
+        }
+        .addOnFailureListener { onResult(null) }
+}
+
+
+
 fun calculateDistance(
     lat1: Double, lon1: Double,
     lat2: Double, lon2: Double

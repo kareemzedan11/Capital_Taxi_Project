@@ -149,8 +149,10 @@ data class Route(
 )
 data class TripResponse(
     val message: String,
-    val trip: Trip
+    val trip: Trip,
+    val paymentUrl: String? = null // ✅ أضف دي
 )
+
 
 
 data class LocationData(
@@ -159,32 +161,32 @@ data class LocationData(
 )
 
 data class TripRequest(
-    val _id: String,
-    val user: String,
-    val origin: String,  // سيتم تخزينها كنص مفصول بفاصلة "lat,lng"
-    val destination: String,  // سيتم تخزينها كنص مفصول بفاصلة "lat,lng"
+    @SerializedName("id") val userId: String,
+    val origin: String,
+    val destination: String,
     val paymentMethod: String,
     val fare: Double,
     val distanceInKm: Double
 )
+
 data class Trip(
     val _id: String,
     val user: String,
-    val driver: Driver,
+    val driver: Driver = Driver(),
     val originMap: Map<String, Any>? = null,
     val destinationMap: Map<String, Any>? = null,
 
-    val origin: String,  // JSON String
-    val destination: String,  // JSON String
+    val origin: String,
+    val destination: String,
     val distanceInKm: Double,
     val fare: Double,
     val paymentMethod: String,
     val status: String,
     val createdAt: String,
     val updatedAt: String,
+    val paymentUrl: String? = null,  // ✅ أضفنا ده
     val cancelledByDrivers: List<String>? = null
 ) {
-    // Empty constructor for Firebase
     constructor() : this(
         _id = "",
         user = "",
@@ -199,10 +201,10 @@ data class Trip(
         status = "",
         createdAt = "",
         updatedAt = "",
-
-        )
+        paymentUrl = null,
+        cancelledByDrivers = null
+    )
 }
-
 
 // موديل بيانات السائق
 data class Driver(

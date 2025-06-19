@@ -59,17 +59,21 @@
     <string name="enter_phone_number">Enter your phone number</string>
     <string name="next_button">Next</string>
 
-
+    <string name="resend_in" translatable="false">Resend in %ds</string>
     <!-- Voucher Screen -->
     <string name="voucher_screen_title">Voucher</string>
     <string name="voucher_promo_code_placeholder">Have a promo code? Enter it here</string>
     <string name="no_vouchers_available">No Vouchers Available</string>
-
+    <string name="verify_email" translatable="false">Verify Email</string>
     <!-- Trips History Screen -->
     <string name="trips_history_screen_title">Trip History</string>
     <string name="no_trip_history_available">No Trip History Available Now</string>
 
-
+    <string name="password_strength_none" translatable="false">Password strength</string>
+    <string name="password_strength_weak" translatable="false">Weak</string>
+    <string name="password_strength_medium" translatable="false">Medium</string>
+    <string name="password_strength_good" translatable="false">Good</string>
+    <string name="password_strength_strong" translatable="false">Strong</string>
     <!-- Settings Screen -->
     <string name="settings_title">Settings</string>
     <string name="home_title">Home</string>

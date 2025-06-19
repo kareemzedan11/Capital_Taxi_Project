@@ -38,20 +38,22 @@ import com.example.capital_taxi.Helper.PartialBottomSheet
 import com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.PaymentMethodContent
 import com.example.capital_taxi.R
 
-
 @Composable
-fun FindDriverCard(onclick:    () -> Unit) {
-
-
+fun FindDriverCard(onclick: (String) -> Unit) {
     var showBottomSheet by remember { mutableStateOf(false) }
+    var selectedPaymentMethod by remember { mutableStateOf("Cash") }
 
     PartialBottomSheet(
         showBottomSheet = showBottomSheet,
-        onDismissRequest = { showBottomSheet = false }) {
-
-        PaymentMethodContent()
-
-
+        onDismissRequest = { showBottomSheet = false }
+    ) {
+        PaymentMethodContent(
+            selectedMethod = selectedPaymentMethod,
+            onOptionSelected = {
+                selectedPaymentMethod = it
+                showBottomSheet = false
+            }
+        )
     }
     Box(
         modifier = Modifier
@@ -90,7 +92,9 @@ fun FindDriverCard(onclick:    () -> Unit) {
                     Spacer(modifier = Modifier.weight(1f))
 
                     Button(
-                        onClick = { onclick() },
+                        onClick = {
+                            onclick(selectedPaymentMethod) // استخدم القيمة هنا
+                        },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = colorResource(
                                 R.color.primary_color
@@ -108,13 +112,7 @@ fun FindDriverCard(onclick:    () -> Unit) {
                         )
                     }
                     Spacer(modifier = Modifier.weight(1f))
-//
-//                                Icon(
-//                                    modifier = Modifier.size(26.dp),
-//                                    painter = painterResource(R.drawable.tools),
-//                                    tint = Color.Black,
-//                                    contentDescription = null
-//                                )
+
                 }
             }
         }

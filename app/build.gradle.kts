@@ -85,7 +85,7 @@ dependencies {
     implementation ("androidx.media3:media3-exoplayer:1.2.1")
     implementation ("androidx.media3:media3-ui:1.2.1")
     implementation("io.github.jan-tennert.supabase:postgrest-kt:1.2.0")
-
+    implementation("com.facebook.android:facebook-login:16.3.0")
     implementation("io.github.jan-tennert.supabase:storage-kt:1.4.0") // لـ Storage
     implementation ("androidx.hilt:hilt-navigation-compose:1.1.0")
     implementation ("com.google.dagger:hilt-android:2.48")

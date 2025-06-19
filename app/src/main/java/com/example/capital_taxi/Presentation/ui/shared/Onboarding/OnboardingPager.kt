@@ -120,41 +120,70 @@ fun OnboardingPager(navController: NavController) {
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+
+
                     googlePhoneSignInButton(
                         onSignInClick = {
-                            val signInIntent = GoogleSignIn.getClient(
-                                context,
-                                GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                                    .requestEmail()
-                                    .build()
-                            ).signInIntent
-                            signInLauncher.launch(signInIntent)
+                            navController.navigate(Destination.modeDesign.route)
                         },
                         navController,
-                        stringResource(R.string.continue_with_google),
-                        image = R.drawable.googleicon
+                        stringResource(R.string.log_in),
+                        image = R.drawable.baseline_login_24
                     )
 
-                    googlePhoneSignInButton(
-                        onSignInClick = { navController.navigate(Destination.PhoneVerification.route) },
-                        navController,
-                        stringResource(R.string.continue_with_phone),
-                        image = R.drawable.phone2
-                    )
+                    Spacer(modifier = Modifier.padding(bottom =20.dp))
 
                     Text(
-                        stringResource(R.string.log_in),
+                       text = "Your Journey Starts Here",
                         fontSize = responsiveTextSize(
                             fraction = 0.06f,
                             minSize = 14.sp,
                             maxSize = 20.sp
                         ),
                         fontFamily = CustomFontFamily,
-                        fontWeight = FontWeight.W500,
+                        fontWeight = FontWeight.Bold,
                         color = Color(0XFF987200),
                         modifier = Modifier
-                            .clickable { navController.navigate(Destination.modeDesign.route) },
+                            .clickable {},
                     )
+
+//                    googlePhoneSignInButton(
+//                        onSignInClick = {
+//                            val signInIntent = GoogleSignIn.getClient(
+//                                context,
+//                                GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+//                                    .requestEmail()
+//                                    .build()
+//                            ).signInIntent
+//                            signInLauncher.launch(signInIntent)
+//                        },
+//                        navController,
+//                        stringResource(R.string.continue_with_google),
+//                        image = R.drawable.googleicon
+//                    )
+
+
+//
+//                    googlePhoneSignInButton(
+//                        onSignInClick = { navController.navigate(Destination.PhoneVerification.route) },
+//                        navController,
+//                        stringResource(R.string.continue_with_phone),
+//                        image = R.drawable.phone2
+//                    )
+//
+//                    Text(
+//                        stringResource(R.string.log_in),
+//                        fontSize = responsiveTextSize(
+//                            fraction = 0.06f,
+//                            minSize = 14.sp,
+//                            maxSize = 20.sp
+//                        ),
+//                        fontFamily = CustomFontFamily,
+//                        fontWeight = FontWeight.W500,
+//                        color = Color(0XFF987200),
+//                        modifier = Modifier
+//                            .clickable { navController.navigate(Destination.modeDesign.route) },
+//                    )
 
                     Spacer(modifier = Modifier.padding(bottom = 10.dp))
                 }

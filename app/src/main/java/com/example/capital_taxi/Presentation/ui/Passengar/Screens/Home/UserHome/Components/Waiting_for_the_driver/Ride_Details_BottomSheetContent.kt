@@ -212,6 +212,7 @@ fun RideDetailsBottomSheetContent(
                             navController,
                             chatId = tripid,
                             userId = UserId,
+                            tripid = tripid,
                         )
                     }
                 }

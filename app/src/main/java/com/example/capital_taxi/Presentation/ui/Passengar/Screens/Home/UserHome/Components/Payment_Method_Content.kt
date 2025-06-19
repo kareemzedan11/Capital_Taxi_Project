@@ -15,24 +15,30 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.capital_taxi.R
  @Composable
-fun PaymentMethodContent() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = stringResource(R.string.Payment_method),
-            fontSize = 24.sp,
 
-            fontWeight = FontWeight.W700
-        )
-        Divider(
-            thickness = 2.dp,
-            modifier = Modifier.padding(vertical = 10.dp, horizontal = 30.dp)
-        )
-        Spacer(modifier = Modifier.padding(20.dp))
-        PaymentCard()
-    }
-}
+ fun PaymentMethodContent(
+     selectedMethod: String,
+     onOptionSelected: (String) -> Unit
+ ) {
+     Column(
+         modifier = Modifier
+             .fillMaxWidth()
+             .padding(16.dp),
+         horizontalAlignment = Alignment.CenterHorizontally
+     ) {
+         Text(
+             text = stringResource(R.string.Payment_method),
+             fontSize = 24.sp,
+             fontWeight = FontWeight.W700
+         )
+         Divider(
+             thickness = 2.dp,
+             modifier = Modifier.padding(vertical = 10.dp, horizontal = 30.dp)
+         )
+         Spacer(modifier = Modifier.padding(20.dp))
+         PaymentCard(
+             selectedMethod = selectedMethod,
+             onSelect = onOptionSelected
+         )
+     }
+ }

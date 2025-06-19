@@ -57,7 +57,9 @@ import com.example.capital_taxi.Presentation.ui.shared.OTP.OtpScreen
 import com.example.capital_taxi.Presentation.ui.shared.Select_the_mode.SelectTheMode
 import com.example.capital_taxi.Presentation.ui.shared.Start.StartScreen
 import com.example.capital_taxi.Presentation.ui.shared.modeDesign.modeDesign
+import com.example.capital_taxi.Presentation.ui.shared.new_password.EmailScreen
 import com.example.capital_taxi.Presentation.ui.shared.new_password.NewPasswordScreen
+import com.example.capital_taxi.Presentation.ui.shared.new_password.OTPAndNewPasswordScreen
 import com.example.capital_taxi.Presentation.ui.shared.search_for_location.SearchForLocation
 import com.example.capital_taxi.ui.screens.Driver.VerficationScreens.CertificateOfVehicleRegistration
 import com.example.capital_taxi.ui.screens.Driver.VerficationScreens.DriverLicence
@@ -199,6 +201,9 @@ fun AppNavGraph(navController: NavHostController) {
         composable(Destination.WorkPlace.route) {
             WorkPlace(navController)
         }
+            composable(Destination.OTPAndNewPasswordScreen.route) {
+                OTPAndNewPasswordScreen(navController)
+            }
 
         composable(Destination.NewPasswordScreen.route) {
             NewPasswordScreen(navController)
@@ -216,6 +221,9 @@ fun AppNavGraph(navController: NavHostController) {
             ChatScreen(navController)
         }
 
+            composable(Destination.EmailScreen.route) {
+                EmailScreen(navController)
+            }
 
 
         composable(Destination.SupportPage.route) {

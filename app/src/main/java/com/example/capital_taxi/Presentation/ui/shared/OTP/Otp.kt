@@ -125,7 +125,7 @@ fun OtpScreen(
                 modifier = Modifier.clickable(enabled = timer == 0) {
                     if (timer == 0) {
                         timer = 60
-                    //    viewModel.resendOtp(phoneNumber!!)
+                    viewModel.sendOtp(phoneNumber!!)
                     }
                 },
                 color = if (timer == 0) MaterialTheme.colorScheme.primary else Color.Gray

@@ -200,7 +200,8 @@ fun UserProfile(navController: NavController, ) {
                 ProfileTextField(
                     label = "Email",
                     value = email,
-                    onValueChange = { email = it },
+                    onValueChange = {}, // فارغ عشان مفيش تعديل
+                    readOnly = true, // ده هو المفتاح
                     leadingIcon = {
                         Icon(
                             painter = painterResource(id = R.drawable.baseline_email_24),
@@ -209,6 +210,7 @@ fun UserProfile(navController: NavController, ) {
                         )
                     }
                 )
+
 
                 ProfileTextField(
                     label = "Phone",
@@ -227,7 +229,13 @@ fun UserProfile(navController: NavController, ) {
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Button(
-                    onClick = { navController.navigate(Destination.UserHomeScreen.route) },
+                    onClick = {
+                        driverId?.let {
+                            updateUserProfileInFirestore(it, userName, phone)
+                            navController.navigate(Destination.UserHomeScreen.route)
+                        }
+                    },
+
                     modifier = Modifier.fillMaxWidth(0.9f).height(60.dp),
                     colors = ButtonDefaults.buttonColors(colorResource(R.color.primary_color)),
                     shape = RoundedCornerShape(16.dp)
@@ -278,5 +286,24 @@ suspend fun updateUserImageUrlInFirestore(userId: String, imageUrl: String) {
                 document.reference.update("imageUrl", cacheBustedUrl)
             }
         }
+}fun updateUserProfileInFirestore(userId: String, name: String, phone: String) {
+    val db = FirebaseFirestore.getInstance()
+    db.collection("users")
+        .whereEqualTo("id", userId)
+        .get()
+        .addOnSuccessListener { documents ->
+            for (document in documents) {
+                document.reference.update(
+                    mapOf(
+                        "name" to name,
+                        "phone" to phone
+                    )
+                )
+            }
+        }
+        .addOnFailureListener {
+            it.printStackTrace()
+        }
 }
+
 

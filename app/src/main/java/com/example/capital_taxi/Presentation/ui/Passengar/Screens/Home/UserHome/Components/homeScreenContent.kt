@@ -10,13 +10,23 @@ import android.location.LocationManager
 import android.net.Uri
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.BottomSheetValue
@@ -44,6 +54,9 @@ import androidx.compose.material.BottomSheetScaffold
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -54,6 +67,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import kotlin.math.*  // يحتوي على sin, cos, sqrt, atan2, p*
 
 import androidx.lifecycle.ViewModel
@@ -130,7 +145,10 @@ import com.example.capital_taxi.data.repository.graphhopper_response.graphhopper
 import com.example.capital_taxi.domain.shared.TripInfoViewModel
 import com.example.capital_taxi.domain.storedPoints
 import com.example.capital_taxi.utils.SearchMapView
+import com.google.firebase.Timestamp
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
 import com.google.maps.android.PolyUtil
 import findNearestIndex
@@ -140,6 +158,7 @@ import kotlinx.coroutines.tasks.await
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlin.math.cos
 import kotlin.math.pow
@@ -147,7 +166,7 @@ import kotlin.math.sin
 
 private val Context.dataStore by preferencesDataStore(name = "location_prefs")
 
-@OptIn(ExperimentalMaterialApi::class)
+@OptIn(ExperimentalMaterialApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun homeScreenContent(navController: NavController) {
     var isConfirmed by remember { mutableStateOf(false) }
@@ -679,489 +698,28 @@ fun homeScreenContent(navController: NavController) {
             isDataLoading2 = false
         }
     }
-    val realStreetPath = listOf(
-        GeoPoint(29.983390, 31.282690),
-        GeoPoint(29.984770, 31.282180),
-        GeoPoint(29.984310, 31.280370),
-        GeoPoint(29.984040, 31.279310),
-        GeoPoint(29.983680, 31.277840),
-        GeoPoint(29.983320, 31.276420),
-        GeoPoint(29.983210, 31.275990),
-        GeoPoint(29.982750, 31.274040),
-        GeoPoint(29.983540, 31.274050),
-        GeoPoint(29.983950, 31.274070),
-        GeoPoint(29.984060, 31.274070),
-        GeoPoint(29.984280, 31.274020),
-        GeoPoint(29.984390, 31.273990),
-        GeoPoint(29.984900, 31.273760),
-        GeoPoint(29.985220, 31.273670),
-        GeoPoint(29.986440, 31.273100),
-        GeoPoint(29.986710, 31.272960),
-        GeoPoint(29.987210, 31.272690),
-        GeoPoint(29.987390, 31.272560),
-        GeoPoint(29.987410, 31.272520),
-        GeoPoint(29.987760, 31.272290),
-        GeoPoint(29.988240, 31.272000),
-        GeoPoint(29.988290, 31.271920),
-        GeoPoint(29.988320, 31.271890),
-        GeoPoint(29.988390, 31.271840),
-        GeoPoint(29.988470, 31.271810),
-        GeoPoint(29.989750, 31.271680),
-        GeoPoint(29.989820, 31.271690),
-        GeoPoint(29.989890, 31.271720),
-        GeoPoint(29.989950, 31.271750),
-        GeoPoint(29.990010, 31.271800),
-        GeoPoint(29.990060, 31.271850),
-        GeoPoint(29.990100, 31.271920),
-        GeoPoint(29.990130, 31.271990),
-        GeoPoint(29.990210, 31.272230),
-        GeoPoint(29.990200, 31.272580),
-        GeoPoint(29.990210, 31.273350),
-        GeoPoint(29.990240, 31.274120),
-        GeoPoint(29.990290, 31.274880),
-        GeoPoint(29.990450, 31.276260),
-        GeoPoint(29.990670, 31.277820),
-        GeoPoint(29.990850, 31.279180),
-        GeoPoint(29.991100, 31.281120),
-        GeoPoint(29.991240, 31.282250),
-        GeoPoint(29.991290, 31.282680),
-        GeoPoint(29.991350, 31.283010),
-        GeoPoint(29.991420, 31.283330),
-        GeoPoint(29.991500, 31.283640),
-        GeoPoint(29.991840, 31.284840),
-        GeoPoint(29.992350, 31.286680),
-        GeoPoint(29.992430, 31.287080),
-        GeoPoint(29.992470, 31.287290),
-        GeoPoint(29.992520, 31.287720),
-        GeoPoint(29.992560, 31.288140),
-        GeoPoint(29.992570, 31.288770),
-        GeoPoint(29.992560, 31.289160),
-        GeoPoint(29.992530, 31.289540),
-        GeoPoint(29.992480, 31.289920),
-        GeoPoint(29.992420, 31.290290),
-        GeoPoint(29.992350, 31.290660),
-        GeoPoint(29.992250, 31.291020),
-        GeoPoint(29.992140, 31.291380),
-        GeoPoint(29.991640, 31.292890),
-        GeoPoint(29.991140, 31.294160),
-        GeoPoint(29.990800, 31.294970),
-        GeoPoint(29.989480, 31.298280),
-        GeoPoint(29.989130, 31.299370),
-        GeoPoint(29.988810, 31.300350),
-        GeoPoint(29.988280, 31.302000),
-        GeoPoint(29.988020, 31.302700),
-        GeoPoint(29.987880, 31.303190),
-        GeoPoint(29.987840, 31.303420),
-        GeoPoint(29.987800, 31.303760),
-        GeoPoint(29.987700, 31.304290),
-        GeoPoint(29.987570, 31.304800),
-        GeoPoint(29.987420, 31.305310),
-        GeoPoint(29.987320, 31.305780),
-        GeoPoint(29.987230, 31.306250),
-        GeoPoint(29.987150, 31.306720),
-        GeoPoint(29.987120, 31.307030),
-        GeoPoint(29.987070, 31.307330),
-        GeoPoint(29.987000, 31.307630),
-        GeoPoint(29.986800, 31.308330),
-        GeoPoint(29.986730, 31.308490),
-        GeoPoint(29.986460, 31.309230),
-        GeoPoint(29.985910, 31.310800),
-        GeoPoint(29.985860, 31.310970),
-        GeoPoint(29.985790, 31.311310),
-        GeoPoint(29.985270, 31.312750),
-        GeoPoint(29.984540, 31.314760),
-        GeoPoint(29.984430, 31.315090),
-        GeoPoint(29.984310, 31.315520),
-        GeoPoint(29.984180, 31.316070),
-        GeoPoint(29.984110, 31.316490),
-        GeoPoint(29.984060, 31.316980),
-        GeoPoint(29.984020, 31.317500),
-        GeoPoint(29.984000, 31.318200),
-        GeoPoint(29.984010, 31.318380),
-        GeoPoint(29.984040, 31.318780),
-        GeoPoint(29.984190, 31.320100),
-        GeoPoint(29.984230, 31.321060),
-        GeoPoint(29.984190, 31.321750),
-        GeoPoint(29.984070, 31.322640),
-        GeoPoint(29.983980, 31.323190),
-        GeoPoint(29.983710, 31.324640),
-        GeoPoint(29.983490, 31.325990),
-        GeoPoint(29.983310, 31.327250),
-        GeoPoint(29.983190, 31.328450),
-        GeoPoint(29.982920, 31.330530),
-        GeoPoint(29.982630, 31.332830),
-        GeoPoint(29.982320, 31.335450),
-        GeoPoint(29.982130, 31.336900),
-        GeoPoint(29.981890, 31.338930),
-        GeoPoint(29.981630, 31.341070),
-        GeoPoint(29.981540, 31.341280),
-        GeoPoint(29.981470, 31.341490),
-        GeoPoint(29.981260, 31.342200),
-        GeoPoint(29.981140, 31.342580),
-        GeoPoint(29.981050, 31.343280),
-        GeoPoint(29.980960, 31.343950),
-        GeoPoint(29.980840, 31.344590),
-        GeoPoint(29.980740, 31.345240),
-        GeoPoint(29.980650, 31.346010),
-        GeoPoint(29.980630, 31.346460),
-        GeoPoint(29.980630, 31.346860),
-        GeoPoint(29.980640, 31.347300),
-        GeoPoint(29.980620, 31.347740),
-        GeoPoint(29.980520, 31.348370),
-        GeoPoint(29.980390, 31.348970),
-        GeoPoint(29.980290, 31.349380),
-        GeoPoint(29.979910, 31.350620),
-        GeoPoint(29.979730, 31.351150),
-        GeoPoint(29.979090, 31.353120),
-        GeoPoint(29.978970, 31.353270),
-        GeoPoint(29.978850, 31.353410),
-        GeoPoint(29.978720, 31.353530),
-        GeoPoint(29.978410, 31.353780),
-        GeoPoint(29.978250, 31.353930),
-        GeoPoint(29.978140, 31.354090),
-        GeoPoint(29.978090, 31.354210),
-        GeoPoint(29.978020, 31.354470),
-        GeoPoint(29.978000, 31.354620),
-        GeoPoint(29.977990, 31.355150),
-        GeoPoint(29.977950, 31.355610),
-        GeoPoint(29.977890, 31.356320),
-        GeoPoint(29.977830, 31.356910),
-        GeoPoint(29.977710, 31.357800),
-        GeoPoint(29.977440, 31.359100),
-        GeoPoint(29.977310, 31.359630),
-        GeoPoint(29.977110, 31.360090),
-        GeoPoint(29.977040, 31.360240),
-        GeoPoint(29.976870, 31.360520),
-        GeoPoint(29.976780, 31.360650),
-        GeoPoint(29.976500, 31.360940),
-        GeoPoint(29.975330, 31.361940),
-        GeoPoint(29.974330, 31.362860),
-        GeoPoint(29.973930, 31.363260),
-        GeoPoint(29.973470, 31.363750),
-        GeoPoint(29.972730, 31.364670),
-        GeoPoint(29.971060, 31.367120),
-        GeoPoint(29.969250, 31.369560),
-        GeoPoint(29.969060, 31.369830),
-        GeoPoint(29.968880, 31.370110),
-        GeoPoint(29.968700, 31.370390),
-        GeoPoint(29.968540, 31.370690),
-        GeoPoint(29.968380, 31.370990),
-        GeoPoint(29.968240, 31.371300),
-        GeoPoint(29.968100, 31.371610),
-        GeoPoint(29.967850, 31.372220),
-        GeoPoint(29.967740, 31.372520),
-        GeoPoint(29.967520, 31.373150),
-        GeoPoint(29.967420, 31.373490),
-        GeoPoint(29.967330, 31.373840),
-        GeoPoint(29.967160, 31.374540),
-        GeoPoint(29.967040, 31.375220),
-        GeoPoint(29.966970, 31.375910),
-        GeoPoint(29.966920, 31.376590),
-        GeoPoint(29.966910, 31.377270),
-        GeoPoint(29.966930, 31.384360),
-        GeoPoint(29.966910, 31.386670),
-        GeoPoint(29.966800, 31.387640),
-        GeoPoint(29.966680, 31.388590),
-        GeoPoint(29.966330, 31.390450),
-        GeoPoint(29.965870, 31.392610),
-        GeoPoint(29.965770, 31.393280),
-        GeoPoint(29.965700, 31.393960),
-        GeoPoint(29.965590, 31.398980),
-        GeoPoint(29.965530, 31.400300),
-        GeoPoint(29.965430, 31.401490),
-        GeoPoint(29.965240, 31.403320),
-        GeoPoint(29.965110, 31.404060),
-        GeoPoint(29.964950, 31.404920),
-        GeoPoint(29.964770, 31.405740),
-        GeoPoint(29.964490, 31.406850),
-        GeoPoint(29.964110, 31.408230),
-        GeoPoint(29.963920, 31.408930),
-        GeoPoint(29.963280, 31.411080),
-        GeoPoint(29.962670, 31.413320),
-        GeoPoint(29.961830, 31.416250),
-        GeoPoint(29.961080, 31.418890),
-        GeoPoint(29.960780, 31.419860),
-        GeoPoint(29.960480, 31.420860),
-        GeoPoint(29.960030, 31.422160),
-        GeoPoint(29.959590, 31.423460),
-        GeoPoint(29.958970, 31.425200),
-        GeoPoint(29.958330, 31.427010),
-        GeoPoint(29.957500, 31.429300),
-        GeoPoint(29.956820, 31.431280),
-        GeoPoint(29.956430, 31.432540),
-        GeoPoint(29.956240, 31.433220),
-        GeoPoint(29.956010, 31.434220),
-        GeoPoint(29.955700, 31.435760),
-        GeoPoint(29.955640, 31.436170),
-        GeoPoint(29.955530, 31.436850),
-        GeoPoint(29.955370, 31.437990),
-        GeoPoint(29.955160, 31.439250),
-        GeoPoint(29.955070, 31.439950),
-        GeoPoint(29.955010, 31.440460),
-        GeoPoint(29.954980, 31.440900),
-        GeoPoint(29.954970, 31.441760),
-        GeoPoint(29.954980, 31.442290),
-        GeoPoint(29.955010, 31.442800),
-        GeoPoint(29.955100, 31.443610),
-        GeoPoint(29.955220, 31.444370),
-        GeoPoint(29.955390, 31.445120),
-        GeoPoint(29.955600, 31.445860),
-        GeoPoint(29.955850, 31.446580),
-        GeoPoint(29.956130, 31.447270),
-        GeoPoint(29.956300, 31.447620),
-        GeoPoint(29.956460, 31.447970),
-        GeoPoint(29.957030, 31.448930),
-        GeoPoint(29.958020, 31.450400),
-        GeoPoint(29.959360, 31.452450),
-        GeoPoint(29.960230, 31.453720),
-        GeoPoint(29.961570, 31.455780),
-        GeoPoint(29.963560, 31.458780),
-        GeoPoint(29.963960, 31.459410),
-        GeoPoint(29.964290, 31.459930),
-        GeoPoint(29.964970, 31.461070),
-        GeoPoint(29.965510, 31.462140),
-        GeoPoint(29.966020, 31.463470),
-        GeoPoint(29.966260, 31.464240),
-        GeoPoint(29.966420, 31.464830),
-        GeoPoint(29.966580, 31.465590),
-        GeoPoint(29.966680, 31.466180),
-        GeoPoint(29.966760, 31.466770),
-        GeoPoint(29.966820, 31.467360),
-        GeoPoint(29.966850, 31.467960),
-        GeoPoint(29.966860, 31.468550),
-        GeoPoint(29.966860, 31.469150),
-        GeoPoint(29.966810, 31.470070),
-        GeoPoint(29.966710, 31.470980),
-        GeoPoint(29.966640, 31.471460),
-        GeoPoint(29.966550, 31.471930),
-        GeoPoint(29.966440, 31.472390),
-        GeoPoint(29.966300, 31.472960),
-        GeoPoint(29.966130, 31.473510),
-        GeoPoint(29.965940, 31.474060),
-        GeoPoint(29.965670, 31.474810),
-        GeoPoint(29.965440, 31.475350),
-        GeoPoint(29.965190, 31.475880),
-        GeoPoint(29.964930, 31.476400),
-        GeoPoint(29.964590, 31.477010),
-        GeoPoint(29.964240, 31.477530),
-        GeoPoint(29.964020, 31.477820),
-        GeoPoint(29.963850, 31.478060),
-        GeoPoint(29.963400, 31.478590),
-        GeoPoint(29.962450, 31.479770),
-        GeoPoint(29.961570, 31.480960),
-        GeoPoint(29.961060, 31.481680),
-        GeoPoint(29.960500, 31.482410),
-        GeoPoint(29.958850, 31.484470),
-        GeoPoint(29.955920, 31.488250),
-        GeoPoint(29.953920, 31.490850),
-        GeoPoint(29.952540, 31.492780),
-        GeoPoint(29.947860, 31.499920),
-        GeoPoint(29.945530, 31.503410),
-        GeoPoint(29.941800, 31.509120),
-        GeoPoint(29.940310, 31.511430),
-        GeoPoint(29.938180, 31.514750),
-        GeoPoint(29.936440, 31.517430),
-        GeoPoint(29.935270, 31.519270),
-        GeoPoint(29.934940, 31.519550),
-        GeoPoint(29.934760, 31.519710),
-        GeoPoint(29.934560, 31.519920),
-        GeoPoint(29.934340, 31.520200),
-        GeoPoint(29.934040, 31.520640),
-        GeoPoint(29.933730, 31.521160),
-        GeoPoint(29.933500, 31.521600),
-        GeoPoint(29.933230, 31.522180),
-        GeoPoint(29.933040, 31.522670),
-        GeoPoint(29.932890, 31.523150),
-        GeoPoint(29.932760, 31.523560),
-        GeoPoint(29.931450, 31.528520),
-        GeoPoint(29.931230, 31.528820),
-        GeoPoint(29.931060, 31.528980),
-        GeoPoint(29.930930, 31.529060),
-        GeoPoint(29.930730, 31.529130),
-        GeoPoint(29.930520, 31.529140),
-        GeoPoint(29.930290, 31.529090),
-        GeoPoint(29.930140, 31.529020),
-        GeoPoint(29.929970, 31.528870),
-        GeoPoint(29.929830, 31.528690),
-        GeoPoint(29.929720, 31.528540),
-        GeoPoint(29.929640, 31.528360),
-        GeoPoint(29.929590, 31.528150),
-        GeoPoint(29.929580, 31.527870),
-        GeoPoint(29.929610, 31.527640),
-        GeoPoint(29.929700, 31.527420),
-        GeoPoint(29.929870, 31.527200),
-        GeoPoint(29.930000, 31.527090),
-        GeoPoint(29.930140, 31.527020),
-        GeoPoint(29.930300, 31.526960),
-        GeoPoint(29.930410, 31.526940),
-        GeoPoint(29.930780, 31.526960),
-        GeoPoint(29.931350, 31.527170),
-        GeoPoint(29.934030, 31.528090),
-        GeoPoint(29.936190, 31.528790),
-        GeoPoint(29.937360, 31.529220),
-        GeoPoint(29.937560, 31.529310),
-        GeoPoint(29.937740, 31.529410),
-        GeoPoint(29.938080, 31.529610),
-        GeoPoint(29.938230, 31.529700),
-        GeoPoint(29.942380, 31.532690),
-        GeoPoint(29.949980, 31.538230),
-        GeoPoint(29.950990, 31.538970),
-        GeoPoint(29.951770, 31.539530),
-        GeoPoint(29.952740, 31.539870),
-        GeoPoint(29.954530, 31.541160),
-        GeoPoint(29.955640, 31.541980),
-        GeoPoint(29.960020, 31.545200),
-        GeoPoint(29.961770, 31.546470),
-        GeoPoint(29.962680, 31.547120),
-        GeoPoint(29.963720, 31.547830),
-        GeoPoint(29.964570, 31.548290),
-        GeoPoint(29.964920, 31.548490),
-        GeoPoint(29.965260, 31.548710),
-        GeoPoint(29.965580, 31.548970),
-        GeoPoint(29.965890, 31.549250),
-        GeoPoint(29.966180, 31.549540),
-        GeoPoint(29.966450, 31.549800),
-        GeoPoint(29.967010, 31.550280),
-        GeoPoint(29.967850, 31.550890),
-        GeoPoint(29.968770, 31.551500),
-        GeoPoint(29.970070, 31.552460),
-        GeoPoint(29.982080, 31.561180),
-        GeoPoint(29.985870, 31.564010),
-        GeoPoint(29.988130, 31.565560),
-        GeoPoint(29.988750, 31.566030),
-        GeoPoint(29.989810, 31.566790),
-        GeoPoint(29.990970, 31.567620),
-        GeoPoint(29.991740, 31.568200),
-        GeoPoint(29.993300, 31.569310),
-        GeoPoint(29.997850, 31.572630),
-        GeoPoint(29.999340, 31.573700),
-        GeoPoint(30.004370, 31.577370),
-        GeoPoint(30.005630, 31.578300),
-        GeoPoint(30.007670, 31.579790),
-        GeoPoint(30.008190, 31.580150),
-        GeoPoint(30.008670, 31.580530),
-        GeoPoint(30.009470, 31.581120),
-        GeoPoint(30.009900, 31.581480),
-        GeoPoint(30.010840, 31.582420),
-        GeoPoint(30.012140, 31.583890),
-        GeoPoint(30.012880, 31.585010),
-        GeoPoint(30.013860, 31.586350),
-        GeoPoint(30.015490, 31.588620),
-        GeoPoint(30.018040, 31.592180),
-        GeoPoint(30.018580, 31.592890),
-        GeoPoint(30.019190, 31.593650),
-        GeoPoint(30.019850, 31.594400),
-        GeoPoint(30.020600, 31.595150),
-        GeoPoint(30.021000, 31.595530),
-        GeoPoint(30.021490, 31.595950),
-        GeoPoint(30.022140, 31.596470),
-        GeoPoint(30.022430, 31.596690),
-        GeoPoint(30.023030, 31.597110),
-        GeoPoint(30.023560, 31.597450),
-        GeoPoint(30.024260, 31.597870),
-        GeoPoint(30.025070, 31.598300),
-        GeoPoint(30.025730, 31.598610),
-        GeoPoint(30.026100, 31.598770),
-        GeoPoint(30.026470, 31.598920),
-        GeoPoint(30.027240, 31.599190),
-        GeoPoint(30.027940, 31.599400),
-        GeoPoint(30.028250, 31.599490),
-        GeoPoint(30.028870, 31.599630),
-        GeoPoint(30.029830, 31.599830),
-        GeoPoint(30.031110, 31.600040),
-        GeoPoint(30.033650, 31.600480),
-        GeoPoint(30.034230, 31.600600),
-        GeoPoint(30.034780, 31.600750),
-        GeoPoint(30.035230, 31.600910),
-        GeoPoint(30.036180, 31.601530),
-        GeoPoint(30.036400, 31.601630),
-        GeoPoint(30.037980, 31.602460),
-        GeoPoint(30.038460, 31.602750),
-        GeoPoint(30.040320, 31.604010),
-        GeoPoint(30.041310, 31.604630),
-        GeoPoint(30.041460, 31.604840),
-        GeoPoint(30.041590, 31.605090),
-        GeoPoint(30.041690, 31.605350),
-        GeoPoint(30.041770, 31.605580),
-        GeoPoint(30.042150, 31.607560),
-        GeoPoint(30.042190, 31.607670),
-        GeoPoint(30.042220, 31.607710),
-        GeoPoint(30.042250, 31.607750),
-        GeoPoint(30.042390, 31.607890),
-        GeoPoint(30.042420, 31.607960),
-        GeoPoint(30.042500, 31.608090),
-        GeoPoint(30.042660, 31.608560),
-        GeoPoint(30.042770, 31.608850),
-        GeoPoint(30.043140, 31.609620),
-        GeoPoint(30.043570, 31.610620),
-        GeoPoint(30.043990, 31.611760),
-        GeoPoint(30.044180, 31.612350),
-        GeoPoint(30.044340, 31.612950),
-        GeoPoint(30.044510, 31.613710),
-        GeoPoint(30.044690, 31.614720),
-        GeoPoint(30.044760, 31.615210),
-        GeoPoint(30.044800, 31.615710),
-        GeoPoint(30.044820, 31.616200),
-        GeoPoint(30.044800, 31.619110),
-        GeoPoint(30.044790, 31.623770),
-        GeoPoint(30.044790, 31.626710),
-        GeoPoint(30.044760, 31.629490),
-        GeoPoint(30.044760, 31.629930),
-        GeoPoint(30.044790, 31.631000),
-        GeoPoint(30.044790, 31.633520),
-        GeoPoint(30.044720, 31.638350),
-        GeoPoint(30.044740, 31.641650),
-        GeoPoint(30.044720, 31.645700),
-        GeoPoint(30.044680, 31.652470),
-        GeoPoint(30.044620, 31.661110),
-        GeoPoint(30.044580, 31.665950),
-        GeoPoint(30.044520, 31.676190),
-        GeoPoint(30.044510, 31.679840),
-        GeoPoint(30.044490, 31.680930),
-        GeoPoint(30.044410, 31.682670),
-        GeoPoint(30.044340, 31.683180),
-        GeoPoint(30.044220, 31.684130),
-        GeoPoint(30.044170, 31.684770),
-        GeoPoint(30.044120, 31.685480),
-        GeoPoint(30.044120, 31.686970),
-        GeoPoint(30.043820, 31.686980),
-        GeoPoint(30.043810, 31.688890),
-        GeoPoint(30.043800, 31.690300),
-        GeoPoint(30.043830, 31.691130),
-        GeoPoint(30.044020, 31.692380),
-        GeoPoint(30.044080, 31.692900),
-        GeoPoint(30.044090, 31.693110),
-        GeoPoint(30.044100, 31.694080),
-        GeoPoint(30.044070, 31.697510),
-        GeoPoint(30.043990, 31.697510),
-    )
-
-    var index by remember { mutableStateOf(0) }
-    var current by remember { mutableStateOf<GeoPoint?>(null) }
-    var previous by remember { mutableStateOf<GeoPoint?>(null) }
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            if (index < realStreetPath.size - 1) {
-                previous = realStreetPath[index]
-                current = realStreetPath[index + 1]
-                index++
-            } else {
-                index = 0
-            }
-            delay(2000L) // كل خطوة 1.5 ثانية
-        }
-    }
 
     var showBottomSheet by remember { mutableStateOf(false) }
+    var selectedPaymentMethod by remember { mutableStateOf("Cash") }
 
     PartialBottomSheet(
         showBottomSheet = showBottomSheet,
-        onDismissRequest = { showBottomSheet = false }) {
-        PaymentMethodContent()
+        onDismissRequest = { showBottomSheet = false }
+    ) {
+        PaymentMethodContent(
+            selectedMethod = selectedPaymentMethod,
+            onOptionSelected = {
+                selectedPaymentMethod = it
+                showBottomSheet = false // تغلق الـ BottomSheet بعد الاختيار (اختياري)
+            }
+        )
     }
+
     var driverLocationState by remember { mutableStateOf<LatLng?>(null) }
     // Main Container
+
+    val userId = sharedPreferences.getString("USER_ID", null)
+    val userType = sharedPreferences.getString("user_type", null)
 
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -1435,17 +993,34 @@ if (state.isInitialPickup && !state.isSearch && !state.isStart && !state.isTripB
                                         stateTripViewModel.updateTripStatus("Completed")
                                     }
                                 }
-                                RideInProgressScreen(
-                                    startLocation = originString?:"",
-                                    endLocation = destinationString?:"مطار القاهرة الدولي",
-                                    estimatedTime = formattedTime?: "30 دقيقة",
+                                var showChatSheet = remember { mutableStateOf(false) }
 
+                                RideInProgressScreen(
+                                    startLocation = originString ?: "",
+                                    endLocation = destinationString ?: "مطار القاهرة الدولي",
+                                    estimatedTime = formattedTime ?: "30 دقيقة",
                                     onEmergencyClick = {
-                                        // هنا ترسل alert للطوارئ أو Firebase
-                                        Log.d("EMERGENCY", "🚨 تم الضغط على زر الطوارئ!")
-                                        // تقدر تبعت location أو تعمل أي logic إضافي
+                                        Log.d("EMERGENCY", "🚨 فتح شات الطوارئ")
+                                        showChatSheet.value = true
                                     }
                                 )
+                                if (showChatSheet.value) {
+                                    ModalBottomSheet(
+                                        onDismissRequest = { showChatSheet.value = false }
+                                    ) {
+                                        EmergencyChatSheet(
+                                            driverId = driverId,
+                                            driverName =driverName!!,
+                                            passengerId = userId!!,
+                                            passengerName ="test" ,
+                                            tripNumber =tripId!!,
+                                            tripFrom ="tanta",
+                                            tripTo ="cairo",
+                                            onClose = { showChatSheet.value=  false }
+                                        )
+
+                                    }
+                                }
 
                             }
                             state.isAccepted -> {
@@ -1575,8 +1150,7 @@ if (state.isInitialPickup && !state.isSearch && !state.isStart && !state.isTripB
                     }
                 }
             )
-
-            LaunchedEffect(Unit) {
+           LaunchedEffect(Unit) {
                 while (true) {
                     delay(2000) // تحديث كل 2 ثانية
 
@@ -1601,72 +1175,52 @@ if (state.isInitialPickup && !state.isSearch && !state.isStart && !state.isTripB
                 &&!state.inProgress&&!state.isStart&&!state.isTripBegin ) {
                 val Savedtoken =
                     token // Fetch or pass the token
-                FindDriverCard(onclick = {
+                FindDriverCard { selectedPaymentMethod ->
 
-
-
-                    if (
-
-                        storedPoints == null  ||startPoint.value == null || endPoint.value == null||tripStatus!="pending") {
-                        Toast.makeText(
-                            context,
-                            "Please select both pickup and drop-off locations",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                    if (storedPoints == null || startPoint.value == null || endPoint.value == null || tripStatus != "pending") {
+                        Toast.makeText(context, "Please select both pickup and drop-off locations", Toast.LENGTH_SHORT).show()
                         return@FindDriverCard
                     }
-                    if (tripStatus=="pending") {
 
-                    Log.d("TripScreen", "FindDriverCard clicked")
-                    isSearch=true
-                    stateTripViewModel.searchDriver()
-                    val sharedPreferences =
-                        context.getSharedPreferences("your_prefs", Context.MODE_PRIVATE)
-                    val userId = sharedPreferences.getString("USER_ID", null)
-                    val userBalance = sharedPreferences.getFloat("USER_BALANCE", 0f)
+                    if (tripStatus == "pending") {
+                        Log.d("TripScreen", "FindDriverCard clicked")
+                        isSearch = true
+                        stateTripViewModel.searchDriver()
 
-                    if (userId == null) {
-                        Toast.makeText(context, "User not logged in", Toast.LENGTH_SHORT).show()
+                        val sharedPreferences = context.getSharedPreferences("your_prefs", Context.MODE_PRIVATE)
+                        val userId = sharedPreferences.getString("USER_ID", null)
+                        val userBalance = sharedPreferences.getFloat("USER_BALANCE", 0f)
 
-                    }
-                    // Use the current location as the origin
-                    val origin = getAddressFromLatLng(
-                        context,
+                        if (userId == null) {
+                            Toast.makeText(context, "User not logged in", Toast.LENGTH_SHORT).show()
+                            return@FindDriverCard
+                        }
 
-                        latitude = startPoint.value?.latitude ?: 0.0,
-                        longitude = startPoint.value?.longitude ?: 0.0
-                    )
+                        val origin = getAddressFromLatLng(
+                            context,
+                            latitude = startPoint.value?.latitude ?: 0.0,
+                            longitude = startPoint.value?.longitude ?: 0.0
+                        )
 
-                    // Use the selected destination as the destination
-                    val destination =
-                        getAddressFromLatLng(context,
+                        val destination = getAddressFromLatLng(
+                            context,
                             latitude = endPoint.value?.latitude ?: 0.0,
                             longitude = endPoint.value?.longitude ?: 0.0
-
                         )
-                    val fare = fare2
-                    val distanceInKm = distance
-                    val paymentMethod = "cash"
-                    val apiKey =
-                        "c69abe50-60d2-43bc-82b1-81cbdcebeddc" // Replace with your actual API key
 
-                    Log.d(
-                        "TripScreen",
-                        "Requesting trip with origin: $origin, destination: $destination, fare: $fare, distance: $distanceInKm"
-                    )
+                        val fare = fare2
+                        val distanceInKm = distance
 
-
-                    if (Savedtoken != null) {
-                        if (distanceInKm != null) {
+                        if (Savedtoken != null && distanceInKm != null) {
                             tripViewModel.createTrip(
                                 context = context,
-                                userId!!,
-                                origin,
-                                destination,
-                                paymentMethod,
-                                fare!!,
-                                distanceInKm,
-                                Savedtoken,
+                                userId = userId,
+                                origin = origin,
+                                destination = destination,
+                                paymentMethod = selectedPaymentMethod, // ✅ هنا بنستخدم القيمة المختارة فعلاً
+                                fare = fare!!,
+                                distance = distanceInKm,
+                                token = Savedtoken,
                                 coroutineScope = CoroutineScope(Dispatchers.Main),
                                 onSuccess = { tripResponse ->
                                     Log.d("tripResponse", "🚗 Trip id: ${tripResponse.trip._id}")
@@ -1677,14 +1231,11 @@ if (state.isInitialPickup && !state.isSearch && !state.isStart && !state.isTripB
                                 }
                             )
                         }
+
+                        endPoint.value = GeoPoint(destinationLat, destinationLng)
                     }
+                }
 
-
-                    // Set the endpoint when the button is clicked
-                    endPoint.value = GeoPoint(destinationLat, destinationLng)
-
-}
-                })
             }
         }
     }
@@ -2133,4 +1684,222 @@ suspend fun fetchGraphHopperSuggestions(
             }
         }
     }
+}
+
+@Composable
+fun EmergencyChatSheet(
+    driverId: String,
+    driverName: String,
+    passengerId: String,
+    passengerName: String,
+    tripNumber: String,
+    tripFrom: String,
+    tripTo: String,
+    passengerImage: String = "",
+    onClose: () -> Unit
+) {
+    val db = FirebaseFirestore.getInstance()
+    var newMessage by remember { mutableStateOf("") }
+    val messages = remember { mutableStateListOf<ChatMessage>() }
+    val context = LocalContext.current
+
+    // Step 1: Get or Create emergency_message document
+    var messageId by remember { mutableStateOf<String?>(null) }
+
+    // Create message document if not already created
+    LaunchedEffect(Unit) {
+        val query = db.collection("emergency_messages")
+            .whereEqualTo("tripNumber", tripNumber)
+            .whereEqualTo("passengerId", passengerId)
+            .whereEqualTo("driverId", driverId)
+            .limit(1)
+            .get()
+            .await()
+
+        if (!query.isEmpty) {
+            messageId = query.documents[0].id
+        } else {
+            val newDoc = hashMapOf(
+                "driverId" to driverId,
+                "driverName" to driverName,
+                "passengerId" to passengerId,
+                "passengerName" to passengerName,
+                "passengerImage" to passengerImage,
+                "tripNumber" to tripNumber,
+                "tripFrom" to tripFrom,
+                "tripTo" to tripTo,
+                "message" to "", // First message will be added in chat
+                "status" to "new",
+                "isRead" to false,
+                "isResolved" to false,
+                "timestamp" to FieldValue.serverTimestamp()
+            )
+            val docRef = db.collection("emergency_messages").add(newDoc).await()
+            messageId = docRef.id
+        }
+    }
+
+    // Step 2: Listen to chat updates
+    LaunchedEffect(messageId) {
+        if (messageId != null) {
+            db.collection("emergency_messages")
+                .document(messageId!!)
+                .collection("chat")
+                .orderBy("timestamp", Query.Direction.ASCENDING)
+                .addSnapshotListener { snapshot, _ ->
+                    if (snapshot != null) {
+                        messages.clear()
+                        messages.addAll(snapshot.documents.mapNotNull { it.toObject(ChatMessage::class.java) })
+                    }
+                }
+        }
+    }
+
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Text("شات الطوارئ", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(8.dp))
+        LazyColumn(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            reverseLayout = false // ده مهم جدًا
+        ) {
+            items(messages.sortedBy { it.timestamp?.seconds ?: 0 }) { msg ->
+                val isMe = msg.senderId == passengerId
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = if (isMe) Arrangement.End else Arrangement.Start
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .background(
+                                color = if (isMe) Color(0xFF2196F3) else Color(0xFFE0E0E0),
+                                shape = RoundedCornerShape(16.dp)
+                            )
+                            .padding(12.dp)
+                            .widthIn(max = 250.dp)
+                    ) {
+                        Text(
+                            text = msg.message,
+                            color = if (isMe) Color.White else Color.Black
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = formatTimestamp(msg.timestamp),
+                            fontSize = 10.sp,
+                            color = if (isMe) Color.White.copy(alpha = 0.7f) else Color.Gray,
+                            modifier = Modifier.align(Alignment.End)
+                        )
+                    }
+                }
+            }
+        }
+
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(modifier = Modifier.fillMaxWidth()) {
+            OutlinedTextField(
+                value = newMessage,
+                onValueChange = { newMessage = it },
+                label = { Text("اكتب رسالتك") },
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Button(
+                onClick = {
+                    if (newMessage.isNotBlank() && messageId != null) {
+                        val chatMessage = hashMapOf(
+                            "message" to newMessage,
+                            "senderId" to passengerId,
+                            "senderName" to passengerName,
+                            "isRead" to false,
+                            "timestamp" to FieldValue.serverTimestamp()
+                        )
+                        db.collection("emergency_messages")
+                            .document(messageId!!)
+                            .collection("chat")
+                            .add(chatMessage)
+                        newMessage = ""
+                    }
+                }
+            ) {
+                Text("إرسال")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(
+            onClick = onClose,
+            modifier = Modifier.align(Alignment.End)
+        ) {
+            Text("إغلاق")
+        }
+    }
+}
+fun formatTimestamp(timestamp: Timestamp?): String {
+    return timestamp?.toDate()?.let {
+        SimpleDateFormat("hh:mm a", Locale.getDefault()).format(it)
+    } ?: ""
+}
+
+data class ChatMessage(
+    val message: String = "",
+    val senderId: String = "",
+    val senderName: String = "",
+    val isRead: Boolean = false,
+    val timestamp: Timestamp = Timestamp.now()
+)
+
+
+
+
+fun sendEmergencyMessage(
+    passengerName: String,
+    passengerId: String,
+    driverName: String,
+    driverId: String,
+    tripNumber: String,
+    tripFrom: String,
+    tripTo: String,
+    message: String,
+    passengerImage: String = "",
+    onSuccess: () -> Unit = {},
+    onError: (Exception) -> Unit = {}
+) {
+    val firestore = FirebaseFirestore.getInstance()
+
+    val data = hashMapOf(
+        "passengerName" to passengerName,
+        "passengerId" to passengerId,
+        "driverName" to driverName,
+        "driverId" to driverId,
+        "tripNumber" to tripNumber,
+        "tripFrom" to tripFrom,
+        "tripTo" to tripTo,
+        "message" to message,
+        "timestamp" to FieldValue.serverTimestamp(),
+        "status" to "new", // مثلاً new, in_progress, resolved
+        "isRead" to false,
+        "isResolved" to false,
+        "passengerImage" to passengerImage
+    )
+
+    firestore.collection("emergency_messages")
+        .add(data)
+        .addOnSuccessListener {
+            Log.d("Firestore", "✅ Emergency message sent")
+            onSuccess()
+        }
+        .addOnFailureListener { e ->
+            Log.e("Firestore", "❌ Failed to send emergency message", e)
+            onError(e)
+        }
 }

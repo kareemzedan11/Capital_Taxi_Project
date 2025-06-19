@@ -20,18 +20,19 @@ fun ProfileTextField(
     label: String,
     value: String,
     onValueChange: (String) -> Unit,
-    leadingIcon: @Composable (() -> Unit)? = null // Optional leading icon
+    leadingIcon: @Composable (() -> Unit)? = null, // Optional leading icon
+    readOnly: Boolean = false // ✅ أضف هذا السطر
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
+        readOnly = readOnly, // ✅ واستخدمه هنا
         label = { Text(label) },
         leadingIcon = leadingIcon,
         modifier = Modifier
             .fillMaxWidth(0.9f)
             .padding(vertical = 8.dp),
-        shape = RoundedCornerShape(16.dp)
-        ,
+        shape = RoundedCornerShape(16.dp),
         textStyle = LocalTextStyle.current.copy(color = Color.Black),
         colors = TextFieldDefaults.outlinedTextFieldColors(
             focusedBorderColor = Color.Black,

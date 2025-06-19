@@ -62,7 +62,9 @@ sealed class Destination(val route: String) {
 
     object DocumentReviewScreen : Destination("DocumentReviewScreen")
     object DriverPhotoValidationScreen : Destination("DriverPhotoValidationScreen")
+    object EmailScreen : Destination("EmailScreen")
 
+    object OTPAndNewPasswordScreen : Destination("OTPAndNewPasswordScreen")
 
 
 }

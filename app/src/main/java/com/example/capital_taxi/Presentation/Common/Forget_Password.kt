@@ -22,7 +22,7 @@ fun ForgetPassword(navController: NavController) {
         text = stringResource(R.string.ForgetPassword),
         modifier = Modifier.Companion
 
-            .clickable { navController.navigate(Destination.NewPasswordScreen.route) },
+            .clickable { navController.navigate(Destination.EmailScreen.route) },
         color = colorResource(R.color.primary_color),
 
         fontSize = responsiveTextSize(fraction = 0.06f, minSize = 14.sp, maxSize = 18.sp),

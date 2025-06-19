@@ -91,7 +91,7 @@ fun userLoginContent(
 
                             if (!document.contains("rating")) {
                                 updates["rating"] = mapOf(
-                                    "count" to 0,
+                                    "count" to 1,
                                     "total" to 5
                                 )
                             }

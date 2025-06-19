@@ -1,6 +1,7 @@
 package com.example.capital_taxi.Presentation.ui.Passengar.Screens.Home.UserHome.Components.Waiting_for_the_driver
 
 import ChatScreen
+import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -23,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,13 +40,23 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.capital_taxi.Navigation.Destination
 import com.example.capital_taxi.R
+import com.google.firebase.firestore.FirebaseFirestore
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CallAndChat(navController: NavController,
-                chatId:String,userId:String) {
+                chatId:String,userId:String
+                ,tripid:String
+) {
     val context = LocalContext.current
 
+    var phoneNumber by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        fetchDriverPhoneFromTrip(tripid) { phone ->
+            phoneNumber = phone
+        }
+    }
 
     val isDriver = false
     val sheetState = rememberModalBottomSheetState(
@@ -77,13 +89,19 @@ fun CallAndChat(navController: NavController,
         horizontalArrangement = Arrangement.Start
     ) {
         Spacer(modifier = Modifier.weight(1f))
-
-        // Call Icon
         Box(
             modifier = Modifier
                 .size(43.dp)
                 .clip(CircleShape)
-                .background(colorResource(R.color.secondary_color)),
+                .background(colorResource(R.color.secondary_color))
+                .clickable(enabled = phoneNumber != null) {
+                    phoneNumber?.let {
+                        val intent = Intent(Intent.ACTION_DIAL).apply {
+                            data = Uri.parse("tel:$it")
+                        }
+                        context.startActivity(intent)
+                    }
+                },
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -93,6 +111,7 @@ fun CallAndChat(navController: NavController,
                 tint = Color.Black
             )
         }
+
 
         Spacer(modifier = Modifier.width(20.dp))
 
@@ -114,4 +133,39 @@ fun CallAndChat(navController: NavController,
             )
         }
     }
+}
+
+
+val db = FirebaseFirestore.getInstance()
+
+fun fetchDriverPhoneFromTrip(tripId: String, onResult: (String?) -> Unit) {
+    db.collection("trips")
+        .whereEqualTo("_id", tripId)
+        .get()
+        .addOnSuccessListener { tripSnapshot ->
+            val tripDoc = tripSnapshot.documents.firstOrNull()
+            if (tripDoc != null) {
+                val driverId = tripDoc.getString("driver")
+                if (driverId != null) {
+                    db.collection("drivers")
+                        .whereEqualTo("id", driverId)
+                        .get()
+                        .addOnSuccessListener { driverSnapshot ->
+                            val driverDoc = driverSnapshot.documents.firstOrNull()
+                            if (driverDoc != null) {
+                                val phone = driverDoc.getString("phone")
+                                onResult(phone)
+                            } else {
+                                onResult(null)
+                            }
+                        }
+                        .addOnFailureListener { onResult(null) }
+                } else {
+                    onResult(null)
+                }
+            } else {
+                onResult(null)
+            }
+        }
+        .addOnFailureListener { onResult(null) }
 }

@@ -7,8 +7,10 @@ import androidx.compose.runtime.*
 import androidx.lifecycle.ViewModel
 import com.example.capital_taxi.domain.RetrofitClient
 import com.example.capital_taxi.domain.Trip
+import com.example.capital_taxi.domain.TripApiService
 import com.example.capital_taxi.domain.TripRequest
 import com.example.capital_taxi.domain.TripResponse
+import com.example.capital_taxi.utils.Constants.ApiConstants
 import com.google.firebase.crashlytics.buildtools.reloc.com.google.common.reflect.TypeToken
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.GeoPoint
@@ -16,8 +18,12 @@ import com.google.firebase.firestore.ListenerRegistration
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 import java.util.Locale
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 data class LocationData(
     val lat: Double,
@@ -139,6 +145,8 @@ class TripViewModel : ViewModel() {
 
 
 
+      val url = ApiConstants.base_URL
+    private   val BASE_URL = url
     var responseMessage = mutableStateOf("")
     private val _tripDetails = mutableStateOf<TripResponse?>(null)
     val tripDetails: State<TripResponse?> = _tripDetails
@@ -162,8 +170,7 @@ class TripViewModel : ViewModel() {
         }
 
         val tripRequest = TripRequest(
-            _id = "",
-            user = userId,
+            userId = userId, // ده هيتحول لـ "id" في JSON
             origin = origin,
             destination = destination,
             paymentMethod = paymentMethod,
@@ -171,11 +178,31 @@ class TripViewModel : ViewModel() {
             distanceInKm = distance
         )
 
+
         Log.d("TripViewModel", "🚗 tripRequest: $tripRequest")
 
         coroutineScope.launch {
             try {
-                val response = RetrofitClient.apiService.createTrip("Bearer $token", tripRequest)
+                val baseUrl = "http://10.0.2.2:5000/api/"
+
+
+                Log.d("TripViewModel", "Sending to: $baseUrl")
+                Log.d("TripViewModel", "TripRequest JSON: ${Gson().toJson(tripRequest)}")
+
+                val customApiService = Retrofit.Builder()
+                    .baseUrl(baseUrl)
+                    .client(
+                        OkHttpClient.Builder()
+                            .connectTimeout(30, TimeUnit.SECONDS)
+                            .readTimeout(30, TimeUnit.SECONDS)
+                            .writeTimeout(30, TimeUnit.SECONDS)
+                            .build()
+                    )
+                    .addConverterFactory(GsonConverterFactory.create())
+                    .build()
+                    .create(TripApiService::class.java)
+
+                val response = customApiService.createTrip("Bearer $token", tripRequest)
 
                 if (response.isSuccessful && response.body() != null) {
                     val tripResponse = response.body()!!
@@ -204,6 +231,9 @@ class TripViewModel : ViewModel() {
                             "lat" to destinationLatLng.first,
                             "lng" to destinationLatLng.second
                         )
+                    }
+                    tripResponse.paymentUrl?.let {
+                        tripDataWithUserId["paymentUrl"] = it
                     }
 
                     db.collection("trips").document(tripId).set(tripDataWithUserId)
