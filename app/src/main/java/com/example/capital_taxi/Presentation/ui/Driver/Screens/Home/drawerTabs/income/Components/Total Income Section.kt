@@ -40,41 +40,7 @@ fun TotalIncomeSection() {
                 modifier = Modifier.padding(15.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Text(
-                        "1 july - ",
-                        fontSize = responsiveTextSize(
-                            fraction = 0.06f,
-                            minSize = 14.sp,
-                            maxSize = 18.sp
-                        ),
 
-
-                        fontFamily = CustomFontFamily,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Text(
-                        "7 july",
-                        fontSize = responsiveTextSize(
-                            fraction = 0.06f,
-                            minSize = 14.sp,
-                            maxSize = 18.sp
-                        ),
-
-
-                        fontFamily = CustomFontFamily,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                }
-                Spacer(modifier = Modifier.height(18.dp))
                 Text(
                     "0:00 EGB",
                     fontSize = responsiveTextSize(

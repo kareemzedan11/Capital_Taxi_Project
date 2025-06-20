@@ -183,7 +183,7 @@ class TripViewModel : ViewModel() {
 
         coroutineScope.launch {
             try {
-                val baseUrl = "http://10.0.2.2:5000/api/"
+                val baseUrl = url
 
 
                 Log.d("TripViewModel", "Sending to: $baseUrl")

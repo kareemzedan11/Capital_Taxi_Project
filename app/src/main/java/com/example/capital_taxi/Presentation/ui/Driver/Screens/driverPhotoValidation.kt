@@ -594,7 +594,7 @@ private fun createImageUri(context: Context, file: File): Uri? {
 }
 
 private val retrofit = Retrofit.Builder()
-    .baseUrl("https://68f5-41-34-47-1.ngrok-free.app/")
+    .baseUrl("https://3abslam-driver-face-verification.hf.space/verify-driver/")
     .addConverterFactory(GsonConverterFactory.create())
     .build()
 

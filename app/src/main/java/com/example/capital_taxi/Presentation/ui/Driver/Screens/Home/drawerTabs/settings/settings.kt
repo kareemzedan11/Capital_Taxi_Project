@@ -154,22 +154,7 @@ fun driversettings(navController: NavController) {
 
                             onClick = { navController.navigate(Destination.LanguageDScreen.route) }
                         )
-                        SettingBox(
-                            title = stringResource(id = R.string.Preferences),
 
-                            icon = painterResource(R.drawable.mode),
-
-                            onClick = { showBottomSheet = true }
-                        )
-
-
-                        SettingBox(
-                            title = stringResource(id = R.string.documents),
-
-                            icon = painterResource(R.drawable.note),
-
-                            onClick = { /* Handle Two-Factor Authentication */ }
-                        )
                         SettingBox(
                             title = stringResource(id = R.string.terms_and_conditions),
 

@@ -170,16 +170,9 @@ fun DriverNavigationDrawer(navController: NavController) {
 
                 )
                 Spacer(Modifier.height(10.dp))
-
                 navigationDrawerItem(
                     onClick = { navController.navigate(Destination.IncomePage.route) },
                     text = stringResource(R.string.Income)
-                )
-                Spacer(Modifier.height(10.dp))
-
-                navigationDrawerItem(
-                    onClick = { navController.navigate(Destination.voucherScreen.route) },
-                    text = stringResource(R.string.Wallet)
                 )
                 Spacer(Modifier.height(10.dp))
                 navigationDrawerItem(

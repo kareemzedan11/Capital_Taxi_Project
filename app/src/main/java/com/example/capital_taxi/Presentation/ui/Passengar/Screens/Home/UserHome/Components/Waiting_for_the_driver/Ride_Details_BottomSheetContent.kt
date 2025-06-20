@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Icon
 import androidx.compose.material.Text
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -33,6 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -146,58 +148,118 @@ fun RideDetailsBottomSheetContent(
                 HorizontalDivider(Modifier.fillMaxWidth(), thickness = 2.dp)
                 Spacer(modifier = Modifier.padding(bottom = 10.dp))
 
-                // Card for car details
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .shadow(20.dp, shape = RoundedCornerShape(8.dp))
-                        .clip(RoundedCornerShape(8.dp))
+                        .shadow(
+                            elevation = 8.dp,
+                            shape = RoundedCornerShape(12.dp),
+                            spotColor = Color(0x40000000)
+                        )
+                        .clip(RoundedCornerShape(12.dp))
                         .background(Color.White)
                         .padding(16.dp)
                 ) {
                     Column {
+                        // Car Details Section
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-
-                            Image(
-                                painter = painterResource(R.drawable.uber),
-                                contentDescription = "car image",
+                            // Car Image with color border
+                            Box(
                                 modifier = Modifier
-                                    .size(160.dp)
-                                    .clip(RoundedCornerShape(12.dp)),
-
-                            )
-
-                            Spacer(modifier = Modifier.weight(1f))
-
-                            Column(
-                                modifier = Modifier.padding(start = 16.dp)
+                                    .size(120.dp)
+                                    .border(
+                                        width = 3.dp,
+                                        color = carColor2,
+                                        shape = RoundedCornerShape(12.dp))
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color.White)
                             ) {
+                                Image(
+                                    painter = painterResource(R.drawable.uber),
+                                    contentDescription = "car image",
+                                    modifier = Modifier
+                                        .padding(8.dp)
+                                        .fillMaxSize(),
+                                    contentScale = ContentScale.Fit
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(16.dp))
+
+                            Column {
                                 if (carNumber.value.isEmpty() || carType.value.isEmpty()) {
                                     CircularProgressIndicator(
-                                        color = Color.Blue,
-                                        strokeWidth = 4.dp
+                                        color = Color(0xFF4CAF50),
+                                        strokeWidth = 3.dp,
+                                        modifier = Modifier.align(Alignment.CenterHorizontally)
                                     )
                                 } else {
-                                    Text(
-                                        carNumber.value,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 20.sp,
-                                        color = Color.Black.copy(alpha = 0.3f)
-                                    )
-                                    Spacer(modifier = Modifier.padding(10.dp))
-                                    Text(
-                                        carType.value,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 20.sp,
-                                    )
+                                    // Car Type with icon
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_car_type),
+                                            contentDescription = "Car Type",
+                                            tint = Color(0xFF4CAF50),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            carType.value,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 18.sp,
+                                            color = Color(0xFF333333)
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    // Car Number with icon
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_plate_number),
+                                            contentDescription = "Plate Number",
+                                            tint = Color(0xFF2196F3),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            carNumber.value,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 16.sp,
+                                            color = Color(0xFF555555)
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    // Car Color with icon
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_color_palette),
+                                            contentDescription = "Car Color",
+                                            tint = carColor2,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            carColor.value,
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 16.sp,
+                                            color = Color(0xFF666666)
+                                        )
+                                    }
                                 }
                             }
                         }
 
-                        Spacer(modifier = Modifier.padding(top = 16.dp))
+
+
+
+
+                        Spacer(modifier = Modifier.height(16.dp))
 
                         driverDetails(
                             driverusername = driverUsername.value,
