@@ -784,7 +784,7 @@ fun driverHomeScreen(navController: NavController) {
                                             passengerLng
                                         )
 
-                                        val maxDistance = 5000000.0
+                                        val maxDistance = 15
                                         distance <= maxDistance
                                     } catch (e: Exception) {
                                         Log.e("DistanceFilter", "Error calculating distance", e)
