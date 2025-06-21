@@ -3,6 +3,8 @@ package com.example.capital_taxi.Presentation.ui.Driver.Screens
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Environment
 import android.util.Log
@@ -53,11 +55,13 @@ import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.storage.Storage
 import io.github.jan.supabase.storage.storage
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
 import retrofit2.http.POST
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -490,8 +494,19 @@ private fun InstructionPoint(text: String) {
     }
 }
 
-class DriverPhotoValidationViewModel : ViewModel() {
 
+class DriverPhotoValidationViewModel : ViewModel() {
+    fun compressImage(context: Context, imageUri: Uri): ByteArray? {
+        return try {
+            val bitmap = BitmapFactory.decodeStream(context.contentResolver.openInputStream(imageUri))
+            val outputStream = ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 70, outputStream) // 70% quality
+            outputStream.toByteArray()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
     private val api = retrofit.create(MatchApi::class.java)
     private val supabase = createSupabaseClient(
         supabaseUrl = "https://mwncdoelxuwhtlrvtnap.supabase.co",
@@ -506,7 +521,7 @@ class DriverPhotoValidationViewModel : ViewModel() {
         return try {
             val fileName = "verify-driver/${UUID.randomUUID()}.jpg"
             val inputStream = context.contentResolver.openInputStream(imageUri) ?: return null
-            val byteArray = inputStream.readBytes()
+            val byteArray = compressImage(context, imageUri) ?: return null
 
             Log.d("SupabaseUpload", "Uploading to Supabase... FileName: $fileName")
 
@@ -523,6 +538,18 @@ class DriverPhotoValidationViewModel : ViewModel() {
     }
 
 
+    suspend fun safeUploadWithRetry(
+        context: Context,
+        imageUri: Uri,
+        retries: Int = 3
+    ): String? {
+        repeat(retries) {
+            val result = uploadImageToSupabase(context, imageUri)
+            if (result != null) return result
+            delay(2000L) // انتظر ثانيتين قبل المحاولة التالية
+        }
+        return null
+    }
     fun verifyImages(
         context: Context,
         originalUrl: String?,
@@ -537,8 +564,7 @@ class DriverPhotoValidationViewModel : ViewModel() {
                     return@launch
                 }
 
-                // رفع الصورة الجديدة إلى Supabase
-                val uploadedUrl = uploadImageToSupabase(context, newImageUri)
+                val uploadedUrl = safeUploadWithRetry(context, newImageUri)
 
                 if (uploadedUrl == null) {
                     onResult(null)
@@ -594,7 +620,7 @@ private fun createImageUri(context: Context, file: File): Uri? {
 }
 
 private val retrofit = Retrofit.Builder()
-    .baseUrl("https://3abslam-driver-face-verification.hf.space/verify-driver/")
+    .baseUrl("https://fcdf-196-132-46-18.ngrok-free.app/")
     .addConverterFactory(GsonConverterFactory.create())
     .build()
 

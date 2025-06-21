@@ -3,7 +3,7 @@ object ApiConstants
 
 {
 
-    const val CHAT_API_URL ="https://chatbot-production-d2c1.up.railway.app/chat"
+    const val CHAT_API_URL ="https://aab2-196-132-46-18.ngrok-free.app/chat"
 
     const val base_URL = "https://capital.fingerprintm.com/api/"
 

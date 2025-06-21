@@ -157,6 +157,7 @@ fun driverProfile(navController: NavController, ) {
                 colors = TopAppBarDefaults.smallTopAppBarColors(containerColor = Color.Transparent)
             )
         },
+
         content = { paddingValues ->
             Column(
                 modifier = Modifier
