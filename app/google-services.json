@@ -1,14 +1,14 @@
 {
   "project_info": {
-    "project_number": "427656484093",
-    "firebase_url": "https://capital-taxi-cda68-default-rtdb.firebaseio.com",
-    "project_id": "capital-taxi-cda68",
-    "storage_bucket": "capital-taxi-cda68.firebasestorage.app"
+    "project_number": "792233640007",
+    "firebase_url": "https://capital-d20fa-default-rtdb.firebaseio.com",
+    "project_id": "capital-d20fa",
+    "storage_bucket": "capital-d20fa.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:427656484093:android:ea68129f0b03e3edb29a94",
+        "mobilesdk_app_id": "1:792233640007:android:034f16b3b824ba688fb162",
         "android_client_info": {
           "package_name": "com.example.capital_taxi"
         }
@@ -16,7 +16,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyB4wiUvOp2Lm5UMzNYAjIgKNrjMRKki0QU"
+          "current_key": "AIzaSyCviHMMQNi17lq_8WJ6TjwQ6s8flm6MmWw"
         }
       ],
       "services": {
